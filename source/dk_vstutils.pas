@@ -38,7 +38,7 @@ begin
   begin
     Node := VST.AddChild(VST.RootNode);
     for j:= 0 to ALengths[i]-1 do VST.AddChild(Node);
-    VST.Expanded[Node]:= AExpandNode;
+    VST.Expanded[Node]:= AExpandNodes;
   end;
 end;
 
