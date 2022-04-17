@@ -101,7 +101,7 @@ begin
   else begin
     i:= (Node^.Parent)^.Index;
     j:= Node^.Index;
-    CellText:= AMatrix[i,j]);
+    CellText:= AMatrix[i,j];
   end;
 end;
 
