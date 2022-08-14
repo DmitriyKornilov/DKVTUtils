@@ -5,7 +5,7 @@ unit DK_VSTUtils;
 interface
 
 uses
-  Classes, SysUtils, VirtualTrees, DK_Vector, DK_Matrix;
+  Classes, SysUtils, Graphics, VirtualTrees, DK_Vector, DK_Matrix;
 
   procedure VSTLoad(const VST: TVirtualStringTree; const AVector: TStrVector);
   procedure VSTLoad(const VST: TVirtualStringTree; const AMatrix: TStrMatrix;
@@ -19,6 +19,13 @@ uses
   procedure VSTGetText(Node: PVirtualNode; var CellText: String;
                      const VST: TVirtualStringTree;
                      const AVector: TStrVector; const AMatrix: TStrMatrix);
+
+  procedure VSTHeaderDraw(const ABorderColor, ABackgroundColor: TColor;
+                         var PaintInfo: THeaderPaintInfo;
+                         const Elements: THeaderPaintElements);
+  procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
+                       TargetCanvas: TCanvas; Column: TColumnIndex;
+                       CellRect: TRect);
 
 
 implementation
@@ -103,6 +110,48 @@ begin
     j:= Node^.Index;
     CellText:= AMatrix[i,j];
   end;
+end;
+
+procedure VSTHeaderDraw(const ABorderColor, ABackgroundColor: TColor;
+  var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
+var
+  R: TRect;
+begin
+  if not (hpeBackground in Elements) then Exit;
+
+  R:= PaintInfo.PaintRectangle;
+
+  PaintInfo.TargetCanvas.Pen.Color:= ABorderColor;
+  PaintInfo.TargetCanvas.Brush.Color:= ABackgroundColor;
+
+  PaintInfo.TargetCanvas.Pen.Style:= psSolid;
+  PaintInfo.TargetCanvas.Brush.Style:= bsSolid;
+
+
+  if R.Left>0 then
+    R.Left:= R.Left-1;
+
+
+  PaintInfo.TargetCanvas.Rectangle(R);
+end;
+
+procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
+  TargetCanvas: TCanvas; Column: TColumnIndex; CellRect: TRect);
+var
+  R: TRect;
+begin
+  R:= CellRect;
+  TargetCanvas.Pen.Style:= psSolid;
+  TargetCanvas.Pen.Color:= ABorderColor;
+  TargetCanvas.Brush.Style:= bsSolid;
+  TargetCanvas.Brush.Color:= ABackgroundColor;
+
+  if R.Left>0 then
+    R.Left:= R.Left-1;
+  R.Top:= R.Top-1;
+
+  TargetCanvas.Rectangle(R);
+
 end;
 
 end.
