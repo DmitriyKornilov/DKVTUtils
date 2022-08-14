@@ -147,8 +147,12 @@ end;
 procedure TVSTTable.AdvancedHeaderDraw(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
 begin
+
   PaintInfo.TargetCanvas.Font.Assign(FHeaderFont);
-  VSTHeaderDraw(FBorderColor, FHeaderBGColor, PaintInfo, Elements);
+  if VIsNil(FHeaderCaptions) then
+    VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
+  else
+    VSTHeaderDraw(FBorderColor, FHeaderBGColor, PaintInfo, Elements);
 end;
 
 procedure TVSTTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
@@ -280,11 +284,14 @@ end;
 
 procedure TVSTTable.Clear;
 begin
-  FTree.Clear;
   FHeaderCaptions:= nil;
   FDataValues:= nil;
   FColumnWidths:= nil;
   FSelectedIndex:= -1;
+  FSelectedNode:= nil;
+  FTree.Clear;
+  FTree.Header.Columns.Clear;
+  FTree.Refresh;
 end;
 
 procedure TVSTTable.Draw;
