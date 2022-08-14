@@ -8,7 +8,7 @@ unit DKVTUtils;
 interface
 
 uses
-  DK_VSTUtils, LazarusPackageIntf;
+  DK_VSTUtils, DK_VSTTables, LazarusPackageIntf;
 
 implementation
 

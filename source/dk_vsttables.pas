@@ -33,8 +33,11 @@ type
     FSelectedIndex: Integer;
     FSelectedNode: PVirtualNode;
 
+
+
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
+    function GetIsSelected: Boolean;
 
 
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
@@ -66,16 +69,23 @@ type
     procedure SetHeaderFont(const AValue: TFont);
     procedure SetValuesFont(const AValue: TFont);
     procedure SetSelectedFont(const AValue: TFont);
+
+    procedure HeaderClear;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
 
     procedure Clear;
+
+    procedure ValuesClear;
+
     procedure Draw;
 
-    procedure ColumnAdd(const ACaption: String; const AValues: TStrVector;
-                        const AWidth: Integer = 100;
-                        const ACaptionAlignment: TAlignment = taCenter;
+    procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter);
+    procedure SetColumn(const AColumnIndex: Integer; const AValues: TStrVector;
+                        const AValuesAlignment: TAlignment = taCenter);
+    procedure SetColumn(const ACaption: String; const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
 
     property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
@@ -83,6 +93,8 @@ type
     property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
 
     property CanSelect: Boolean read FCanSelect write SetCanSelect;
+    property SelectedIndex: Integer read FSelectedIndex;
+    property IsSeleceted: Boolean read GetIsSelected;
 
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
@@ -101,6 +113,11 @@ begin
   //SelectedNode^.CheckState:= csCheckedNormal;
   FTree.FocusedNode:= FSelectedNode;
   FTree.Refresh;
+end;
+
+function TVSTTable.GetIsSelected: Boolean;
+begin
+  Result:= FSelectedIndex>=0;
 end;
 
 procedure TVSTTable.SetSelectedFont(const AValue: TFont);
@@ -162,7 +179,9 @@ var
 begin
   if High(FDataValues)<Column then Exit;
   i:= Node^.Index;
-  CellText:= FDataValues[Column, i];
+  CellText:= EmptyStr;
+  if not VIsNil(FDataValues[Column]) then
+    CellText:= FDataValues[Column, i];
 end;
 
 procedure TVSTTable.DrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
@@ -282,22 +301,37 @@ begin
   inherited Destroy;
 end;
 
-procedure TVSTTable.Clear;
+procedure TVSTTable.HeaderClear;
 begin
   FHeaderCaptions:= nil;
-  FDataValues:= nil;
   FColumnWidths:= nil;
-  FSelectedIndex:= -1;
-  FSelectedNode:= nil;
-  FTree.Clear;
   FTree.Header.Columns.Clear;
-  FTree.Refresh;
+  FDataValues:= nil;
+end;
+
+procedure TVSTTable.ValuesClear;
+var
+  i: Integer;
+begin
+  for i:=0 to High(FDataValues) do
+    FDataValues[i]:= nil;
+  //FSelectedIndex:= -1;
+  //FSelectedNode:= nil;
+  UnselectNode;
+  FTree.Clear;
+end;
+
+procedure TVSTTable.Clear;
+begin
+  ValuesClear;
+  HeaderClear;
 end;
 
 procedure TVSTTable.Draw;
 var
   i, MaxLength: Integer;
 begin
+  UnselectNode;
   FTree.Clear;
   if VIsNil(FHeaderCaptions) then Exit;
 
@@ -314,24 +348,40 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTTable.ColumnAdd(const ACaption: String; const AValues: TStrVector;
-                              const AWidth: Integer = 100;
-                              const ACaptionAlignment: TAlignment = taCenter;
-                              const AValuesAlignment: TAlignment = taCenter);
+procedure TVSTTable.AddColumn(const ACaption: String; const AWidth: Integer;
+  const ACaptionAlignment: TAlignment);
 var
   Col: TVirtualTreeColumn;
 begin
   VAppend(FHeaderCaptions, ACaption);
-  MAppend(FDataValues, AValues);
   VAppend(FColumnWidths, AWidth);
+  MAppend(FDataValues, nil);
   Col:= FTree.Header.Columns.Add;
   Col.Text:= ACaption;
   Col.CaptionAlignment:= ACaptionAlignment;
-  Col.Alignment:= AValuesAlignment;
   Col.Margin:= 3;
   Col.Spacing:= 0;
   Col.Width:= AWidth;
 end;
+
+procedure TVSTTable.SetColumn(const AColumnIndex: Integer;
+  const AValues: TStrVector; const AValuesAlignment: TAlignment);
+begin
+  FDataValues[AColumnIndex]:= VCut(AValues);
+  FTree.Header.Columns[AColumnIndex].Alignment:= AValuesAlignment;
+end;
+
+procedure TVSTTable.SetColumn(const ACaption: String;
+  const AValues: TStrVector; const AValuesAlignment: TAlignment);
+var
+  ColumnIndex: Integer;
+begin
+  ColumnIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  if ColumnIndex>=0 then
+    SetColumn(ColumnIndex, AValues, AValuesAlignment);
+end;
+
+
 
 end.
 
