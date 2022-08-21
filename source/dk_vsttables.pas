@@ -88,6 +88,8 @@ type
     procedure SetColumn(const ACaption: String; const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
 
+    function SelectIndex(const AIndex: Integer): Boolean;
+
     property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
     property HeaderBGColor: TColor read FHeaderBGColor write SetHeaderBGColor;
     property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
@@ -105,6 +107,24 @@ type
 implementation
 
 { TVSTTable }
+
+function TVSTTable.SelectIndex(const AIndex: Integer): Boolean;
+var
+  Node: PVirtualNode;
+begin
+  Result:= False;
+  Node:= FTree.GetFirst;
+  while Assigned(Node) do
+  begin
+    if Node^.Index = AIndex then
+    begin
+      SelectNode(Node);
+      Result:= True;
+      break;
+    end;
+    Node:= FTree.GetNext(Node);
+  end;
+end;
 
 procedure TVSTTable.SelectNode(Node: PVirtualNode);
 begin
@@ -380,6 +400,8 @@ begin
   if ColumnIndex>=0 then
     SetColumn(ColumnIndex, AValues, AValuesAlignment);
 end;
+
+
 
 
 
