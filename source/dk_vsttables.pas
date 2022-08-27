@@ -96,7 +96,7 @@ type
 
     property CanSelect: Boolean read FCanSelect write SetCanSelect;
     property SelectedIndex: Integer read FSelectedIndex;
-    property IsSeleceted: Boolean read GetIsSelected;
+    property IsSelected: Boolean read GetIsSelected;
 
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
