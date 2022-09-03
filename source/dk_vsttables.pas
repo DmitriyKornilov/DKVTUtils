@@ -127,6 +127,8 @@ type
   TVSTCheckTable = class(TVSTCustomTable)
   private
     FChecked: TBoolVector;
+
+
     procedure DrawText(Sender: TBaseVirtualTree;
                        TargetCanvas: TCanvas; Node: PVirtualNode;
                        Column: TColumnIndex;
@@ -136,18 +138,27 @@ type
                               Node: PVirtualNode; Column: TColumnIndex;
                               CellPaintMode: TVTCellPaintMode; CellRect: TRect;
                               var ContentRect: TRect);
+
+
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         Shift: TShiftState; X, Y: Integer);
-
     procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
       Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
     procedure Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
       var NewState: TCheckState; var Allowed: Boolean);
 
     procedure ReverseCheckState(Node: PVirtualNode);
-    procedure Check(Node: PVirtualNode);
-    procedure Uncheck(Node: PVirtualNode);
 
+    function GetIsAllChecked: Boolean;
+    function GetIsAllUnchecked: Boolean;
+
+    procedure SetChecked(AIndex: Integer; AValue: Boolean);
+    function GetChecked(AIndex: Integer): Boolean;
+
+    procedure Check(Node: PVirtualNode);
+    procedure Check(const AIndex: Integer);
+    procedure Uncheck(Node: PVirtualNode);
+    procedure Uncheck(const AIndex: Integer);
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -155,8 +166,10 @@ type
     procedure Draw; override;
 
     procedure CheckAll(const AChecked: Boolean);
-    procedure Check(const AIndex: Integer);
-    procedure Uncheck(const AIndex: Integer);
+
+    property Checked[AIndex: Integer]: Boolean read GetChecked write SetChecked;
+    property IsAllChecked: Boolean read GetIsAllChecked;
+    property IsAllUnchecked: Boolean read GetIsAllUnchecked;
   end;
 
 implementation
@@ -185,6 +198,32 @@ begin
   VSTCellDraw(FBorderColor, BGColor, TargetCanvas, Column, CellRect);
 end;
 
+function TVSTCheckTable.GetIsAllUnchecked: Boolean;
+begin
+  Result:= VIsAllFalse(FChecked);
+end;
+
+function TVSTCheckTable.GetIsAllChecked: Boolean;
+begin
+  Result:= VIsAllTrue(FChecked);
+end;
+
+function TVSTCheckTable.GetChecked(AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if not IsIndexCorrect(AIndex) then Exit;
+  Result:= FChecked[AIndex];
+end;
+
+procedure TVSTCheckTable.SetChecked(AIndex: Integer; AValue: Boolean);
+begin
+  if not IsIndexCorrect(AIndex) then Exit;
+  if Avalue then
+    Check(AIndex)
+  else
+    Uncheck(AIndex);
+end;
+
 procedure TVSTCheckTable.ReverseCheckState(Node: PVirtualNode);
 begin
   if Node^.CheckState=csUncheckedNormal then
@@ -198,7 +237,7 @@ begin
   if (not Assigned(Node)) or VIsNil(FChecked) then Exit;
   Node^.CheckState:= csCheckedNormal;
   FChecked[Node^.Index]:= True;
-  //FTree.Refresh;
+  FTree.Refresh;
 end;
 
 procedure TVSTCheckTable.Uncheck(Node: PVirtualNode);
@@ -206,7 +245,7 @@ begin
   if (not Assigned(Node)) or VIsNil(FChecked) then Exit;
   Node^.CheckState:= csUncheckedNormal;
   FChecked[Node^.Index]:= False;
-  //FTree.Refresh;
+  FTree.Refresh;
 end;
 
 procedure TVSTCheckTable.CheckAll(const AChecked: Boolean);
@@ -286,6 +325,8 @@ begin
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
   //FTree.Margin:= 0;
   FTree.Indent:= 0;
+
+
 
   FTree.OnDrawText:= @DrawText;
   FTree.OnBeforeCellPaint:= @BeforeCellPaint;
