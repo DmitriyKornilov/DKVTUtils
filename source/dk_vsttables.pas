@@ -10,10 +10,10 @@ uses
 
 type
 
-  { TVSTTable }
+  { TVSTCustomTable }
 
-  TVSTTable = class(TObject)
-  private
+  TVSTCustomTable = class(TObject)
+  protected
     FTree: TVirtualStringTree;
 
     FBorderColor: TColor;
@@ -29,17 +29,9 @@ type
     FValuesFont: TFont;
     FSelectedFont: TFont;
 
-    FCanSelect: Boolean;
-    FSelectedIndex: Integer;
-    FSelectedNode: PVirtualNode;
 
 
-
-    procedure SelectNode(Node: PVirtualNode);
-    procedure UnselectNode;
-    function GetIsSelected: Boolean;
-
-
+    procedure HeaderClear;
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var PaintInfo: THeaderPaintInfo;
                             var Elements: THeaderPaintElements);
@@ -49,6 +41,57 @@ type
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; TextType: TVSTTextType;
                       var CellText: String);
+
+    procedure SetHeaderBGColor(AValue: TColor);
+    procedure SetHeaderFont(AValue: TFont);
+    procedure SetSelectedBGColor(AValue: TColor);
+    procedure SetSelectedFont(AValue: TFont);
+    procedure SetValuesBGColor(AValue: TColor);
+    procedure SetValuesFont(AValue: TFont);
+
+    function IsIndexCorrect(const AIndex: Integer): Boolean;
+    function NodeFromIndex(const AIndex: Integer): PVirtualNode;
+  public
+    constructor Create(const ATree: TVirtualStringTree);
+    destructor  Destroy; override;
+    procedure Clear;
+    procedure ValuesClear; virtual;
+    procedure Draw; virtual;
+
+    procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter);
+    procedure SetColumn(const AColumnIndex: Integer; const AValues: TStrVector;
+                        const AValuesAlignment: TAlignment = taCenter);
+    procedure SetColumn(const ACaption: String; const AValues: TStrVector;
+                        const AValuesAlignment: TAlignment = taCenter);
+
+
+
+    property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
+    property HeaderBGColor: TColor read FHeaderBGColor write SetHeaderBGColor;
+    property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
+
+
+
+    property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
+    property ValuesFont: TFont read FValuesFont write SetValuesFont;
+    property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
+  end;
+
+
+  { TVSTTable }
+
+  TVSTTable = class(TVSTCustomTable)
+  private
+    FSelectedIndex: Integer;
+    FSelectedNode: PVirtualNode;
+    FCanSelect: Boolean;
+
+    procedure Select(Node: PVirtualNode);
+    procedure UnselectNode;
+    function GetIsSelected: Boolean;
+
+
     procedure DrawText(Sender: TBaseVirtualTree;
                        TargetCanvas: TCanvas; Node: PVirtualNode;
                        Column: TColumnIndex;
@@ -62,129 +105,236 @@ type
                         Shift: TShiftState; X, Y: Integer);
 
     procedure SetCanSelect(const AValue: Boolean);
-    procedure SetHeaderBGColor(const AValue: TColor);
-    procedure SetValuesBGColor(const AValue: TColor);
-    procedure SetSelectedBGColor(const AValue: TColor);
 
-    procedure SetHeaderFont(const AValue: TFont);
-    procedure SetValuesFont(const AValue: TFont);
-    procedure SetSelectedFont(const AValue: TFont);
-
-    procedure HeaderClear;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
 
-    procedure Clear;
+    //procedure Clear;  //
 
-    procedure ValuesClear;
+    procedure ValuesClear; override;
 
-    procedure Draw;
+    procedure Draw; override;
 
-    procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
-                        const ACaptionAlignment: TAlignment = taCenter);
-    procedure SetColumn(const AColumnIndex: Integer; const AValues: TStrVector;
-                        const AValuesAlignment: TAlignment = taCenter);
-    procedure SetColumn(const ACaption: String; const AValues: TStrVector;
-                        const AValuesAlignment: TAlignment = taCenter);
-
-    function SelectIndex(const AIndex: Integer): Boolean;
-
-    property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
-    property HeaderBGColor: TColor read FHeaderBGColor write SetHeaderBGColor;
-    property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
-
-    property CanSelect: Boolean read FCanSelect write SetCanSelect;
+    function Select(const AIndex: Integer): Boolean;
     property SelectedIndex: Integer read FSelectedIndex;
     property IsSelected: Boolean read GetIsSelected;
+    property CanSelect: Boolean read FCanSelect write SetCanSelect;
+  end;
 
-    property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
-    property ValuesFont: TFont read FValuesFont write SetValuesFont;
-    property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
+  { TVSTCheckTable }
 
+  TVSTCheckTable = class(TVSTCustomTable)
+  private
+    FChecked: TBoolVector;
+    procedure DrawText(Sender: TBaseVirtualTree;
+                       TargetCanvas: TCanvas; Node: PVirtualNode;
+                       Column: TColumnIndex;
+                       const CellText: String; const CellRect: TRect;
+                       var DefaultDraw: Boolean);
+    procedure BeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+                              Node: PVirtualNode; Column: TColumnIndex;
+                              CellPaintMode: TVTCellPaintMode; CellRect: TRect;
+                              var ContentRect: TRect);
+    procedure MouseDown(Sender: TObject; Button: TMouseButton;
+                        Shift: TShiftState; X, Y: Integer);
+
+    procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
+      Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+    procedure Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
+      var NewState: TCheckState; var Allowed: Boolean);
+
+    procedure ReverseCheckState(Node: PVirtualNode);
+    procedure Check(Node: PVirtualNode);
+    procedure Uncheck(Node: PVirtualNode);
+
+  public
+    constructor Create(const ATree: TVirtualStringTree);
+    destructor  Destroy; override;
+    procedure ValuesClear; override;
+    procedure Draw; override;
+
+    procedure CheckAll(const AChecked: Boolean);
+    procedure Check(const AIndex: Integer);
+    procedure Uncheck(const AIndex: Integer);
   end;
 
 implementation
 
-{ TVSTTable }
+{ TVSTCheckTable }
 
-function TVSTTable.SelectIndex(const AIndex: Integer): Boolean;
+procedure TVSTCheckTable.DrawText(Sender: TBaseVirtualTree;
+  TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  const CellText: String; const CellRect: TRect; var DefaultDraw: Boolean);
+begin
+  if FChecked[Node^.Index] then
+    TargetCanvas.Font.Assign(FSelectedFont)
+  else
+    TargetCanvas.Font.Assign(FValuesFont);
+end;
+
+procedure TVSTCheckTable.BeforeCellPaint(Sender: TBaseVirtualTree;
+  TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
+var
+  BGColor: TColor;
+begin
+  BGColor:= FValuesBGColor;
+  if FChecked[Node^.Index] then
+    BGColor:= FSelectedBGColor;
+  VSTCellDraw(FBorderColor, BGColor, TargetCanvas, Column, CellRect);
+end;
+
+procedure TVSTCheckTable.ReverseCheckState(Node: PVirtualNode);
+begin
+  if Node^.CheckState=csUncheckedNormal then
+    Check(Node)
+  else if Node^.CheckState=csCheckedNormal then
+    Uncheck(Node);
+end;
+
+procedure TVSTCheckTable.Check(Node: PVirtualNode);
+begin
+  if (not Assigned(Node)) or VIsNil(FChecked) then Exit;
+  Node^.CheckState:= csCheckedNormal;
+  FChecked[Node^.Index]:= True;
+  //FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.Uncheck(Node: PVirtualNode);
+begin
+  if (not Assigned(Node)) or VIsNil(FChecked) then Exit;
+  Node^.CheckState:= csUncheckedNormal;
+  FChecked[Node^.Index]:= False;
+  //FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.CheckAll(const AChecked: Boolean);
 var
   Node: PVirtualNode;
 begin
-  Result:= False;
+  if MIsNil(FDataValues) then Exit;
+  if VIsNil(FDataValues[0]) then Exit;
   Node:= FTree.GetFirst;
   while Assigned(Node) do
   begin
-    if Node^.Index = AIndex then
-    begin
-      SelectNode(Node);
-      Result:= True;
-      break;
-    end;
+    if AChecked then
+      Check(Node)
+    else
+      Uncheck(Node);
     Node:= FTree.GetNext(Node);
+  end;
+  VReDim(FChecked, Length(FDataValues[0]), AChecked);
+  FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.Check(const AIndex: Integer);
+begin
+  Check(NodeFromIndex(AIndex));
+end;
+
+procedure TVSTCheckTable.Uncheck(const AIndex: Integer);
+begin
+  Uncheck(NodeFromIndex(AIndex));
+end;
+
+procedure TVSTCheckTable.MouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  Ind: Integer;
+  Node: PVirtualNode;
+begin
+  Node:= FTree.GetNodeAt(X, Y);
+  if not Assigned(Node) then Exit;
+  Ind:= Node^.Index;
+  if not IsIndexCorrect(Ind) then Exit;
+
+  if Button=mbRight then
+    CheckAll(False)
+  else if Button=mbLeft then
+    ReverseCheckState(Node);
+  FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.InitNode(Sender: TBaseVirtualTree; ParentNode,
+  Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+begin
+  Node^.CheckType:= ctCheckBox;
+  Node^.CheckState:= csUncheckedNormal;
+end;
+
+procedure TVSTCheckTable.Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  var NewState: TCheckState; var Allowed: Boolean);
+begin
+  if NewState=csUncheckedNormal then
+  begin
+    Check(Node);
+    NewState:= csCheckedNormal;
+  end
+  else if NewState=csCheckedNormal then
+  begin
+    Uncheck(Node);
+    NewState:= csUncheckedNormal;
   end;
 end;
 
-procedure TVSTTable.SelectNode(Node: PVirtualNode);
+
+
+constructor TVSTCheckTable.Create(const ATree: TVirtualStringTree);
 begin
-  FSelectedIndex:= Node^.Index;
-  FSelectedNode:= Node;
-  //SelectedNode^.CheckState:= csCheckedNormal;
-  FTree.FocusedNode:= FSelectedNode;
-  FTree.Refresh;
+  inherited Create(ATree);
+  FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
+  //FTree.Margin:= 0;
+  FTree.Indent:= 0;
+
+  FTree.OnDrawText:= @DrawText;
+  FTree.OnBeforeCellPaint:= @BeforeCellPaint;
+  FTree.OnMouseDown:= @MouseDown;
+  FTree.OnInitNode:= @InitNode;
+  FTree.OnChecking:= @Checking;
 end;
 
-function TVSTTable.GetIsSelected: Boolean;
+destructor TVSTCheckTable.Destroy;
 begin
-  Result:= FSelectedIndex>=0;
+  inherited Destroy;
 end;
 
-procedure TVSTTable.SetSelectedFont(const AValue: TFont);
+procedure TVSTCheckTable.ValuesClear;
 begin
-  if FSelectedFont=AValue then Exit;
-  FSelectedFont:= AValue;
-  FTree.Refresh;
+  FChecked:= nil;
+  inherited ValuesClear;
 end;
 
-procedure TVSTTable.SetHeaderFont(const AValue: TFont);
+procedure TVSTCheckTable.Draw;
 begin
-  if FHeaderFont=AValue then Exit;
-  FHeaderFont:= AValue;
-  FTree.Header.Font.Assign(FHeaderFont);
-  FTree.Refresh;
-end;
-
-procedure TVSTTable.SetValuesFont(const AValue: TFont);
-begin
-  if FValuesFont=AValue then Exit;
-  FValuesFont:= AValue;
-  FTree.Font.Assign(FValuesFont);
-  FTree.Refresh;
-end;
-
-
-procedure TVSTTable.UnselectNode;
-begin
-  //if SelectedIndex>=0 then
-  //  SelectedNode^.CheckState:= csUnCheckedNormal;
-  FSelectedIndex:= -1;
-  FSelectedNode:= nil;
+  inherited Draw;
+  if not VIsNil(FHeaderCaptions) then
+    FTree.Header.Columns[0].CheckType:= ctCheckBox;
+  CheckAll(False);
   FTree.Refresh;
 end;
 
 
 
-procedure TVSTTable.HeaderDrawQueryElements(Sender: TVTHeader;
+{ TVSTCustomTable }
+
+procedure TVSTCustomTable.HeaderClear;
+begin
+  FHeaderCaptions:= nil;
+  FColumnWidths:= nil;
+  FTree.Header.Columns.Clear;
+  FDataValues:= nil;
+end;
+
+procedure TVSTCustomTable.HeaderDrawQueryElements(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; var Elements: THeaderPaintElements);
 begin
   Elements:= [hpeBackground];
 end;
 
-procedure TVSTTable.AdvancedHeaderDraw(Sender: TVTHeader;
+procedure TVSTCustomTable.AdvancedHeaderDraw(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
 begin
-
   PaintInfo.TargetCanvas.Font.Assign(FHeaderFont);
   if VIsNil(FHeaderCaptions) then
     VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
@@ -192,7 +342,7 @@ begin
     VSTHeaderDraw(FBorderColor, FHeaderBGColor, PaintInfo, Elements);
 end;
 
-procedure TVSTTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+procedure TVSTCustomTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
   Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
 var
   i: Integer;
@@ -204,76 +354,74 @@ begin
     CellText:= FDataValues[Column, i];
 end;
 
-procedure TVSTTable.DrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
-  Node: PVirtualNode; Column: TColumnIndex; const CellText: String;
-  const CellRect: TRect; var DefaultDraw: Boolean);
+procedure TVSTCustomTable.SetHeaderBGColor(AValue: TColor);
 begin
-  if Node=FSelectedNode then
-    TargetCanvas.Font.Assign(FSelectedFont)
-  else
-    TargetCanvas.Font.Assign(FValuesFont)
+  if FHeaderBGColor=AValue then Exit;
+  FHeaderBGColor:=AValue;
+  FTree.Refresh;
 end;
 
-procedure TVSTTable.BeforeCellPaint(Sender: TBaseVirtualTree;
-  TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
-  CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
-var
-  BGColor: TColor;
+procedure TVSTCustomTable.SetHeaderFont(AValue: TFont);
 begin
-  BGColor:= FValuesBGColor;
-  if FSelectedNode=Node then
-    BGColor:= FSelectedBGColor;
-  VSTCellDraw(FBorderColor, BGColor, TargetCanvas, Column, CellRect);
+  FHeaderFont.Assign(AValue);
+  FTree.Header.Font.Assign(FHeaderFont);
+  FTree.Refresh;
 end;
 
-procedure TVSTTable.MouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
+procedure TVSTCustomTable.SetSelectedBGColor(AValue: TColor);
+begin
+  if FSelectedBGColor=AValue then Exit;
+  FSelectedBGColor:=AValue;
+  FTree.Refresh;
+end;
+
+procedure TVSTCustomTable.SetSelectedFont(AValue: TFont);
+begin
+  FSelectedFont.Assign(AValue);
+  FTree.Refresh;
+end;
+
+procedure TVSTCustomTable.SetValuesBGColor(AValue: TColor);
+begin
+  if FValuesBGColor=AValue then Exit;
+  FValuesBGColor:=AValue;
+  FTree.Refresh;
+end;
+
+procedure TVSTCustomTable.SetValuesFont(AValue: TFont);
+begin
+  FValuesFont.Assign(AValue);
+  FTree.Font.Assign(FValuesFont);
+  FTree.Refresh;
+end;
+
+function TVSTCustomTable.IsIndexCorrect(const AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if MIsNil(FDataValues) then Exit;
+  if VIsNil(FDataValues[0]) then Exit;
+  Result:= (AIndex>=0) and (AIndex<=High(FDataValues[0]));
+end;
+
+function TVSTCustomTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
 var
   Node: PVirtualNode;
 begin
-  if not FCanSelect then Exit;
-  if Button=mbRight then
-    UnselectNode;
-
-  if Button=mbLeft then
+  Result:= nil;
+  if not IsIndexCorrect(AIndex) then Exit;
+  Node:= FTree.GetFirst;
+  while Assigned(Node) do
   begin
-    Node:= FTree.GetNodeAt(X, Y);
-    if Assigned(Node) then
-      SelectNode(Node);
+    if Node^.Index = AIndex then
+    begin
+      Result:= Node;
+      break;
+    end;
+    Node:= FTree.GetNext(Node);
   end;
-
 end;
 
-procedure TVSTTable.SetCanSelect(const AValue: Boolean);
-begin
-  if FCanSelect=AValue then Exit;
-  if not AValue then
-    UnselectNode;
-  FCanSelect:= AValue;
-end;
-
-procedure TVSTTable.SetHeaderBGColor(const AValue: TColor);
-begin
-  if FHeaderBGColor=AValue then Exit;
-  FHeaderBGColor:= AValue;
-  FTree.Refresh;
-end;
-
-procedure TVSTTable.SetValuesBGColor(const AValue: TColor);
-begin
-  if FValuesBGColor=AValue then Exit;
-  FValuesBGColor:= AValue;
-  FTree.Refresh;
-end;
-
-procedure TVSTTable.SetSelectedBGColor(const AValue: TColor);
-begin
-  if FSelectedBGColor=AValue then Exit;
-  FSelectedBGColor:= AValue;
-  FTree.Refresh;
-end;
-
-constructor TVSTTable.Create(const ATree: TVirtualStringTree);
+constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree);
 begin
   FTree:= ATree;
   FHeaderFont:= TFont.Create;
@@ -295,63 +443,52 @@ begin
 
   FTree.DefaultNodeHeight:= 25;
   FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight + 1;
-  FTree.Margin:= 0;
-  FTree.Indent:= 0;
+
+  //FTree.Margin:= 0;
+  //FTree.Indent:= 0;
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions -
                                    [toShowTreeLines] +
                                    [toAlwaysHideSelection, toHideFocusRect];
   FTree.Header.Options:= FTree.Header.Options +
                          [hoOwnerDraw, hoVisible, hoAutoResize];
+
+
   FTree.OnHeaderDrawQueryElements:= @HeaderDrawQueryElements;
   FTree.OnAdvancedHeaderDraw:= @AdvancedHeaderDraw;
-
   FTree.OnGetText:= @GetText;
-  FTree.OnDrawText:= @DrawText;
-  FTree.OnBeforeCellPaint:= @BeforeCellPaint;
-  FTree.OnMouseDown:= @MouseDown;
+
 
 end;
 
-destructor TVSTTable.Destroy;
+destructor TVSTCustomTable.Destroy;
 begin
   FreeAndNil(FHeaderFont);
   FreeAndNil(FValuesFont);
   FreeAndNil(FSelectedFont);
   inherited Destroy;
+  inherited Destroy;
 end;
 
-procedure TVSTTable.HeaderClear;
-begin
-  FHeaderCaptions:= nil;
-  FColumnWidths:= nil;
-  FTree.Header.Columns.Clear;
-  FDataValues:= nil;
-end;
-
-procedure TVSTTable.ValuesClear;
-var
-  i: Integer;
-begin
-  for i:=0 to High(FDataValues) do
-    FDataValues[i]:= nil;
-  //FSelectedIndex:= -1;
-  //FSelectedNode:= nil;
-  UnselectNode;
-  FTree.Clear;
-end;
-
-procedure TVSTTable.Clear;
+procedure TVSTCustomTable.Clear;
 begin
   ValuesClear;
   HeaderClear;
 end;
 
-procedure TVSTTable.Draw;
+procedure TVSTCustomTable.ValuesClear;
+var
+  i: Integer;
+begin
+  for i:=0 to High(FDataValues) do
+    FDataValues[i]:= nil;
+  FTree.Clear;
+end;
+
+procedure TVSTCustomTable.Draw;
 var
   i, MaxLength: Integer;
 begin
-  UnselectNode;
   FTree.Clear;
   if VIsNil(FHeaderCaptions) then Exit;
 
@@ -365,11 +502,11 @@ begin
   for i:= 0 to High(FHeaderCaptions) do
     FTree.Header.Columns[i].Width:= FColumnWidths[i];
 
-  FTree.Refresh;
+
 end;
 
-procedure TVSTTable.AddColumn(const ACaption: String; const AWidth: Integer;
-  const ACaptionAlignment: TAlignment);
+procedure TVSTCustomTable.AddColumn(const ACaption: String;
+  const AWidth: Integer; const ACaptionAlignment: TAlignment);
 var
   Col: TVirtualTreeColumn;
 begin
@@ -382,16 +519,17 @@ begin
   Col.Margin:= 3;
   Col.Spacing:= 0;
   Col.Width:= AWidth;
+
 end;
 
-procedure TVSTTable.SetColumn(const AColumnIndex: Integer;
+procedure TVSTCustomTable.SetColumn(const AColumnIndex: Integer;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 begin
   FDataValues[AColumnIndex]:= VCut(AValues);
   FTree.Header.Columns[AColumnIndex].Alignment:= AValuesAlignment;
 end;
 
-procedure TVSTTable.SetColumn(const ACaption: String;
+procedure TVSTCustomTable.SetColumn(const ACaption: String;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 var
   ColumnIndex: Integer;
@@ -401,7 +539,134 @@ begin
     SetColumn(ColumnIndex, AValues, AValuesAlignment);
 end;
 
+{ TVSTTable }
 
+function TVSTTable.Select(const AIndex: Integer): Boolean;
+var
+  Node: PVirtualNode;
+begin
+  Node:= NodeFromIndex(AIndex);
+  if Assigned(Node) then Select(Node);
+
+  //Result:= False;
+  //Node:= FTree.GetFirst;
+  //while Assigned(Node) do
+  //begin
+  //  if Node^.Index = AIndex then
+  //  begin
+  //    Select(Node);
+  //    Result:= True;
+  //    break;
+  //  end;
+  //  Node:= FTree.GetNext(Node);
+  //end;
+end;
+
+procedure TVSTTable.Select(Node: PVirtualNode);
+begin
+  FSelectedIndex:= Node^.Index;
+  FSelectedNode:= Node;
+  FTree.FocusedNode:= FSelectedNode;
+  FTree.Refresh;
+end;
+
+function TVSTTable.GetIsSelected: Boolean;
+begin
+  Result:= FSelectedIndex>=0;
+end;
+
+procedure TVSTTable.UnselectNode;
+begin
+  FSelectedIndex:= -1;
+  FSelectedNode:= nil;
+  FTree.Refresh;
+end;
+
+procedure TVSTTable.DrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+  Node: PVirtualNode; Column: TColumnIndex; const CellText: String;
+  const CellRect: TRect; var DefaultDraw: Boolean);
+begin
+  if Node=FSelectedNode then
+    TargetCanvas.Font.Assign(FSelectedFont)
+  else
+    TargetCanvas.Font.Assign(FValuesFont);
+end;
+
+procedure TVSTTable.BeforeCellPaint(Sender: TBaseVirtualTree;
+  TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
+var
+  BGColor: TColor;
+begin
+  BGColor:= FValuesBGColor;
+  if FSelectedNode=Node then
+    BGColor:= FSelectedBGColor;
+  VSTCellDraw(FBorderColor, BGColor, TargetCanvas, Column, CellRect);
+end;
+
+procedure TVSTTable.MouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  Ind: Integer;
+  Node: PVirtualNode;
+begin
+  if not FCanSelect then Exit;
+
+  Node:= FTree.GetNodeAt(X, Y);
+  if not Assigned(Node) then Exit;
+  Ind:= Node^.Index;
+  if not IsIndexCorrect(Ind) then Exit;
+
+  if Button=mbRight then
+    UnselectNode
+  else if Button=mbLeft then
+    Select(Node);
+end;
+
+
+procedure TVSTTable.SetCanSelect(const AValue: Boolean);
+begin
+  if FCanSelect=AValue then Exit;
+  if not AValue then UnselectNode;
+  FCanSelect:=AValue;
+end;
+
+constructor TVSTTable.Create(const ATree: TVirtualStringTree);
+begin
+  inherited Create(ATree);
+
+  FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions - [toCheckSupport];
+
+
+
+  FTree.OnDrawText:= @DrawText;
+  FTree.OnBeforeCellPaint:= @BeforeCellPaint;
+  FTree.OnMouseDown:= @MouseDown;
+end;
+
+destructor TVSTTable.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TVSTTable.ValuesClear;
+begin
+  UnselectNode;
+  inherited ValuesClear;
+end;
+
+//procedure TVSTTable.Clear;   //
+//begin
+//  ValuesClear;
+//  HeaderClear;
+//end;
+
+procedure TVSTTable.Draw;
+begin
+  UnselectNode;
+  inherited Draw;
+  FTree.Refresh;
+end;
 
 
 
