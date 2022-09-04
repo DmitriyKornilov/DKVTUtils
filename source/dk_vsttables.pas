@@ -10,9 +10,9 @@ uses
 
 type
 
-  { TVSTCustomTable }
+  { TVSTCoreTable }
 
-  TVSTCustomTable = class(TObject)
+  TVSTCoreTable = class(TObject)
   protected
     FTree: TVirtualStringTree;
 
@@ -22,25 +22,13 @@ type
     FSelectedBGColor: TColor;
 
     FHeaderCaptions: TStrVector;
-    FDataValues: TStrMatrix;
     FColumnWidths: TIntVector;
 
     FHeaderFont: TFont;
     FValuesFont: TFont;
     FSelectedFont: TFont;
 
-
-
-    procedure HeaderClear;
-    procedure HeaderDrawQueryElements(Sender: TVTHeader;
-                            var PaintInfo: THeaderPaintInfo;
-                            var Elements: THeaderPaintElements);
-    procedure AdvancedHeaderDraw(Sender: TVTHeader;
-                            var PaintInfo: THeaderPaintInfo;
-                            const Elements: THeaderPaintElements);
-    procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
-                      Column: TColumnIndex; TextType: TVSTTextType;
-                      var CellText: String);
+    procedure HeaderClear; virtual;
 
     procedure SetHeaderBGColor(AValue: TColor);
     procedure SetHeaderFont(AValue: TFont);
@@ -48,6 +36,36 @@ type
     procedure SetSelectedFont(AValue: TFont);
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
+    procedure HeaderDrawQueryElements(Sender: TVTHeader;
+                            var PaintInfo: THeaderPaintInfo;
+                            var Elements: THeaderPaintElements);
+    procedure AdvancedHeaderDraw(Sender: TVTHeader;
+                            var PaintInfo: THeaderPaintInfo;
+                            const Elements: THeaderPaintElements);
+  public
+    constructor Create(const ATree: TVirtualStringTree);
+    destructor  Destroy; override;
+
+    property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
+    property HeaderBGColor: TColor read FHeaderBGColor write SetHeaderBGColor;
+    property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
+
+    property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
+    property ValuesFont: TFont read FValuesFont write SetValuesFont;
+    property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
+  end;
+
+  { TVSTCustomTable }
+
+  TVSTCustomTable = class(TVSTCoreTable)
+  protected
+    FDataValues: TStrMatrix;
+
+    procedure HeaderClear; override;
+
+    procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+                      Column: TColumnIndex; TextType: TVSTTextType;
+                      var CellText: String);
 
     function IsIndexCorrect(const AIndex: Integer): Boolean;
     function NodeFromIndex(const AIndex: Integer): PVirtualNode;
@@ -65,17 +83,6 @@ type
     procedure SetColumn(const ACaption: String; const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
 
-
-
-    property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
-    property HeaderBGColor: TColor read FHeaderBGColor write SetHeaderBGColor;
-    property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
-
-
-
-    property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
-    property ValuesFont: TFont read FValuesFont write SetValuesFont;
-    property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
   end;
 
 
@@ -109,8 +116,6 @@ type
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
-
-    //procedure Clear;  //
 
     procedure ValuesClear; override;
 
@@ -172,7 +177,158 @@ type
     property IsAllUnchecked: Boolean read GetIsAllUnchecked;
   end;
 
+  { TVST2LevelCustomTable }
+
+  TVST2LevelCustomTable = class(TVSTCoreTable)
+  protected
+    FLevel1DataValues: TStrVector;
+    FLevel2DataValues: TStrMatrix3D;
+
+    procedure HeaderClear; override;
+
+  public
+    constructor Create(const ATree: TVirtualStringTree);
+    destructor  Destroy; override;
+
+    procedure Clear;
+    procedure ValuesClear; virtual;
+  end;
+
 implementation
+
+{ TVST2LevelCustomTable }
+
+procedure TVST2LevelCustomTable.HeaderClear;
+begin
+  inherited HeaderClear;
+  FLevel2DataValues:= nil;
+end;
+
+constructor TVST2LevelCustomTable.Create(const ATree: TVirtualStringTree);
+begin
+  inherited Create(ATree);
+  Clear;
+end;
+
+destructor TVST2LevelCustomTable.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TVST2LevelCustomTable.Clear;
+begin
+  ValuesClear;
+  HeaderClear;
+end;
+
+procedure TVST2LevelCustomTable.ValuesClear;
+var
+  i: Integer;
+begin
+  FLevel1DataValues:= nil;
+  for i:=0 to High(FLevel2DataValues) do
+    FLevel2DataValues[i]:= nil;
+  FTree.Clear;
+end;
+
+{ TVSTCoreTable }
+
+procedure TVSTCoreTable.HeaderClear;
+begin
+  FHeaderCaptions:= nil;
+  FColumnWidths:= nil;
+  FTree.Header.Columns.Clear;
+end;
+
+procedure TVSTCoreTable.SetHeaderBGColor(AValue: TColor);
+begin
+  if FHeaderBGColor=AValue then Exit;
+  FHeaderBGColor:=AValue;
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetHeaderFont(AValue: TFont);
+begin
+  FHeaderFont.Assign(AValue);
+  FTree.Header.Font.Assign(FHeaderFont);
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetSelectedBGColor(AValue: TColor);
+begin
+  if FSelectedBGColor=AValue then Exit;
+  FSelectedBGColor:=AValue;
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetSelectedFont(AValue: TFont);
+begin
+  FSelectedFont.Assign(AValue);
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetValuesBGColor(AValue: TColor);
+begin
+  if FValuesBGColor=AValue then Exit;
+  FValuesBGColor:=AValue;
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetValuesFont(AValue: TFont);
+begin
+  FValuesFont.Assign(AValue);
+  FTree.Font.Assign(FValuesFont);
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.HeaderDrawQueryElements(Sender: TVTHeader;
+  var PaintInfo: THeaderPaintInfo; var Elements: THeaderPaintElements);
+begin
+  Elements:= [hpeBackground];
+end;
+
+procedure TVSTCoreTable.AdvancedHeaderDraw(Sender: TVTHeader;
+  var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
+begin
+  PaintInfo.TargetCanvas.Font.Assign(FHeaderFont);
+  if VIsNil(FHeaderCaptions) then
+    VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
+  else
+    VSTHeaderDraw(FBorderColor, FHeaderBGColor, PaintInfo, Elements);
+end;
+
+constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
+begin
+  FTree:= ATree;
+  FHeaderFont:= TFont.Create;
+  FValuesFont:= TFont.Create;
+  FSelectedFont:= TFont.Create;
+  FHeaderFont.Assign(FTree.Header.Font);
+  FValuesFont.Assign(FTree.Font);
+  FSelectedFont.Assign(FTree.Font);
+
+  FBorderColor:= clWindowText;
+  FValuesBGColor:= clWindow;
+  FHeaderBGColor:= FValuesBGColor;
+  FSelectedBGColor:= clHighlight;
+
+  FTree.Colors.GridLineColor:= FBorderColor;
+  FTree.Color:= FValuesBGColor;
+
+  FTree.DefaultNodeHeight:= 25;
+  FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight + 1;
+
+  FTree.OnHeaderDrawQueryElements:= @HeaderDrawQueryElements;
+  FTree.OnAdvancedHeaderDraw:= @AdvancedHeaderDraw;
+end;
+
+destructor TVSTCoreTable.Destroy;
+begin
+  FreeAndNil(FHeaderFont);
+  FreeAndNil(FValuesFont);
+  FreeAndNil(FSelectedFont);
+  inherited Destroy;
+end;
 
 { TVSTCheckTable }
 
@@ -361,26 +517,8 @@ end;
 
 procedure TVSTCustomTable.HeaderClear;
 begin
-  FHeaderCaptions:= nil;
-  FColumnWidths:= nil;
-  FTree.Header.Columns.Clear;
+  inherited HeaderClear;
   FDataValues:= nil;
-end;
-
-procedure TVSTCustomTable.HeaderDrawQueryElements(Sender: TVTHeader;
-  var PaintInfo: THeaderPaintInfo; var Elements: THeaderPaintElements);
-begin
-  Elements:= [hpeBackground];
-end;
-
-procedure TVSTCustomTable.AdvancedHeaderDraw(Sender: TVTHeader;
-  var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
-begin
-  PaintInfo.TargetCanvas.Font.Assign(FHeaderFont);
-  if VIsNil(FHeaderCaptions) then
-    VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
-  else
-    VSTHeaderDraw(FBorderColor, FHeaderBGColor, PaintInfo, Elements);
 end;
 
 procedure TVSTCustomTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
@@ -393,47 +531,6 @@ begin
   CellText:= EmptyStr;
   if not VIsNil(FDataValues[Column]) then
     CellText:= FDataValues[Column, i];
-end;
-
-procedure TVSTCustomTable.SetHeaderBGColor(AValue: TColor);
-begin
-  if FHeaderBGColor=AValue then Exit;
-  FHeaderBGColor:=AValue;
-  FTree.Refresh;
-end;
-
-procedure TVSTCustomTable.SetHeaderFont(AValue: TFont);
-begin
-  FHeaderFont.Assign(AValue);
-  FTree.Header.Font.Assign(FHeaderFont);
-  FTree.Refresh;
-end;
-
-procedure TVSTCustomTable.SetSelectedBGColor(AValue: TColor);
-begin
-  if FSelectedBGColor=AValue then Exit;
-  FSelectedBGColor:=AValue;
-  FTree.Refresh;
-end;
-
-procedure TVSTCustomTable.SetSelectedFont(AValue: TFont);
-begin
-  FSelectedFont.Assign(AValue);
-  FTree.Refresh;
-end;
-
-procedure TVSTCustomTable.SetValuesBGColor(AValue: TColor);
-begin
-  if FValuesBGColor=AValue then Exit;
-  FValuesBGColor:=AValue;
-  FTree.Refresh;
-end;
-
-procedure TVSTCustomTable.SetValuesFont(AValue: TFont);
-begin
-  FValuesFont.Assign(AValue);
-  FTree.Font.Assign(FValuesFont);
-  FTree.Refresh;
 end;
 
 function TVSTCustomTable.IsIndexCorrect(const AIndex: Integer): Boolean;
@@ -464,29 +561,8 @@ end;
 
 constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree);
 begin
-  FTree:= ATree;
-  FHeaderFont:= TFont.Create;
-  FValuesFont:= TFont.Create;
-  FSelectedFont:= TFont.Create;
-  FHeaderFont.Assign(FTree.Header.Font);
-  FValuesFont.Assign(FTree.Font);
-  FSelectedFont.Assign(FTree.Font);
-
+  inherited Create(ATree);
   Clear;
-
-  FBorderColor:= clWindowText;
-  FValuesBGColor:= clWindow;
-  FHeaderBGColor:= FValuesBGColor;
-  FSelectedBGColor:= clHighlight;
-
-  FTree.Colors.GridLineColor:= FBorderColor;
-  FTree.Color:= FValuesBGColor;
-
-  FTree.DefaultNodeHeight:= 25;
-  FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight + 1;
-
-  //FTree.Margin:= 0;
-  //FTree.Indent:= 0;
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions -
                                    [toShowTreeLines] +
@@ -495,8 +571,7 @@ begin
                          [hoOwnerDraw, hoVisible, hoAutoResize];
 
 
-  FTree.OnHeaderDrawQueryElements:= @HeaderDrawQueryElements;
-  FTree.OnAdvancedHeaderDraw:= @AdvancedHeaderDraw;
+
   FTree.OnGetText:= @GetText;
 
 
@@ -504,10 +579,6 @@ end;
 
 destructor TVSTCustomTable.Destroy;
 begin
-  FreeAndNil(FHeaderFont);
-  FreeAndNil(FValuesFont);
-  FreeAndNil(FSelectedFont);
-  inherited Destroy;
   inherited Destroy;
 end;
 
@@ -588,19 +659,6 @@ var
 begin
   Node:= NodeFromIndex(AIndex);
   if Assigned(Node) then Select(Node);
-
-  //Result:= False;
-  //Node:= FTree.GetFirst;
-  //while Assigned(Node) do
-  //begin
-  //  if Node^.Index = AIndex then
-  //  begin
-  //    Select(Node);
-  //    Result:= True;
-  //    break;
-  //  end;
-  //  Node:= FTree.GetNext(Node);
-  //end;
 end;
 
 procedure TVSTTable.Select(Node: PVirtualNode);
