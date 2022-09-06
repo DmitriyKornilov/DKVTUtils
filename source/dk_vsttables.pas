@@ -216,11 +216,38 @@ type
 
   TVSTCategoryRadioButtonTable = class(TVSTCategoryCustomTable)
   private
+    FSelectedIndex1, FSelectedIndex2: Integer;
+    FSelectedNode: PVirtualNode;
+    FCanSelect: Boolean;
+
+
     procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
       Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+    procedure MouseDown(Sender: TObject; Button: TMouseButton;
+                        Shift: TShiftState; X, Y: Integer);
+    procedure DrawText(Sender: TBaseVirtualTree;
+                       TargetCanvas: TCanvas; Node: PVirtualNode;
+                       Column: TColumnIndex;
+                       const CellText: String; const CellRect: TRect;
+                       var DefaultDraw: Boolean);
+
+    procedure SetCanSelect(AValue: Boolean);
+    procedure Select(Node: PVirtualNode);
+    procedure UnselectNode;
+    function GetIsSelected: Boolean;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
+
+    procedure Draw;
+
+    procedure ValuesClear; override;
+
+    procedure Select(const AIndex1, AIndex2: Integer);
+    property CanSelect: Boolean read FCanSelect write SetCanSelect;
+    property SelectedIndex1: Integer read FSelectedIndex1;
+    property SelectedIndex2: Integer read FSelectedIndex2;
+    property IsSelected: Boolean read GetIsSelected;
   end;
 
   { TVSTCategoryCheckTable }
@@ -279,15 +306,105 @@ begin
   //  Node^.CheckState:= csUncheckedNormal;
 end;
 
+function TVSTCategoryRadioButtonTable.GetIsSelected: Boolean;
+begin
+  Result:= (FSelectedIndex1>=0) and (FSelectedIndex2>=0);
+end;
+
+procedure TVSTCategoryRadioButtonTable.MouseDown(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  Ind1, Ind2: Integer;
+  Node: PVirtualNode;
+begin
+  if not FCanSelect then Exit;
+
+  Node:= FTree.GetNodeAt(X, Y);
+  if not Assigned(Node) then Exit;
+  if FTree.GetNodeLevel(Node)<>1 then Exit;
+
+  Ind1:= (Node^.Parent)^.Index;
+  Ind2:= Node^.Index;
+  if not IsIndexesCorrect(Ind1, Ind2) then Exit;
+
+  if Button=mbRight then
+    UnselectNode
+  else if Button=mbLeft then
+    Select(Node);
+
+end;
+
+procedure TVSTCategoryRadioButtonTable.DrawText(Sender: TBaseVirtualTree;
+  TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  const CellText: String; const CellRect: TRect; var DefaultDraw: Boolean);
+begin
+  if Node=FSelectedNode then
+    TargetCanvas.Font.Assign(FSelectedFont)
+  else
+    TargetCanvas.Font.Assign(FValuesFont);
+end;
+
+procedure TVSTCategoryRadioButtonTable.SetCanSelect(AValue: Boolean);
+begin
+  if FCanSelect=AValue then Exit;
+  if not AValue then UnselectNode;
+  FCanSelect:=AValue;
+end;
+
+procedure TVSTCategoryRadioButtonTable.Select(Node: PVirtualNode);
+begin
+  UnselectNode;
+  FSelectedIndex1:= (Node^.Parent)^.Index;
+  FSelectedIndex2:= Node^.Index;
+  FSelectedNode:= Node;
+  FTree.FocusedNode:= FSelectedNode;
+  FSelectedNode^.CheckState:= csCheckedNormal;
+  FTree.Refresh;
+end;
+
+procedure TVSTCategoryRadioButtonTable.UnselectNode;
+begin
+  if not IsSelected then Exit;
+  if Assigned(FSelectedNode) then
+    FSelectedNode^.CheckState:= csUncheckedNormal;
+  FSelectedIndex1:= -1;
+  FSelectedIndex2:= -1;
+  FSelectedNode:= nil;
+  FTree.Refresh;
+end;
+
 constructor TVSTCategoryRadioButtonTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
   FTree.OnInitNode:= @InitNode;
+  FTree.OnMouseDown:= @MouseDown;
+  FTree.OnDrawText:= @DrawText;
 end;
 
 destructor TVSTCategoryRadioButtonTable.Destroy;
 begin
   inherited Destroy;
+end;
+
+procedure TVSTCategoryRadioButtonTable.Draw;
+begin
+  UnselectNode;
+  inherited Draw;
+  FTree.Refresh;
+end;
+
+procedure TVSTCategoryRadioButtonTable.ValuesClear;
+begin
+  UnselectNode;
+  inherited ValuesClear;
+end;
+
+procedure TVSTCategoryRadioButtonTable.Select(const AIndex1, AIndex2: Integer);
+var
+  Node: PVirtualNode;
+begin
+  Node:= NodeFromIndexes(AIndex1, AIndex2);
+  if Assigned(Node) then Select(Node);
 end;
 
 { TVSTCategoryCustomTable }
@@ -326,7 +443,14 @@ end;
 
 function TVSTCategoryCustomTable.IsIndexesCorrect(const AIndex1,AIndex2: Integer): Boolean;
 begin
-  Result:= Assigned(NodeFromIndexes(AIndex1, AIndex2));
+  Result:= False;
+  if MIsNil(FDataValues) then Exit;
+  if MIsNil(FDataValues[0]) then Exit;
+  if (AIndex1>=0) and (AIndex1<=High(FDataValues[0])) then
+  begin
+    if VIsNil(FDataValues[0,AIndex1]) then Exit;
+    Result:= (AIndex2>=0) and (AIndex2<=High(FDataValues[0,AIndex1]))
+  end;
 end;
 
 function TVSTCategoryCustomTable.NodeFromIndexes(const AIndex1, AIndex2: Integer): PVirtualNode;
@@ -334,6 +458,7 @@ var
   Node: PVirtualNode;
 begin
   Result:= nil;
+  if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
   Node:= FTree.GetFirst;
   while Assigned(Node) do
   begin
@@ -430,6 +555,8 @@ begin
     for i:= 0 to High(FDataValues[0]) do
       VAppend(FCategoryValues, 'Категория' + IntToStr(i+1));
   end;
+
+  {ВЫРОВНЯТЬ МАТРИЦЫ!!!!!!}
   //MaxLength:= MMaxLength(FDataValues);
   //for i:= 0 to High(FDataValues) do
   //  if Length(FDataValues[i])<MaxLength then
@@ -979,11 +1106,7 @@ end;
 constructor TVSTTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
-
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions - [toCheckSupport];
-
-
-
   FTree.OnDrawText:= @DrawText;
   FTree.OnBeforeCellPaint:= @BeforeCellPaint;
   FTree.OnMouseDown:= @MouseDown;
