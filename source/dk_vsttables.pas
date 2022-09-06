@@ -14,12 +14,14 @@ type
 
   TVSTCoreTable = class(TObject)
   private
-    procedure SetDrawBorders(AValue: Boolean);
+
   protected
     FTree: TVirtualStringTree;
 
-    FBorderColor: TColor;
-    FDrawBorders: Boolean;
+    FGridLinesColor: TColor;
+    FGridLinesVisible: Boolean;
+
+
 
     FCanSelect: Boolean;
     FSelectedNode: PVirtualNode;
@@ -39,8 +41,9 @@ type
     procedure HeaderClear; virtual;
     procedure SetHeaderVisible(AValue: Boolean);
     procedure SetColumnWidths;
-    procedure SetDrawBorders;
-    procedure SetBorderColor(AValue: TColor);
+    procedure SetGridLinesVisible(AValue: Boolean);
+    //procedure SetTreeLinesVisible(AValue: Boolean);
+    procedure SetGridLinesColor(AValue: TColor);
     procedure SetHeaderBGColor(AValue: TColor);
     procedure SetHeaderFont(AValue: TFont);
     procedure SetSelectedBGColor(AValue: TColor);
@@ -59,16 +62,20 @@ type
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
 
-    property DrawBorders: Boolean read FDrawBorders write SetDrawBorders;
 
-    property BorderColor: TColor read FBorderColor write SetBorderColor;
+
+
+    property GridLinesColor: TColor read FGridLinesColor write SetGridLinesColor;
     property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
     property HeaderBGColor: TColor read FHeaderBGColor write SetHeaderBGColor;
     property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
 
     property CanSelect: Boolean read FCanSelect write SetCanSelect;
 
+    property GridLinesVisible: Boolean write SetGridLinesVisible;
     property HeaderVisible: Boolean write SetHeaderVisible;
+
+
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
@@ -199,6 +206,7 @@ type
     FCategoryValues: TStrVector;
     FDataValues: TStrMatrix3D;
 
+    procedure SetTreeLinesVisible(AValue: Boolean);
     procedure HeaderClear; override;
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; TextType: TVSTTextType;
@@ -223,6 +231,8 @@ type
     procedure Draw;
     procedure ExpandAll(const AExpand: Boolean);
     procedure Show(const AIndex1, AIndex2: Integer);
+
+    property TreeLinesVisible: Boolean write SetTreeLinesVisible;
   end;
 
   { TVSTCategoryRadioButtonTable }
@@ -368,8 +378,8 @@ begin
   BGColor:= FValuesBGColor;
   if FSelectedNode=Node then
     BGColor:= FSelectedBGColor;
-  if FDrawBorders then
-    VSTCellDraw(FBorderColor, BGColor, TargetCanvas, Column, CellRect)
+  if FGridLinesVisible then
+    VSTCellDraw(FGridLinesColor, BGColor, TargetCanvas, Column, CellRect)
   else
     VSTCellDraw(BGColor, BGColor, TargetCanvas, Column, CellRect);
 end;
@@ -438,6 +448,14 @@ begin
 end;
 
 { TVSTCategoryCustomTable }
+
+procedure TVSTCategoryCustomTable.SetTreeLinesVisible(AValue: Boolean);
+begin
+  if Avalue then
+    FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions + [toShowTreeLines]
+  else
+    FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
+end;
 
 procedure TVSTCategoryCustomTable.HeaderClear;
 begin
@@ -508,7 +526,10 @@ constructor TVSTCategoryCustomTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
   Clear;
+  FCanSelect:= True;
+  FSelectedBGColor:= FTree.Color;
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
+  FTree.TreeOptions.AutoOptions:= FTree.TreeOptions.AutoOptions + [toAutoSpanColumns];
   FTree.LineStyle:= lsSolid;
   FTree.OnGetText:= @GetText;
 end;
@@ -632,19 +653,21 @@ begin
     FTree.Header.Options:= FTree.Header.Options - [hoVisible];
 end;
 
-procedure TVSTCoreTable.SetBorderColor(AValue: TColor);
+procedure TVSTCoreTable.SetGridLinesColor(AValue: TColor);
 begin
-  if FBorderColor=AValue then Exit;
-  FBorderColor:=AValue;
+  if FGridLinesColor=AValue then Exit;
+  FGridLinesColor:=AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetDrawBorders(AValue: Boolean);
+procedure TVSTCoreTable.SetGridLinesVisible(AValue: Boolean);
 begin
-  if FDrawBorders=AValue then Exit;
-  FDrawBorders:=AValue;
+  if FGridLinesVisible=AValue then Exit;
+  FGridLinesVisible:=AValue;
   FTree.Refresh;
 end;
+
+
 
 procedure TVSTCoreTable.SetCanSelect(AValue: Boolean);
 begin
@@ -668,10 +691,7 @@ begin
     FTree.Header.Columns[i].Width:= FColumnWidths[i];
 end;
 
-procedure TVSTCoreTable.SetDrawBorders;
-begin
 
-end;
 
 procedure TVSTCoreTable.SetHeaderBGColor(AValue: TColor);
 begin
@@ -729,8 +749,8 @@ begin
   if VIsNil(FHeaderCaptions) then
     VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
   else begin
-    if FDrawBorders then
-      VSTHeaderDraw(FBorderColor, FHeaderBGColor, PaintInfo, Elements)
+    if FGridLinesVisible then
+      VSTHeaderDraw(FGridLinesColor, FHeaderBGColor, PaintInfo, Elements)
     else
       VSTHeaderDraw(FHeaderBGColor, FHeaderBGColor, PaintInfo, Elements);
   end;
@@ -746,13 +766,13 @@ begin
   FValuesFont.Assign(FTree.Font);
   FSelectedFont.Assign(FTree.Font);
 
-  FDrawBorders:= True;
-  FBorderColor:= clWindowText;
+  FGridLinesVisible:= True;
+  FGridLinesColor:= clWindowText;
   FValuesBGColor:= clWindow;
   FHeaderBGColor:= FValuesBGColor;
   FSelectedBGColor:= clHighlight;
 
-  FTree.Colors.GridLineColor:= FBorderColor;
+  FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
 
   FTree.DefaultNodeHeight:= 25;
@@ -798,8 +818,8 @@ begin
   BGColor:= FValuesBGColor;
   if FChecked[Node^.Index] then
     BGColor:= FSelectedBGColor;
-  if FDrawBorders then
-    VSTCellDraw(FBorderColor, BGColor, TargetCanvas, Column, CellRect)
+  if FGridLinesVisible then
+    VSTCellDraw(FGridLinesColor, BGColor, TargetCanvas, Column, CellRect)
   else
     VSTCellDraw(BGColor, BGColor, TargetCanvas, Column, CellRect);
 end;
@@ -1139,8 +1159,8 @@ begin
   BGColor:= FValuesBGColor;
   if FSelectedNode=Node then
     BGColor:= FSelectedBGColor;
-  if FDrawBorders then
-    VSTCellDraw(FBorderColor, BGColor, TargetCanvas, Column, CellRect)
+  if FGridLinesVisible then
+    VSTCellDraw(FGridLinesColor, BGColor, TargetCanvas, Column, CellRect)
   else
     VSTCellDraw(BGColor, BGColor, TargetCanvas, Column, CellRect);
 end;
