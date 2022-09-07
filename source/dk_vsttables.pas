@@ -20,6 +20,7 @@ type
     FGridLinesVisible: Boolean;
 
     FCanSelect: Boolean;
+    FCanRightMouseButtonUnselect: Boolean;
 
     FValuesBGColor: TColor;
     FHeaderBGColor: TColor;
@@ -31,6 +32,11 @@ type
     FHeaderFont: TFont;
     FValuesFont: TFont;
     FSelectedFont: TFont;
+
+
+
+    function NodeFromIndex(const AIndex: Integer): PVirtualNode;
+    function NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
 
     procedure SetCanSelect(AValue: Boolean); virtual;
     procedure HeaderClear; virtual;
@@ -77,14 +83,15 @@ type
     property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
 
     property CanSelect: Boolean read FCanSelect write SetCanSelect;
+    property CanRightMouseButtonUnselect: Boolean read FCanRightMouseButtonUnselect write FCanRightMouseButtonUnselect;
 
     property GridLinesVisible: Boolean write SetGridLinesVisible;
     property HeaderVisible: Boolean write SetHeaderVisible;
 
-
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
+
   end;
 
   { TVSTCustomTable }
@@ -104,7 +111,6 @@ type
                       var CellText: String);
 
     function IsIndexCorrect(const AIndex: Integer): Boolean;
-    function NodeFromIndex(const AIndex: Integer): PVirtualNode;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -155,7 +161,7 @@ type
   { TVSTCheckTable }
 
   TVSTCheckTable = class(TVSTCustomTable)
-  private
+  protected
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         Shift: TShiftState; X, Y: Integer);
     procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
@@ -163,18 +169,20 @@ type
     procedure Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
       var NewState: TCheckState; var Allowed: Boolean);
 
-    procedure ReverseCheckState(Node: PVirtualNode);
-
     function GetIsAllChecked: Boolean;
     function GetIsAllUnchecked: Boolean;
+
+    procedure SetCanSelect(AValue: Boolean); override;
 
     procedure SetChecked(AIndex: Integer; AValue: Boolean);
     function GetChecked(AIndex: Integer): Boolean;
 
+    procedure CheckNode(Node: PVirtualNode; const AChecked: Boolean);
     procedure Check(Node: PVirtualNode);
     procedure Check(const AIndex: Integer);
     procedure Uncheck(Node: PVirtualNode);
     procedure Uncheck(const AIndex: Integer);
+    procedure ReverseCheckState(Node: PVirtualNode);
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -202,7 +210,6 @@ type
                       Column: TColumnIndex; TextType: TVSTTextType;
                       var CellText: String);
     function IsIndexesCorrect(const AIndex1, AIndex2: Integer): Boolean;
-    function NodeFromIndexes(const AIndex1, AIndex2: Integer): PVirtualNode;
 
     function IsNodeSelected(Node: PVirtualNode): Boolean; override;
     function GetIsSelected: Boolean;
@@ -258,17 +265,57 @@ type
   { TVSTCategoryCheckTable }
 
   TVSTCategoryCheckTable = class(TVSTCategoryCustomTable)
-  private
+  protected
+
     procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
       Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+    procedure MouseDown(Sender: TObject; Button: TMouseButton;
+                        Shift: TShiftState; X, Y: Integer);
+    procedure Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
+      var NewState: TCheckState; var Allowed: Boolean);
+
+    procedure SetCanSelect(AValue: Boolean); override;
+
+    procedure SetChecked(AIndex1, AIndex2: Integer; AValue: Boolean);
+    function GetChecked(AIndex1, AIndex2: Integer): Boolean;
+
+    procedure CheckNode(Node: PVirtualNode; const AChecked: Boolean);
+    procedure Check(Node: PVirtualNode);
+    procedure Check(const AIndex1, AIndex2: Integer);
+    procedure Uncheck(Node: PVirtualNode);
+    procedure Uncheck(const AIndex1, AIndex2: Integer);
+    procedure ReverseCheckState(Node: PVirtualNode);
+    procedure ReverseCategoryCheckState(Node: PVirtualNode);
+
+    function IsAllCheckedCategory(Node: PVirtualNode): Boolean;
+    function IsAllUncheckedCategory(Node: PVirtualNode): Boolean;
+    function IsHasCheckedCategory(Node: PVirtualNode): Boolean;
+    function IsHasCheckedCategory(const AIndex: Integer): Boolean;
+    procedure CheckCategory(Node: PVirtualNode; const AChecked: Boolean);
+    procedure SetCategoryCheckState(Node: PVirtualNode);
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
+
+    function IsAllCheckedCategory(const AIndex: Integer): Boolean;
+    function IsAllUncheckedCategory(const AIndex: Integer): Boolean;
+
+    procedure CheckAll(const AChecked: Boolean);
+    procedure CheckCategory(const AIndex: Integer; const AChecked: Boolean);
+
+    property Checked[AIndex1, AIndex2: Integer]: Boolean read GetChecked write SetChecked;
   end;
 
 implementation
 
 { TVSTCategoryCheckTable }
+
+function TVSTCategoryCheckTable.GetChecked(AIndex1, AIndex2: Integer): Boolean;
+begin
+  Result:= False;
+  if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
+  Result:= FSelected[AIndex1, AIndex2];
+end;
 
 procedure TVSTCategoryCheckTable.InitNode(Sender: TBaseVirtualTree; ParentNode,
   Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
@@ -285,15 +332,267 @@ begin
   end;
 end;
 
+procedure TVSTCategoryCheckTable.MouseDown(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  Node: PVirtualNode;
+begin
+  Node:= FTree.GetNodeAt(X, Y);
+  if not Assigned(Node) then Exit;
+
+  if Button=mbRight then
+  begin
+    if FCanRightMouseButtonUnselect then
+      CheckAll(False);
+  end
+  else if Button=mbLeft then
+  begin
+    if FTree.GetNodeLevel(Node)=1 then
+    begin
+      ReverseCheckState(Node);
+      SetCategoryCheckState(Node^.Parent);
+    end
+    else if FTree.GetNodeLevel(Node)=0 then
+      ReverseCategoryCheckState(Node);
+  end;
+
+  FTree.Refresh;
+end;
+
+procedure TVSTCategoryCheckTable.Checking(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; var NewState: TCheckState; var Allowed: Boolean);
+begin
+  if FTree.GetNodeLevel(Node) = 1 then
+  begin
+    if NewState=csUncheckedNormal then
+    begin
+      Check(Node);
+      NewState:= csCheckedNormal;
+    end
+    else if NewState=csCheckedNormal then
+    begin
+      Uncheck(Node);
+      NewState:= csUncheckedNormal;
+    end;
+    SetCategoryCheckState(Node^.Parent);
+  end
+  else if FTree.GetNodeLevel(Node) = 0 then
+  begin
+    if IsAllCheckedCategory(Node) then
+    begin
+      CheckCategory(Node, True);
+      NewState:= csCheckedNormal;
+    end
+    else if IsAllUncheckedCategory(Node) then
+    begin
+      CheckCategory(Node, False);
+      NewState:= csUncheckedNormal;
+    end
+    else begin
+      if NewState=csUncheckedNormal then
+      begin
+        CheckCategory(Node, True);
+        NewState:= csCheckedNormal;
+      end
+      else if NewState=csCheckedNormal then
+      begin
+        CheckCategory(Node, False);
+        NewState:= csUncheckedNormal;
+      end;
+    end;
+  end;
+end;
+
+procedure TVSTCategoryCheckTable.SetCanSelect(AValue: Boolean);
+begin
+  if not AValue then CheckAll(False);
+  inherited SetCanSelect(AValue);
+end;
+
+procedure TVSTCategoryCheckTable.CheckNode(Node: PVirtualNode; const AChecked: Boolean);
+begin
+  if (not Assigned(Node)) or MIsNil(FSelected) then Exit;
+  if VIsNil(FSelected[(Node^.Parent)^.Index]) then Exit;
+  if AChecked then
+    Node^.CheckState:= csCheckedNormal
+  else
+    Node^.CheckState:= csUnCheckedNormal;
+  FSelected[(Node^.Parent)^.Index, Node^.Index]:= AChecked;
+  FTree.Refresh;
+end;
+
+procedure TVSTCategoryCheckTable.Check(Node: PVirtualNode);
+begin
+  CheckNode(Node, True);
+end;
+
+procedure TVSTCategoryCheckTable.Check(const AIndex1, AIndex2: Integer);
+begin
+  Check(NodeFromIndex(AIndex1, AIndex2));
+end;
+
+procedure TVSTCategoryCheckTable.SetChecked(AIndex1, AIndex2: Integer;
+  AValue: Boolean);
+begin
+  if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
+  if Avalue then
+    Check(AIndex1, AIndex2)
+  else
+    Uncheck(AIndex1, AIndex2);
+end;
+
+procedure TVSTCategoryCheckTable.Uncheck(Node: PVirtualNode);
+begin
+  CheckNode(Node, False);
+end;
+
+procedure TVSTCategoryCheckTable.Uncheck(const AIndex1, AIndex2: Integer);
+begin
+  Uncheck(NodeFromIndex(AIndex1, AIndex2));
+end;
+
+procedure TVSTCategoryCheckTable.ReverseCheckState(Node: PVirtualNode);
+begin
+  if Node^.CheckState=csUncheckedNormal then
+    Check(Node)
+  else if Node^.CheckState=csCheckedNormal then
+    Uncheck(Node);
+end;
+
+procedure TVSTCategoryCheckTable.ReverseCategoryCheckState(Node: PVirtualNode);
+begin
+  if Node^.CheckState=csUncheckedNormal then
+    CheckCategory(Node, True)
+  else if Node^.CheckState=csCheckedNormal then
+    CheckCategory(Node, False);
+end;
+
+
+
+
+
 constructor TVSTCategoryCheckTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
+  FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
+  FTree.OnChecking:= @Checking;
 end;
 
 destructor TVSTCategoryCheckTable.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TVSTCategoryCheckTable.IsHasCheckedCategory(Node: PVirtualNode): Boolean;
+begin
+  Result:= False;
+  if not Assigned(Node) then Exit;
+  if not FTree.GetNodeLevel(Node)=0 then Exit;
+  Result:= IsHasCheckedCategory(Node^.Index);
+end;
+
+function TVSTCategoryCheckTable.IsHasCheckedCategory(const AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if MIsNil(FSelected) then Exit;
+  if VIsNil(FSelected[AIndex]) then Exit;
+  Result:= VIsTrue(FSelected[AIndex]);
+end;
+
+function TVSTCategoryCheckTable.IsAllCheckedCategory(const AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if MIsNil(FSelected) then Exit;
+  if VIsNil(FSelected[AIndex]) then Exit;
+  Result:= VIsAllTrue(FSelected[AIndex]);
+end;
+
+function TVSTCategoryCheckTable.IsAllUncheckedCategory(const AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if MIsNil(FSelected) then Exit;
+  if VIsNil(FSelected[AIndex]) then Exit;
+  Result:= VIsAllFalse(FSelected[AIndex]);
+end;
+
+function TVSTCategoryCheckTable.IsAllCheckedCategory(Node: PVirtualNode): Boolean;
+var
+  i: Integer;
+begin
+  Result:= False;
+  if not Assigned(Node) then Exit;
+  if not FTree.GetNodeLevel(Node)=0 then Exit;
+  Result:= IsAllCheckedCategory(Node^.Index);
+end;
+
+function TVSTCategoryCheckTable.IsAllUncheckedCategory(Node: PVirtualNode): Boolean;
+var
+  i: Integer;
+begin
+  Result:= False;
+  if not Assigned(Node) then Exit;
+  if not FTree.GetNodeLevel(Node)=0 then Exit;
+  Result:= IsAllUncheckedCategory(Node^.Index);
+end;
+
+
+
+procedure TVSTCategoryCheckTable.CheckAll(const AChecked: Boolean);
+var
+  Node: PVirtualNode;
+begin
+  Node:= FTree.GetFirst;
+  while Assigned(Node) do
+  begin
+    if FTree.GetNodeLevel(Node)=0 then
+      CheckCategory(Node, AChecked);
+    Node:= FTree.GetNext(Node);
+  end;
+  FTree.Refresh;
+end;
+
+procedure TVSTCategoryCheckTable.CheckCategory(Node: PVirtualNode;
+  const AChecked: Boolean);
+var
+  Ind, i: Integer;
+begin
+  if not Assigned(Node) then Exit;
+  if FTree.GetNodeLevel(Node)<>0 then Exit;
+  Ind:= Node^.Index;
+  if MIsNil(FSelected) then Exit;
+  if VIsNil(FSelected[Ind]) then Exit;
+  for i:= 0 to High(FSelected[Ind]) do
+  begin
+    if AChecked then
+    begin
+      Check(Ind, i);
+      Node^.CheckState:= csCheckedNormal
+    end
+    else begin
+      Uncheck(Ind, i);
+      Node^.CheckState:= csUnCheckedNormal;
+    end;
+  end;
+end;
+
+procedure TVSTCategoryCheckTable.SetCategoryCheckState(Node: PVirtualNode);
+begin
+  if IsAllCheckedCategory(Node) then
+   Node^.CheckState:= csCheckedNormal
+  else if IsAllUncheckedCategory(Node) then
+    Node^.CheckState:= csUncheckedNormal
+  else if IsHasCheckedCategory(Node) then
+    Node^.CheckState:= csMixedNormal;
+end;
+
+procedure TVSTCategoryCheckTable.CheckCategory(const AIndex: Integer; const AChecked: Boolean);
+var
+  Node: PVirtualNode;
+begin
+  Node:= NodeFromIndex(AIndex);
+  if not Assigned(Node) then Exit;
+  CheckCategory(Node, AChecked);
 end;
 
 { TVSTCategoryRadioButtonTable }
@@ -311,23 +610,23 @@ end;
 procedure TVSTCategoryRadioButtonTable.MouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
-  Ind1, Ind2: Integer;
   Node: PVirtualNode;
 begin
   if not FCanSelect then Exit;
 
   Node:= FTree.GetNodeAt(X, Y);
   if not Assigned(Node) then Exit;
-  if FTree.GetNodeLevel(Node)<>1 then Exit;
-
-  Ind1:= (Node^.Parent)^.Index;
-  Ind2:= Node^.Index;
-  if not IsIndexesCorrect(Ind1, Ind2) then Exit;
 
   if Button=mbRight then
-    UnselectNode
+  begin
+    if FCanRightMouseButtonUnselect then
+      UnselectNode;
+  end
   else if Button=mbLeft then
-    SelectNode(Node);
+  begin
+    if FTree.GetNodeLevel(Node)=1 then
+      SelectNode(Node);
+  end;
 end;
 
 procedure TVSTCategoryRadioButtonTable.SetCanSelect(AValue: Boolean);
@@ -395,7 +694,7 @@ procedure TVSTCategoryRadioButtonTable.Select(const AIndex1, AIndex2: Integer);
 var
   Node: PVirtualNode;
 begin
-  Node:= NodeFromIndexes(AIndex1, AIndex2);
+  Node:= NodeFromIndex(AIndex1, AIndex2);
   if Assigned(Node) then SelectNode(Node);
 end;
 
@@ -458,26 +757,26 @@ begin
   end;
 end;
 
-function TVSTCategoryCustomTable.NodeFromIndexes(const AIndex1, AIndex2: Integer): PVirtualNode;
-var
-  Node: PVirtualNode;
-begin
-  Result:= nil;
-  if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
-  Node:= FTree.GetFirst;
-  while Assigned(Node) do
-  begin
-    if FTree.GetNodeLevel(Node)=1 then
-    begin
-      if ((Node^.Parent)^.Index=AIndex1) and (Node^.Index = AIndex2) then
-      begin
-        Result:= Node;
-        break;
-      end;
-    end;
-    Node:= FTree.GetNext(Node);
-  end;
-end;
+//function TVSTCategoryCustomTable.NodeFromIndexes(const AIndex1, AIndex2: Integer): PVirtualNode;
+//var
+//  Node: PVirtualNode;
+//begin
+//  Result:= nil;
+//  if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
+//  Node:= FTree.GetFirst;
+//  while Assigned(Node) do
+//  begin
+//    if FTree.GetNodeLevel(Node)=1 then
+//    begin
+//      if ((Node^.Parent)^.Index=AIndex1) and (Node^.Index = AIndex2) then
+//      begin
+//        Result:= Node;
+//        break;
+//      end;
+//    end;
+//    Node:= FTree.GetNext(Node);
+//  end;
+//end;
 
 function TVSTCategoryCustomTable.IsNodeSelected(Node: PVirtualNode): Boolean;
 begin
@@ -619,7 +918,7 @@ var
   Node: PVirtualNode;
 begin
   if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
-  Node:= NodeFromIndexes(AIndex1, AIndex2);
+  Node:= NodeFromIndex(AIndex1, AIndex2);
   FTree.Expanded[Node^.Parent]:= True;
   FTree.FocusedNode:= Node;
 end;
@@ -646,6 +945,46 @@ begin
   if FGridLinesVisible=AValue then Exit;
   FGridLinesVisible:=AValue;
   FTree.Refresh;
+end;
+
+function TVSTCoreTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
+var
+  Node: PVirtualNode;
+begin
+  Result:= nil;
+  Node:= FTree.GetFirst;
+  while Assigned(Node) do
+  begin
+    if FTree.GetNodeLevel(Node)=0 then
+    begin
+      if (Node^.Index = AIndex) then
+      begin
+        Result:= Node;
+        break;
+      end;
+    end;
+    Node:= FTree.GetNext(Node);
+  end;
+end;
+
+function TVSTCoreTable.NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
+var
+  Node: PVirtualNode;
+begin
+  Result:= nil;
+  Node:= FTree.GetFirst;
+  while Assigned(Node) do
+  begin
+    if (FTree.GetNodeLevel(Node)=1) then
+    begin
+      if ((Node^.Parent)^.Index=AIndex1) and (Node^.Index = AIndex2) then
+      begin
+        Result:= Node;
+        break;
+      end;
+    end;
+    Node:= FTree.GetNext(Node);
+  end;
 end;
 
 procedure TVSTCoreTable.SetCanSelect(AValue: Boolean);
@@ -767,8 +1106,7 @@ begin
 
   Clear;
 
-  //FTree.Margin:= 0;
-  FTree.Indent:= 0;
+  FTree.Margin:= 0;
 
   FHeaderFont:= TFont.Create;
   FValuesFont:= TFont.Create;
@@ -782,6 +1120,8 @@ begin
   FValuesBGColor:= clWindow;
   FHeaderBGColor:= FValuesBGColor;
   FSelectedBGColor:= clHighlight;
+
+  FCanRightMouseButtonUnselect:= True;
 
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
@@ -842,6 +1182,12 @@ begin
   Result:= VIsAllFalse(FSelected);
 end;
 
+procedure TVSTCheckTable.SetCanSelect(AValue: Boolean);
+begin
+  if not AValue then CheckAll(False);
+  inherited SetCanSelect(AValue);
+end;
+
 function TVSTCheckTable.GetIsAllChecked: Boolean;
 begin
   Result:= VIsAllTrue(FSelected);
@@ -871,20 +1217,25 @@ begin
     Uncheck(Node);
 end;
 
-procedure TVSTCheckTable.Check(Node: PVirtualNode);
+procedure TVSTCheckTable.CheckNode(Node: PVirtualNode; const AChecked: Boolean);
 begin
   if (not Assigned(Node)) or VIsNil(FSelected) then Exit;
-  Node^.CheckState:= csCheckedNormal;
-  FSelected[Node^.Index]:= True;
+  if AChecked then
+    Node^.CheckState:= csCheckedNormal
+  else
+    Node^.CheckState:= csUnCheckedNormal;
+  FSelected[Node^.Index]:= AChecked;
   FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.Check(Node: PVirtualNode);
+begin
+  CheckNode(Node, True);
 end;
 
 procedure TVSTCheckTable.Uncheck(Node: PVirtualNode);
 begin
-  if (not Assigned(Node)) or VIsNil(FSelected) then Exit;
-  Node^.CheckState:= csUncheckedNormal;
-  FSelected[Node^.Index]:= False;
-  FTree.Refresh;
+  CheckNode(Node, False);
 end;
 
 procedure TVSTCheckTable.CheckAll(const AChecked: Boolean);
@@ -900,9 +1251,9 @@ begin
       Check(Node)
     else
       Uncheck(Node);
+    FSelected[Node^.Index]:= AChecked;
     Node:= FTree.GetNext(Node);
   end;
-  VReDim(FSelected, Length(FDataValues[0]), AChecked);
   FTree.Refresh;
 end;
 
@@ -928,7 +1279,10 @@ begin
   if not IsIndexCorrect(Ind) then Exit;
 
   if Button=mbRight then
-    CheckAll(False)
+  begin
+    if FCanRightMouseButtonUnselect then
+      CheckAll(False)
+  end
   else if Button=mbLeft then
     ReverseCheckState(Node);
   FTree.Refresh;
@@ -960,8 +1314,7 @@ constructor TVSTCheckTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
-  //FTree.Margin:= 0;
-  //FTree.Indent:= 0;
+
 
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
@@ -1028,27 +1381,28 @@ begin
   Result:= (AIndex>=0) and (AIndex<=High(FDataValues[0]));
 end;
 
-function TVSTCustomTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
-var
-  Node: PVirtualNode;
-begin
-  Result:= nil;
-  if not IsIndexCorrect(AIndex) then Exit;
-  Node:= FTree.GetFirst;
-  while Assigned(Node) do
-  begin
-    if Node^.Index = AIndex then
-    begin
-      Result:= Node;
-      break;
-    end;
-    Node:= FTree.GetNext(Node);
-  end;
-end;
+//function TVSTCustomTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
+//var
+//  Node: PVirtualNode;
+//begin
+//  Result:= nil;
+//  if not IsIndexCorrect(AIndex) then Exit;
+//  Node:= FTree.GetFirst;
+//  while Assigned(Node) do
+//  begin
+//    if Node^.Index = AIndex then
+//    begin
+//      Result:= Node;
+//      break;
+//    end;
+//    Node:= FTree.GetNext(Node);
+//  end;
+//end;
 
 constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
+  FTree.Indent:= 0;
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
   FTree.OnGetText:= @GetText;
 end;
@@ -1166,7 +1520,10 @@ begin
   if not IsIndexCorrect(Ind) then Exit;
 
   if Button=mbRight then
-    UnselectNode
+  begin
+    if FCanRightMouseButtonUnselect then
+      UnselectNode;
+  end
   else if Button=mbLeft then
     SelectNode(Node);
 end;
