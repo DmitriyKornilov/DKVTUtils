@@ -249,7 +249,8 @@ type
     procedure SetCanSelect(AValue: Boolean); override;
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
-
+    function GetSelectedIndex1: Integer;
+    function GetSelectedIndex2: Integer;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -260,6 +261,8 @@ type
 
     procedure Select(const AIndex1, AIndex2: Integer);
     procedure SelectedIndexes(out AIndex1, AIndex2: Integer);
+    property SelectedIndex1: Integer read GetSelectedIndex1;
+    property SelectedIndex2: Integer read GetSelectedIndex2;
   end;
 
   { TVSTCategoryCheckTable }
@@ -597,6 +600,22 @@ end;
 
 { TVSTCategoryRadioButtonTable }
 
+function TVSTCategoryRadioButtonTable.GetSelectedIndex1: Integer;
+var
+  Ind1, Ind2: Integer;
+begin
+  SelectedIndexes(Ind1, Ind2);
+  Result:= Ind1;
+end;
+
+function TVSTCategoryRadioButtonTable.GetSelectedIndex2: Integer;
+var
+  Ind1, Ind2: Integer;
+begin
+  SelectedIndexes(Ind1, Ind2);
+  Result:= Ind2;
+end;
+
 procedure TVSTCategoryRadioButtonTable.InitNode(Sender: TBaseVirtualTree;
   ParentNode, Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
 begin
@@ -757,27 +776,6 @@ begin
   end;
 end;
 
-//function TVSTCategoryCustomTable.NodeFromIndexes(const AIndex1, AIndex2: Integer): PVirtualNode;
-//var
-//  Node: PVirtualNode;
-//begin
-//  Result:= nil;
-//  if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
-//  Node:= FTree.GetFirst;
-//  while Assigned(Node) do
-//  begin
-//    if FTree.GetNodeLevel(Node)=1 then
-//    begin
-//      if ((Node^.Parent)^.Index=AIndex1) and (Node^.Index = AIndex2) then
-//      begin
-//        Result:= Node;
-//        break;
-//      end;
-//    end;
-//    Node:= FTree.GetNext(Node);
-//  end;
-//end;
-
 function TVSTCategoryCustomTable.IsNodeSelected(Node: PVirtualNode): Boolean;
 begin
   Result:= inherited IsNodeSelected(Node);
@@ -799,6 +797,7 @@ constructor TVSTCategoryCustomTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
   Clear;
+  FTree.Margin:= 0;
   FCanSelect:= True;
   FSelectedBGColor:= FTree.Color;
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
@@ -919,6 +918,7 @@ var
 begin
   if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
   Node:= NodeFromIndex(AIndex1, AIndex2);
+  if not Assigned(Node) then Exit;
   FTree.Expanded[Node^.Parent]:= True;
   FTree.FocusedNode:= Node;
 end;
@@ -1105,8 +1105,6 @@ begin
   FTree:= ATree;
 
   Clear;
-
-  FTree.Margin:= 0;
 
   FHeaderFont:= TFont.Create;
   FValuesFont:= TFont.Create;
@@ -1542,6 +1540,7 @@ end;
 constructor TVSTTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
+  FTree.Margin:= 0;
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions - [toCheckSupport];
   FTree.OnMouseDown:= @MouseDown;
 end;
