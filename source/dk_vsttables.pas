@@ -33,8 +33,6 @@ type
     FValuesFont: TFont;
     FSelectedFont: TFont;
 
-
-
     function NodeFromIndex(const AIndex: Integer): PVirtualNode;
     function NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
 
@@ -1075,14 +1073,17 @@ procedure TVSTCoreTable.BeforeCellPaint(Sender: TBaseVirtualTree;
   CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
 var
   BGColor: TColor;
+  NeedTopLine: Boolean;
 begin
   BGColor:= FValuesBGColor;
   if IsNodeSelected(Node) then
     BGColor:= FSelectedBGColor;
+  NeedTopLine:= (Sender.GetNodeLevel(Node)=0) and (Node^.Index=0) and
+                (not (hoVisible in FTree.Header.Options));
   if FGridLinesVisible then
-    VSTCellDraw(FGridLinesColor, BGColor, TargetCanvas, Column, CellRect)
+    VSTCellDraw(FGridLinesColor, BGColor, TargetCanvas, Column, CellRect, NeedTopLine)
   else
-    VSTCellDraw(BGColor, BGColor, TargetCanvas, Column, CellRect);
+    VSTCellDraw(BGColor, BGColor, TargetCanvas, Column, CellRect, NeedTopLine);
 end;
 
 procedure TVSTCoreTable.DrawText(Sender: TBaseVirtualTree;

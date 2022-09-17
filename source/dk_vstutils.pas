@@ -25,7 +25,7 @@ uses
                          const Elements: THeaderPaintElements);
   procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
                        TargetCanvas: TCanvas; Column: TColumnIndex;
-                       CellRect: TRect);
+                       CellRect: TRect; const ANeedTopLine: Boolean = False);
 
 
 implementation
@@ -136,7 +136,8 @@ begin
 end;
 
 procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
-  TargetCanvas: TCanvas; Column: TColumnIndex; CellRect: TRect);
+  TargetCanvas: TCanvas; Column: TColumnIndex; CellRect: TRect;
+  const ANeedTopLine: Boolean = False);
 var
   R: TRect;
 begin
@@ -148,7 +149,11 @@ begin
 
   if R.Left>0 then
     R.Left:= R.Left-1;
-  R.Top:= R.Top-1;
+  if not ANeedTopLine then
+    R.Top:= R.Top-1;
+
+
+
 
   TargetCanvas.Rectangle(R);
 
