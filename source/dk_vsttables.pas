@@ -123,6 +123,8 @@ type
     procedure SetColumn(const ACaption: String; const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
 
+    procedure Show(const AIndex: Integer);
+
     property IsSelected: Boolean read GetIsSelected;
 
   end;
@@ -1411,7 +1413,7 @@ begin
   if VIsNil(FHeaderCaptions) then Exit;
 
   MaxLength:= MMaxLength(FDataValues);
-  VReDim(FSelected, MaxLength, False);
+  VDim(FSelected, MaxLength, False);
   for i:= 0 to High(FDataValues) do
     if Length(FDataValues[i])<MaxLength then
       VReDim(FDataValues[i], MaxLength, EmptyStr);
@@ -1442,6 +1444,16 @@ begin
   ColumnIndex:= VIndexOf(FHeaderCaptions, ACaption);
   if ColumnIndex>=0 then
     SetColumn(ColumnIndex, AValues, AValuesAlignment);
+end;
+
+procedure TVSTCustomTable.Show(const AIndex: Integer);
+var
+  Node: PVirtualNode;
+begin
+  if not IsIndexCorrect(AIndex) then Exit;
+  Node:= NodeFromIndex(AIndex);
+  if not Assigned(Node) then Exit;
+  FTree.FocusedNode:= Node;
 end;
 
 { TVSTTable }
@@ -1541,9 +1553,9 @@ end;
 
 procedure TVSTTable.Draw;
 begin
-  UnselectNode;
+  //UnselectNode;
   inherited Draw;
-  FTree.Refresh;
+  //FTree.Refresh;
 end;
 
 
