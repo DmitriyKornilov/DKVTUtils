@@ -5,7 +5,7 @@ unit DK_VSTTables;
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, VirtualTrees,
+  Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees,
   DK_VSTUtils, DK_Vector, DK_Matrix;
 
 type
@@ -49,20 +49,20 @@ type
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
-                            var PaintInfo: THeaderPaintInfo;
+                            var {%H-}PaintInfo: THeaderPaintInfo;
                             var Elements: THeaderPaintElements);
     procedure AdvancedHeaderDraw(Sender: TVTHeader;
                             var PaintInfo: THeaderPaintInfo;
                             const Elements: THeaderPaintElements);
     procedure BeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
                               Node: PVirtualNode; Column: TColumnIndex;
-                              CellPaintMode: TVTCellPaintMode; CellRect: TRect;
-                              var ContentRect: TRect);
+                              {%H-}CellPaintMode: TVTCellPaintMode; CellRect: TRect;
+                              var {%H-}ContentRect: TRect);
     procedure DrawText(Sender: TBaseVirtualTree;
                        TargetCanvas: TCanvas; Node: PVirtualNode;
-                       Column: TColumnIndex;
-                       const CellText: String; const CellRect: TRect;
-                       var DefaultDraw: Boolean);
+                       {%H-}Column: TColumnIndex;
+                       const {%H-}CellText: String; const {%H-}CellRect: TRect;
+                       var {%H-}DefaultDraw: Boolean);
 
     function IsNodeSelected(Node: PVirtualNode): Boolean; virtual;
   public
@@ -105,7 +105,7 @@ type
     procedure HeaderClear; override;
 
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
-                      Column: TColumnIndex; TextType: TVSTTextType;
+                      Column: TColumnIndex; {%H-}TextType: TVSTTextType;
                       var CellText: String);
 
     function IsIndexCorrect(const AIndex: Integer): Boolean;
@@ -138,10 +138,13 @@ type
     procedure UnselectNode;
 
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
-                        Shift: TShiftState; X, Y: Integer);
+                        {%H-}Shift: TShiftState; X, Y: Integer);
+    procedure KeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
 
     procedure SetCanSelect(AValue: Boolean); override;
     function GetSelectedIndex: Integer;
+
+    procedure MoveSelection(const ADeltaIndex: Integer);
 
   public
     constructor Create(const ATree: TVirtualStringTree);
@@ -151,6 +154,7 @@ type
 
     procedure Draw; override;
 
+    procedure UnSelect;
     procedure Select(const AIndex: Integer);
     procedure Select(const AColumnIndex: Integer; const AValue: String);
     procedure Select(const AColumnCaption, AValue: String);
@@ -163,11 +167,11 @@ type
   TVSTCheckTable = class(TVSTCustomTable)
   protected
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
-                        Shift: TShiftState; X, Y: Integer);
-    procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
-      Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+                        {%H-}Shift: TShiftState; X, Y: Integer);
+    procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
+      Node: PVirtualNode; var {%H-}InitialStates: TVirtualNodeInitStates);
     procedure Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
-      var NewState: TCheckState; var Allowed: Boolean);
+      var NewState: TCheckState; var {%H-}Allowed: Boolean);
 
     function GetIsAllChecked: Boolean;
     function GetIsAllUnchecked: Boolean;
@@ -207,7 +211,7 @@ type
     procedure SetTreeLinesVisible(AValue: Boolean);
     procedure HeaderClear; override;
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
-                      Column: TColumnIndex; TextType: TVSTTextType;
+                      Column: TColumnIndex; {%H-}TextType: TVSTTextType;
                       var CellText: String);
     function IsIndexesCorrect(const AIndex1, AIndex2: Integer): Boolean;
 
@@ -241,10 +245,10 @@ type
   TVSTCategoryRadioButtonTable = class(TVSTCategoryCustomTable)
   protected
 
-    procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
-      Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+    procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
+      Node: PVirtualNode; var {%H-}InitialStates: TVirtualNodeInitStates);
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
-                        Shift: TShiftState; X, Y: Integer);
+                        {%H-}Shift: TShiftState; X, Y: Integer);
 
     procedure SetCanSelect(AValue: Boolean); override;
     procedure SelectNode(Node: PVirtualNode);
@@ -270,12 +274,12 @@ type
   TVSTCategoryCheckTable = class(TVSTCategoryCustomTable)
   protected
 
-    procedure InitNode(Sender: TBaseVirtualTree; ParentNode,
-      Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+    procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
+      Node: PVirtualNode; var {%H-}InitialStates: TVirtualNodeInitStates);
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
-                        Shift: TShiftState; X, Y: Integer);
+                        {%H-}Shift: TShiftState; X, Y: Integer);
     procedure Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
-      var NewState: TCheckState; var Allowed: Boolean);
+      var NewState: TCheckState; var {%H-}Allowed: Boolean);
 
     procedure SetCanSelect(AValue: Boolean); override;
 
@@ -520,8 +524,6 @@ begin
 end;
 
 function TVSTCategoryCheckTable.IsAllCheckedCategory(Node: PVirtualNode): Boolean;
-var
-  i: Integer;
 begin
   Result:= False;
   if not Assigned(Node) then Exit;
@@ -530,8 +532,6 @@ begin
 end;
 
 function TVSTCategoryCheckTable.IsAllUncheckedCategory(Node: PVirtualNode): Boolean;
-var
-  i: Integer;
 begin
   Result:= False;
   if not Assigned(Node) then Exit;
@@ -859,7 +859,7 @@ end;
 
 procedure TVSTCategoryCustomTable.Draw;
 var
-  ColumnIndex, CategoryIndex,j, MaxLength: Integer;
+  ColumnIndex, CategoryIndex, MaxLength: Integer;
 begin
   FTree.Clear;
   if VIsNil(FHeaderCaptions) then Exit;
@@ -1521,6 +1521,27 @@ begin
     SelectNode(Node);
 end;
 
+procedure TVSTTable.MoveSelection(const ADeltaIndex: Integer);
+var
+  Ind: Integer;
+begin
+  if (not IsSelected) or (ADeltaIndex=0) then Exit;
+
+  Ind:= SelectedIndex+ADeltaIndex;
+  if not IsIndexCorrect(Ind) then Exit;
+
+  Select(Ind);
+
+end;
+
+procedure TVSTTable.KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key=VK_UP then
+    MoveSelection(-1)
+  else if Key=VK_DOWN then
+    MoveSelection(1);
+end;
+
 procedure TVSTTable.SetCanSelect(AValue: Boolean);
 begin
   if not AValue then UnselectNode;
@@ -1538,6 +1559,7 @@ begin
   FTree.Margin:= 0;
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions - [toCheckSupport];
   FTree.OnMouseDown:= @MouseDown;
+  FTree.OnKeyDown:= @KeyDown;
 end;
 
 destructor TVSTTable.Destroy;
@@ -1556,6 +1578,12 @@ begin
   //UnselectNode;
   inherited Draw;
   //FTree.Refresh;
+end;
+
+procedure TVSTTable.UnSelect;
+begin
+  if IsSelected then
+    UnselectNode;
 end;
 
 
