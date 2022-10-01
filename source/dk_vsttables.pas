@@ -1380,24 +1380,6 @@ begin
   Result:= (AIndex>=0) and (AIndex<=High(FDataValues[0]));
 end;
 
-//function TVSTCustomTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
-//var
-//  Node: PVirtualNode;
-//begin
-//  Result:= nil;
-//  if not IsIndexCorrect(AIndex) then Exit;
-//  Node:= FTree.GetFirst;
-//  while Assigned(Node) do
-//  begin
-//    if Node^.Index = AIndex then
-//    begin
-//      Result:= Node;
-//      break;
-//    end;
-//    Node:= FTree.GetNext(Node);
-//  end;
-//end;
-
 constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
