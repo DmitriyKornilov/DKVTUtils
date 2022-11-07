@@ -180,6 +180,7 @@ type
 
     procedure SetChecked(AIndex: Integer; AValue: Boolean);
     function GetChecked(AIndex: Integer): Boolean;
+    function GetSelected: TBoolVector;
 
     procedure CheckNode(Node: PVirtualNode; const AChecked: Boolean);
     procedure Check(Node: PVirtualNode);
@@ -198,6 +199,7 @@ type
     property Checked[AIndex: Integer]: Boolean read GetChecked write SetChecked;
     property IsAllChecked: Boolean read GetIsAllChecked;
     property IsAllUnchecked: Boolean read GetIsAllUnchecked;
+    property Selected: TBoolVector read GetSelected;
   end;
 
   { TVSTCategoryCustomTable }
@@ -1266,6 +1268,11 @@ end;
 procedure TVSTCheckTable.Uncheck(const AIndex: Integer);
 begin
   Uncheck(NodeFromIndex(AIndex));
+end;
+
+function TVSTCheckTable.GetSelected: TBoolVector;
+begin
+  Result:= VCut(FSelected);
 end;
 
 procedure TVSTCheckTable.MouseDown(Sender: TObject; Button: TMouseButton;
