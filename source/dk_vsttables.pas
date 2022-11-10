@@ -5,8 +5,8 @@ unit DK_VSTTables;
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees,
-  DK_VSTUtils, DK_Vector, DK_Matrix;
+  Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls,
+  DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils;
 
 type
 
@@ -15,6 +15,8 @@ type
   TVSTCoreTable = class(TObject)
   protected
     FTree: TVirtualStringTree;
+
+    FAutosizeColumnIndex: Integer; //-2 last clolumn, -1 none
 
     FGridLinesColor: TColor;
     FGridLinesVisible: Boolean;
@@ -64,7 +66,10 @@ type
                        const {%H-}CellText: String; const {%H-}CellRect: TRect;
                        var {%H-}DefaultDraw: Boolean);
 
-    function IsNodeSelected(Node: PVirtualNode): Boolean; virtual;
+    function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; virtual;
+
+    function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; virtual;
+    function CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex): TFont; virtual;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -74,6 +79,9 @@ type
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); virtual;
+
+    procedure AutosizeColumnEnable(const AColumnIndex: Integer);
+    procedure AutosizeColumnDisable;
 
     property GridLinesColor: TColor read FGridLinesColor write SetGridLinesColor;
     property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
@@ -92,6 +100,77 @@ type
 
   end;
 
+  { TVSTEdit }
+
+  TVSTEdit = class (TVSTCoreTable)
+  protected
+    FDataValues: TStrMatrix;
+    FSelectedRowIndex, FSelectedColIndex: Integer;
+    FTitleColumnIndex: Integer;
+
+    FRowTitlesFont: TFont;
+    FRowTitlesBGColor: TColor;
+
+    procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex);
+    procedure UnselectCell;
+
+    procedure HeaderClear; override;
+
+    function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
+    function GetIsSelected: Boolean;
+
+    procedure SetRowTitlesBGColor(AValue: TColor);
+    procedure SetRowTitlesFont(AValue: TFont);
+    procedure SetRowTitlesColumnVisible(AValue: Boolean);
+
+    function GetIsRowTitlesColumnExists: Boolean;
+
+    function CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor; override;
+    function CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont; override;
+
+    procedure MoveSelectionVertical(const ADirection {1 down, -1 up}: Integer);
+    procedure MoveSelectionHorizontal(const ADirection {1 right, -1 left}: Integer);
+
+    procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+                      Column: TColumnIndex; {%H-}TextType: TVSTTextType;
+                      var CellText: String);
+    procedure NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
+    procedure MouseDown(Sender: TObject; Button: TMouseButton;
+                        {%H-}Shift: TShiftState; {%H-}X, {%H-}Y: Integer);
+    procedure KeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
+    procedure UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
+  public
+    constructor Create(const ATree: TVirtualStringTree);
+    destructor  Destroy; override;
+
+    procedure ValuesClear; override;
+    procedure Draw; //virtual;
+
+    procedure AddRowTitlesColumn(const ACaption: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter);
+    procedure SetRowTitlesColumn(const AValues: TStrVector;
+                        const AValuesAlignment: TAlignment = taCenter);
+
+    procedure AddValuesColumn(const ACaption: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AValuesAlignment: TAlignment = taCenter);
+
+    procedure UnSelect;
+    procedure Select(const ARowIndex, AColIndex: Integer);
+    procedure Select(const ARowIndex: Integer; const AColumnCaption: String);
+    procedure Select(const ARowTitle, AColumnCaption: String);
+
+    property RowTitlesFont: TFont read FRowTitlesFont write SetRowTitlesFont;
+    property RowTitlesBGColor: TColor read FRowTitlesBGColor write SetRowTitlesBGColor;
+
+    property IsRowTitlesColumnExists: Boolean read GetIsRowTitlesColumnExists;
+    property RowTitlesColumnVisible: Boolean write SetRowTitlesColumnVisible;
+
+    property IsSelected: Boolean read GetIsSelected;
+    property SelectedRowIndex: Integer read FSelectedRowIndex;
+    property SelectedColIndex: Integer read FSelectedColIndex;
+  end;
+
   { TVSTCustomTable }
 
   TVSTCustomTable = class(TVSTCoreTable)
@@ -100,7 +179,7 @@ type
     FSelected: TBoolVector;
 
     function GetIsSelected: Boolean;
-    function IsNodeSelected(Node: PVirtualNode): Boolean; override;
+    function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
 
     procedure HeaderClear; override;
 
@@ -217,7 +296,7 @@ type
                       var CellText: String);
     function IsIndexesCorrect(const AIndex1, AIndex2: Integer): Boolean;
 
-    function IsNodeSelected(Node: PVirtualNode): Boolean; override;
+    function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
     function GetIsSelected: Boolean;
   public
     constructor Create(const ATree: TVirtualStringTree);
@@ -316,6 +395,292 @@ type
   end;
 
 implementation
+
+{ TVSTEdit }
+
+
+
+function TVSTEdit.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
+begin
+  Result:= inherited IsCellSelected(Node, Column);
+  if not Result then Exit;
+  Result:= (Node^.Index=FSelectedRowIndex) and (Column=FSelectedColIndex);
+end;
+
+procedure TVSTEdit.SetRowTitlesBGColor(AValue: TColor);
+begin
+  if FRowTitlesBGColor=AValue then Exit;
+  FRowTitlesBGColor:=AValue;
+  FTree.Refresh;
+end;
+
+procedure TVSTEdit.SetRowTitlesFont(AValue: TFont);
+begin
+  FRowTitlesFont.Assign(AValue);
+  FTree.Refresh;
+end;
+
+procedure TVSTEdit.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
+var
+  i: Integer;
+begin
+  if High(FDataValues)<Column then Exit;
+  i:= Node^.Index;
+  CellText:= EmptyStr;
+  if not VIsNil(FDataValues[Column]) then
+    CellText:= FDataValues[Column, i];
+end;
+
+procedure TVSTEdit.Select(const ARowIndex, AColIndex: Integer);
+var
+  Node: PVirtualNode;
+begin
+  Node:= NodeFromIndex(ARowIndex);
+  if not Assigned(Node) then Exit;
+  if not ((AColIndex<>FTitleColumnIndex) and
+          (AColIndex>=0) and (AColIndex<=High(FHeaderCaptions))) then Exit;
+  SelectCell(Node, AColIndex);
+end;
+
+procedure TVSTEdit.Select(const ARowIndex: Integer; const AColumnCaption: String);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeadercaptions, AColumnCaption);
+  if (ColIndex<0) or (ColIndex=FTitleColumnIndex) then Exit;
+  Select(ARowIndex, ColIndex);
+end;
+
+procedure TVSTEdit.Select(const ARowTitle, AColumnCaption: String);
+var
+  RowIndex: Integer;
+begin
+  if not IsRowTitlesColumnExists then Exit;
+  RowIndex:= VIndexOf(FDataValues[FTitleColumnIndex], ARowTitle);
+  if RowIndex<0 then Exit;
+  Select(RowIndex, AColumnCaption);
+end;
+
+procedure TVSTEdit.SelectCell(Node: PVirtualNode; Column: TColumnIndex);
+begin
+  if Column<>FTitleColumnIndex then
+  begin
+    UnselectCell;
+    FSelectedRowIndex:= Node^.Index;
+    FSelectedColIndex:= Column;
+    FTree.FocusedNode:= Node;
+  end;
+  FTree.Refresh;
+end;
+
+procedure TVSTEdit.UnselectCell;
+begin
+  if not IsSelected then Exit;
+  FSelectedRowIndex:= -1;
+  FSelectedColIndex:= -1;
+  FTree.Refresh;
+end;
+
+procedure TVSTEdit.NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
+begin
+  SelectCell(HitInfo.HitNode, HitInfo.HitColumn);
+end;
+
+procedure TVSTEdit.MouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  if Button=mbRight then
+  begin
+    if FCanRightMouseButtonUnselect then
+      UnselectCell;
+  end
+end;
+
+procedure TVSTEdit.KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if not IsSelected then Exit;
+  case Key of
+   VK_DOWN, VK_RETURN: MoveSelectionVertical(1);
+   VK_UP:   MoveSelectionVertical(-1);
+   VK_RIGHT: MoveSelectionHorizontal(1);
+   VK_LEFT: MoveSelectionHorizontal(-1);
+   //VK_0..VK_9, VK_NUMPAD0..VK_NUMPAD9
+  end;
+
+end;
+
+procedure TVSTEdit.UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
+begin
+  if not IsSelected then Exit;
+  if SPos('1234567890', UTF8Key)=0 then Exit;
+  FDataValues[FSelectedColIndex, FSelectedRowIndex]:=
+      FDataValues[FSelectedColIndex, FSelectedRowIndex] + UTF8Key;
+  FTree.Refresh;
+end;
+
+constructor TVSTEdit.Create(const ATree: TVirtualStringTree);
+begin
+  inherited Create(ATree);
+  FTree.Indent:= 0;
+  FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
+  FTree.OnGetText:= @GetText;
+  FTree.OnNodeClick:= @NodeClick;
+  FTree.OnMouseDown:= @MouseDown;
+  FTree.OnKeyDown:= @KeyDown;
+  FTree.OnUTF8KeyPress:= @UTF8KeyPress;
+
+  FRowTitlesFont:= TFont.Create;
+  FRowTitlesFont.Assign(FTree.Font);
+  FRowTitlesBGColor:= clWindow;
+
+  FTitleColumnIndex:= -1;
+  FSelectedRowIndex:= -1;
+  FSelectedColIndex:= -1;
+
+
+end;
+
+destructor TVSTEdit.Destroy;
+begin
+  FreeAndNil(FRowTitlesFont);
+  inherited Destroy;
+end;
+
+function TVSTEdit.GetIsRowTitlesColumnExists: Boolean;
+begin
+  Result:= FTitleColumnIndex>=0;
+end;
+
+function TVSTEdit.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
+begin
+  if Column=FTitleColumnIndex then
+    Result:= FRowTitlesBGColor
+  else
+    Result:= inherited CellBGColor(Node, Column);
+end;
+
+function TVSTEdit.CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont;
+begin
+  if Column=FTitleColumnIndex then
+    Result:= FRowTitlesFont
+  else
+    Result:= inherited CellFont(Node, Column);
+end;
+
+procedure TVSTEdit.MoveSelectionVertical(const ADirection: Integer);
+var
+  NewRowIndex: Integer;
+begin
+  if not IsSelected then Exit;
+  NewRowIndex:= FSelectedRowIndex + ADirection;
+  if (NewRowIndex<0) or (NewRowIndex>High(FDataValues[FTitleColumnIndex])) then Exit;
+  FSelectedRowIndex:= NewRowIndex;
+  FTree.Refresh;
+end;
+
+procedure TVSTEdit.MoveSelectionHorizontal(const ADirection: Integer);
+var
+  NewColIndex: Integer;
+begin
+  if not IsSelected then Exit;
+  NewColIndex:= FSelectedColIndex;
+  repeat
+    NewColIndex:= NewColIndex + ADirection;
+  until NewColIndex<>FTitleColumnIndex;
+  if (NewColIndex<0) or (NewColIndex>High(FHeaderCaptions)) then Exit;
+  FSelectedColIndex:= NewColIndex;
+  FTree.Refresh;
+end;
+
+procedure TVSTEdit.SetRowTitlesColumnVisible(AValue: Boolean);
+begin
+  if not IsRowTitlesColumnExists then Exit;
+  if AValue then
+    FTree.Header.Columns[FTitleColumnIndex].Options:=
+      FTree.Header.Columns[FTitleColumnIndex].Options + [coVisible]
+  else
+    FTree.Header.Columns[FTitleColumnIndex].Options:=
+      FTree.Header.Columns[FTitleColumnIndex].Options - [coVisible];
+  FTree.Refresh;
+end;
+
+function TVSTEdit.GetIsSelected: Boolean;
+begin
+  Result:= (FSelectedRowIndex>=0) and (FSelectedColIndex>=0);
+end;
+
+
+
+procedure TVSTEdit.HeaderClear;
+begin
+  inherited HeaderClear;
+  FDataValues:= nil;
+  FTitleColumnIndex:= -1;
+end;
+
+procedure TVSTEdit.ValuesClear;
+var
+  i: Integer;
+begin
+  FSelectedRowIndex:= -1;
+  FSelectedColIndex:= -1;
+  for i:=0 to High(FDataValues) do
+    FDataValues[i]:= nil;
+  inherited ValuesClear;
+end;
+
+procedure TVSTEdit.Draw;
+var
+  i, n: Integer;
+begin
+  FTree.Clear;
+  if VIsNil(FHeaderCaptions) then Exit;
+
+  if IsRowTitlesColumnExists then
+  begin
+    n:= Length(FDataValues[FTitleColumnIndex]);
+    for i:= 0 to High(FDataValues) do
+      if i<>FTitleColumnIndex then
+        VReDim(FDataValues[i], n, EmptyStr);
+    VSTLoad(FTree, FDataValues[FTitleColumnIndex]);
+  end;
+
+  SetColumnWidths;
+
+end;
+
+procedure TVSTEdit.AddRowTitlesColumn(const ACaption: String;
+  const AWidth: Integer; const ACaptionAlignment: TAlignment);
+begin
+  if IsRowTitlesColumnExists then Exit;
+  AddColumn(ACaption, AWidth, ACaptionAlignment);
+  FTitleColumnIndex:= High(FHeaderCaptions);
+  MAppend(FDataValues, nil);
+end;
+
+procedure TVSTEdit.SetRowTitlesColumn(const AValues: TStrVector;
+  const AValuesAlignment: TAlignment);
+begin
+  if not IsRowTitlesColumnExists then Exit;
+  FDataValues[FTitleColumnIndex]:= VCut(AValues);
+  FTree.Header.Columns[FTitleColumnIndex].Alignment:= AValuesAlignment;
+end;
+
+procedure TVSTEdit.AddValuesColumn(const ACaption: String; const AWidth: Integer;
+                             const ACaptionAlignment: TAlignment;
+                             const AValuesAlignment: TAlignment);
+begin
+  AddColumn(ACaption, AWidth, ACaptionAlignment);
+  FTree.Header.Columns[High(FHeaderCaptions)].Alignment:= AValuesAlignment;
+  MAppend(FDataValues, nil);
+end;
+
+procedure TVSTEdit.UnSelect;
+begin
+  if IsSelected then
+    UnselectCell;
+end;
 
 { TVSTCategoryCheckTable }
 
@@ -778,9 +1143,10 @@ begin
   end;
 end;
 
-function TVSTCategoryCustomTable.IsNodeSelected(Node: PVirtualNode): Boolean;
+function TVSTCategoryCustomTable.IsCellSelected(Node: PVirtualNode;
+  Column: TColumnIndex): Boolean;
 begin
-  Result:= inherited IsNodeSelected(Node);
+  Result:= inherited IsCellSelected(Node, Column);
   if not Result then Exit;
   Result:= False;
   if FTree.GetNodeLevel(Node)<>1 then Exit;
@@ -1000,13 +1366,21 @@ begin
   FHeaderCaptions:= nil;
   FColumnWidths:= nil;
   FTree.Header.Columns.Clear;
+
 end;
 
 procedure TVSTCoreTable.SetColumnWidths;
 var
   i: Integer;
 begin
-  FTree.Header.AutoSizeIndex:= High(FHeaderCaptions);
+  FTree.Header.AutoSizeIndex:= -1;
+  if FAutosizeColumnIndex>=0 then
+  begin
+    if FAutosizeColumnIndex<=High(FHeaderCaptions) then
+    FTree.Header.AutoSizeIndex:= FAutosizeColumnIndex;
+  end
+  else if FAutosizeColumnIndex=-2 then
+    FTree.Header.AutoSizeIndex:= High(FHeaderCaptions);
   for i:= 0 to High(FHeaderCaptions) do
     FTree.Header.Columns[i].Width:= FColumnWidths[i];
 end;
@@ -1062,7 +1436,7 @@ procedure TVSTCoreTable.AdvancedHeaderDraw(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
 begin
   PaintInfo.TargetCanvas.Font.Assign(FHeaderFont);
-  if VIsNil(FHeaderCaptions) then
+  if (not Assigned(PaintInfo.Column)) or VIsNil(FHeaderCaptions) then
     VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
   else begin
     if FGridLinesVisible then
@@ -1079,9 +1453,7 @@ var
   BGColor: TColor;
   NeedTopLine: Boolean;
 begin
-  BGColor:= FValuesBGColor;
-  if IsNodeSelected(Node) then
-    BGColor:= FSelectedBGColor;
+  BGColor:= CellBGColor(Node, Column);
   NeedTopLine:= (Sender.GetNodeLevel(Node)=0) and (Node^.Index=0) and
                 (not (hoVisible in FTree.Header.Options));
   if FGridLinesVisible then
@@ -1094,15 +1466,28 @@ procedure TVSTCoreTable.DrawText(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   const CellText: String; const CellRect: TRect; var DefaultDraw: Boolean);
 begin
-  if IsNodeSelected(Node) then
-    TargetCanvas.Font.Assign(FSelectedFont)
-  else
-    TargetCanvas.Font.Assign(FValuesFont);
+  TargetCanvas.Font.Assign(CellFont(Node, Column));
 end;
 
-function TVSTCoreTable.IsNodeSelected(Node: PVirtualNode): Boolean;
+function TVSTCoreTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
 begin
-  Result:= Assigned(Node);
+  Result:= Assigned(Node) and (Column>=0) and (Column<=High(FHeaderCaptions));
+end;
+
+function TVSTCoreTable.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
+begin
+  if IsCellSelected(Node, Column) then
+    Result:= FSelectedBGColor
+  else
+    Result:= FValuesBGColor;
+end;
+
+function TVSTCoreTable.CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont;
+begin
+  if IsCellSelected(Node, Column) then
+    Result:= FSelectedFont
+  else
+    Result:= FValuesFont;
 end;
 
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
@@ -1135,8 +1520,8 @@ begin
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions +
                                    [toAlwaysHideSelection, toHideFocusRect];
 
-  FTree.Header.Options:= FTree.Header.Options +
-                         [hoOwnerDraw, hoVisible, hoAutoResize];
+  FTree.Header.Options:= FTree.Header.Options + [hoOwnerDraw, hoVisible];
+  AutosizeColumnEnable(-2); //last column
 
   FTree.OnHeaderDrawQueryElements:= @HeaderDrawQueryElements;
   FTree.OnAdvancedHeaderDraw:= @AdvancedHeaderDraw;
@@ -1173,9 +1558,28 @@ begin
   Col:= FTree.Header.Columns.Add;
   Col.Text:= ACaption;
   Col.CaptionAlignment:= ACaptionAlignment;
-  Col.Margin:= 3;  //!
-  Col.Spacing:= 0; //!
+  Col.Margin:= 3;
+  Col.Spacing:= 0;
   Col.Width:= AWidth;
+end;
+
+procedure TVSTCoreTable.AutosizeColumnEnable(const AColumnIndex: Integer);
+begin
+  if AColumnIndex<0 then
+    if AColumnIndex<>-2 then
+      Exit;
+  FAutosizeColumnIndex:= AColumnIndex;
+  FTree.Header.Options:= FTree.Header.Options + [hoAutoResize];
+  FTree.ScrollBarOptions.ScrollBars:= ssVertical;
+  SetColumnWidths;
+end;
+
+procedure TVSTCoreTable.AutosizeColumnDisable;
+begin
+  FAutosizeColumnIndex:= -1;
+  FTree.Header.Options:= FTree.Header.Options - [hoAutoResize];
+  FTree.ScrollBarOptions.ScrollBars:= ssBoth;
+  SetColumnWidths;
 end;
 
 { TVSTCheckTable }
@@ -1356,9 +1760,9 @@ begin
   Result:= VIsTrue(FSelected);
 end;
 
-function TVSTCustomTable.IsNodeSelected(Node: PVirtualNode): Boolean;
+function TVSTCustomTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
 begin
-  Result:= inherited IsNodeSelected(Node);
+  Result:= inherited IsCellSelected(Node, Column);
   if not Result then Exit;
   Result:= FSelected[Node^.Index];
 end;

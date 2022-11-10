@@ -152,12 +152,10 @@ begin
   if not ANeedTopLine then
     R.Top:= R.Top-1;
 
-
-
-
   TargetCanvas.Rectangle(R);
 
 end;
+
 
 end.
 
