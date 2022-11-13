@@ -5,8 +5,9 @@ unit DK_VSTTables;
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls,
-  DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils;
+  Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls, Spin,
+  DateTimePicker, LMessages, LCLIntf,
+  DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const;
 
 type
 
@@ -100,16 +101,28 @@ type
 
   end;
 
+  TVSTColumnType = (
+    ctUndefined,
+    ctInteger,
+    ctString,
+    ctDate,
+    ctTime
+  );
+
   { TVSTEdit }
 
   TVSTEdit = class (TVSTCoreTable)
   protected
     FDataValues: TStrMatrix;
+    FColumnTypes: array of TVSTColumnType;
+    FColumnFormatStrings: TStrVector;
     FSelectedRowIndex, FSelectedColIndex: Integer;
     FTitleColumnIndex: Integer;
+    FEditor: TWinControl;
 
     FRowTitlesFont: TFont;
     FRowTitlesBGColor: TColor;
+
 
     procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex);
     procedure UnselectCell;
@@ -118,10 +131,21 @@ type
 
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
     function GetIsSelected: Boolean;
+    function GetSelectedText: String;
+    procedure SetSelectedText(AValue: String);
+    function SelectedCellRect: TRect;
+
 
     procedure SetRowTitlesBGColor(AValue: TColor);
     procedure SetRowTitlesFont(AValue: TFont);
     procedure SetRowTitlesColumnVisible(AValue: Boolean);
+    procedure SetNewColumn(const AColumnType: TVSTColumnType;
+                           const AFormatString: String);
+    procedure AddValuesColumn(const AColumnType: TVSTColumnType;
+                        const ACaption, AFormatString: String;
+                        const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AValuesAlignment: TAlignment = taCenter);
 
     function GetIsRowTitlesColumnExists: Boolean;
 
@@ -131,6 +155,9 @@ type
     procedure MoveSelectionVertical(const ADirection {1 down, -1 up}: Integer);
     procedure MoveSelectionHorizontal(const ADirection {1 right, -1 left}: Integer);
 
+    procedure BeginEdit;
+    procedure EndEdit;
+
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; {%H-}TextType: TVSTTextType;
                       var CellText: String);
@@ -139,6 +166,8 @@ type
                         {%H-}Shift: TShiftState; {%H-}X, {%H-}Y: Integer);
     procedure KeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
     procedure UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
+
+    procedure EditorKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -146,19 +175,32 @@ type
     procedure ValuesClear; override;
     procedure Draw; //virtual;
 
+
+
     procedure AddRowTitlesColumn(const ACaption: String; const AWidth: Integer = 100;
-                        const ACaptionAlignment: TAlignment = taCenter);
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AFixColumn: Boolean = False);
     procedure SetRowTitlesColumn(const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
-
-    procedure AddValuesColumn(const ACaption: String; const AWidth: Integer = 100;
+    procedure AddIntegerColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
+    procedure AddStringColumn(const ACaption: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AValuesAlignment: TAlignment = taCenter);
+    procedure AddDateColumn(const ACaption, AFormatString: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AValuesAlignment: TAlignment = taCenter);
+    procedure AddTimeColumn(const ACaption, AFormatString: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AValuesAlignment: TAlignment = taCenter);
+
 
     procedure UnSelect;
     procedure Select(const ARowIndex, AColIndex: Integer);
     procedure Select(const ARowIndex: Integer; const AColumnCaption: String);
     procedure Select(const ARowTitle, AColumnCaption: String);
+
 
     property RowTitlesFont: TFont read FRowTitlesFont write SetRowTitlesFont;
     property RowTitlesBGColor: TColor read FRowTitlesBGColor write SetRowTitlesBGColor;
@@ -169,6 +211,7 @@ type
     property IsSelected: Boolean read GetIsSelected;
     property SelectedRowIndex: Integer read FSelectedRowIndex;
     property SelectedColIndex: Integer read FSelectedColIndex;
+    property SelectedText: String read GetSelectedText write SetSelectedText;
   end;
 
   { TVSTCustomTable }
@@ -462,14 +505,25 @@ begin
   Select(RowIndex, AColumnCaption);
 end;
 
+
+
 procedure TVSTEdit.SelectCell(Node: PVirtualNode; Column: TColumnIndex);
+var
+  RowIndex, ColIndex: Integer;
+  IsEditorExists: Boolean;
 begin
   if Column<>FTitleColumnIndex then
   begin
+    IsEditorExists:= Assigned(FEditor);
+    RowIndex:= FSelectedRowIndex;
+    ColIndex:= FSelectedColIndex;
     UnselectCell;
     FSelectedRowIndex:= Node^.Index;
     FSelectedColIndex:= Column;
     FTree.FocusedNode:= Node;
+    if (not IsEditorExists) and
+       (FSelectedRowIndex=RowIndex) and (FSelectedColIndex=ColIndex) then
+      BeginEdit;
   end;
   FTree.Refresh;
 end;
@@ -477,6 +531,7 @@ end;
 procedure TVSTEdit.UnselectCell;
 begin
   if not IsSelected then Exit;
+  EndEdit;
   FSelectedRowIndex:= -1;
   FSelectedColIndex:= -1;
   FTree.Refresh;
@@ -497,15 +552,45 @@ begin
   end
 end;
 
+procedure TVSTEdit.EditorKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+var
+  R: Integer;
+
+  procedure EditorEscape;
+  begin
+    PostMessage(FTree.Handle, LM_KEYDOWN, VK_ESCAPE, 0);
+    FTree.SetFocus;
+  end;
+
+begin
+  if Key=VK_RETURN then
+  begin
+    R:= FSelectedRowIndex + 1;
+    if (R<0) or (R>High(FDataValues[FTitleColumnIndex])) then
+      EditorEscape
+    else begin
+      PostMessage(FTree.Handle, LM_KEYDOWN, VK_DOWN, 0);
+      PostMessage(FTree.Handle, LM_KEYDOWN, VK_RETURN, 0);
+    end;
+  end
+  else if Key=VK_ESCAPE then
+    EditorEscape;
+end;
+
 procedure TVSTEdit.KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   if not IsSelected then Exit;
   case Key of
-   VK_DOWN, VK_RETURN: MoveSelectionVertical(1);
+   VK_RETURN: BeginEdit;
+   VK_ESCAPE: if Assigned(FEditor) then
+                MoveSelectionVertical(0)
+              else
+                UnSelect;
+   VK_DOWN: MoveSelectionVertical(1);
    VK_UP:   MoveSelectionVertical(-1);
    VK_RIGHT: MoveSelectionHorizontal(1);
    VK_LEFT: MoveSelectionHorizontal(-1);
-   //VK_0..VK_9, VK_NUMPAD0..VK_NUMPAD9
   end;
 
 end;
@@ -513,11 +598,14 @@ end;
 procedure TVSTEdit.UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
 begin
   if not IsSelected then Exit;
-  if SPos('1234567890', UTF8Key)=0 then Exit;
+  if SPos(SYMBOLS_KEYBOARD, UTF8Key)=0 then Exit;
   FDataValues[FSelectedColIndex, FSelectedRowIndex]:=
       FDataValues[FSelectedColIndex, FSelectedRowIndex] + UTF8Key;
+  BeginEdit;
   FTree.Refresh;
 end;
+
+
 
 constructor TVSTEdit.Create(const ATree: TVirtualStringTree);
 begin
@@ -544,6 +632,7 @@ end;
 destructor TVSTEdit.Destroy;
 begin
   FreeAndNil(FRowTitlesFont);
+  if Assigned(FEditor) then FreeAndNil(FEditor);
   inherited Destroy;
 end;
 
@@ -574,9 +663,9 @@ var
 begin
   if not IsSelected then Exit;
   NewRowIndex:= FSelectedRowIndex + ADirection;
-  if (NewRowIndex<0) or (NewRowIndex>High(FDataValues[FTitleColumnIndex])) then Exit;
-  FSelectedRowIndex:= NewRowIndex;
-  FTree.Refresh;
+  if (NewRowIndex<0) or (NewRowIndex>High(FDataValues[FTitleColumnIndex])) then
+    Exit;
+  Select(NewRowIndex, FSelectedColIndex);
 end;
 
 procedure TVSTEdit.MoveSelectionHorizontal(const ADirection: Integer);
@@ -588,9 +677,93 @@ begin
   repeat
     NewColIndex:= NewColIndex + ADirection;
   until NewColIndex<>FTitleColumnIndex;
-  if (NewColIndex<0) or (NewColIndex>High(FHeaderCaptions)) then Exit;
-  FSelectedColIndex:= NewColIndex;
-  FTree.Refresh;
+  if (NewColIndex<0) or (NewColIndex>High(FHeaderCaptions)) then
+    Exit;
+  Select(FSelectedRowIndex, NewColIndex);
+end;
+
+procedure TVSTEdit.BeginEdit;
+var
+  ColumnType: TVSTColumnType;
+
+  procedure CreateEditorInteger;
+  begin
+    FEditor:= TSpinEdit.Create(FTree);
+    TSpinEdit(FEditor).BorderStyle:= bsNone;
+    TSpinEdit(FEditor).Text:= SelectedText;
+    TSpinEdit(FEditor).Alignment:= FTree.Header.Columns[FSelectedColIndex].Alignment;
+  end;
+
+  procedure CreateEditorString;
+  begin
+    FEditor:= TEdit.Create(FTree);
+    TEdit(FEditor).BorderStyle:= bsNone;
+    TEdit(FEditor).Text:= SelectedText;
+    TEdit(FEditor).Alignment:= FTree.Header.Columns[FSelectedColIndex].Alignment;
+  end;
+
+  procedure CreateEditorDate;
+  begin
+    FEditor:= TDateTimePicker.Create(FTree);
+    TDateTimePicker(FEditor).Kind:= dtkDate;
+    TDateTimePicker(FEditor).BorderStyle:= bsNone;
+    TDateTimePicker(FEditor).Alignment:=FTree.Header.Columns[FSelectedColIndex].Alignment;
+    TDateTimePicker(FEditor).Date:= StrToDateDef(SelectedText, Date);
+  end;
+
+  procedure CreateEditorTime;
+  begin
+    FEditor:= TDateTimePicker.Create(FTree);
+    TDateTimePicker(FEditor).Kind:= dtkTime;
+    TDateTimePicker(FEditor).TimeDisplay:= tdHMSMs;
+    TDateTimePicker(FEditor).TimeFormat:= tf24;
+    TDateTimePicker(FEditor).BorderStyle:= bsNone;
+    TDateTimePicker(FEditor).Alignment:=FTree.Header.Columns[FSelectedColIndex].Alignment;
+    TDateTimePicker(FEditor).Time:= StrToTimeDef(SelectedText, 0);
+  end;
+
+begin
+  if Assigned(FEditor) then FreeAndNil(FEditor);
+
+  ColumnType:= FColumnTypes[FSelectedColIndex];
+  case ColumnType of
+    ctInteger: CreateEditorInteger;
+    ctString:  CreateEditorString;
+    ctDate:    CreateEditorDate;
+    ctTime:    CreateEditorTime;
+  else
+    Exit;
+  end;
+
+  FEditor.OnKeyDown:= @EditorKeyDown;
+  FEditor.Parent:= FTree;
+  FEditor.AutoSize:= False;
+  FEditor.BoundsRect:= SelectedCellRect;
+  FEditor.Show;
+  FEditor.SetFocus;
+end;
+
+procedure TVSTEdit.EndEdit;
+var
+  ColumnType: TVSTColumnType;
+begin
+  if not Assigned(FEditor) then Exit;
+
+  ColumnType:= FColumnTypes[FSelectedColIndex];
+  case ColumnType of
+    ctInteger: if TSpinEdit(FEditor).Value=0 then
+                 SelectedText:= EmptyStr
+               else
+                 SelectedText:= TSpinEdit(FEditor).Text;
+    ctString:  SelectedText:= TEdit(FEditor).Text;
+    ctDate:    SelectedText:= FormatDateTime(
+                                    FColumnFormatStrings[FSelectedColIndex],
+                                    TDateTimePicker(FEditor).Date);
+    ctTime:    SelectedText:= FormatDateTime(
+                                    FColumnFormatStrings[FSelectedColIndex],
+                                    TDateTimePicker(FEditor).Time);
+  end;
+  FreeAndNil(FEditor);
 end;
 
 procedure TVSTEdit.SetRowTitlesColumnVisible(AValue: Boolean);
@@ -605,9 +778,26 @@ begin
   FTree.Refresh;
 end;
 
+
+
 function TVSTEdit.GetIsSelected: Boolean;
 begin
   Result:= (FSelectedRowIndex>=0) and (FSelectedColIndex>=0);
+end;
+
+function TVSTEdit.GetSelectedText: String;
+begin
+  Result:= EmptyStr;
+  if not IsSelected then Exit;
+  Result:= FDataValues[FSelectedColIndex, FSelectedRowIndex];
+end;
+
+procedure TVSTEdit.SetSelectedText(AValue: String);
+begin
+  if not IsSelected then Exit;
+  if FDataValues[FSelectedColIndex, FSelectedRowIndex]=AValue then Exit;
+  FDataValues[FSelectedColIndex, FSelectedRowIndex]:= AValue;
+  FTree.Refresh;
 end;
 
 
@@ -616,6 +806,8 @@ procedure TVSTEdit.HeaderClear;
 begin
   inherited HeaderClear;
   FDataValues:= nil;
+  FColumnTypes:= nil;
+  FColumnFormatStrings:= nil;
   FTitleColumnIndex:= -1;
 end;
 
@@ -650,13 +842,31 @@ begin
 
 end;
 
+function TVSTEdit.SelectedCellRect: TRect;
+var
+  Node: PVirtualNode;
+begin
+  Result:= Rect(0,0,0,0);
+  if not IsSelected then Exit;
+  Node:= NodeFromIndex(FSelectedRowIndex);
+  Result:= FTree.GetDisplayRect(Node, FSelectedColIndex, False);
+  Result.Bottom:= Result.Bottom - 1;
+end;
+
 procedure TVSTEdit.AddRowTitlesColumn(const ACaption: String;
-  const AWidth: Integer; const ACaptionAlignment: TAlignment);
+  const AWidth: Integer; const ACaptionAlignment: TAlignment;
+  const AFixColumn: Boolean = False);
 begin
   if IsRowTitlesColumnExists then Exit;
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTitleColumnIndex:= High(FHeaderCaptions);
-  MAppend(FDataValues, nil);
+  if AFixColumn then
+    FTree.Header.Columns[FTitleColumnIndex].Options:=
+      FTree.Header.Columns[FTitleColumnIndex].Options + [coFixed]
+  else
+    FTree.Header.Columns[FTitleColumnIndex].Options:=
+      FTree.Header.Columns[FTitleColumnIndex].Options - [coFixed];
+  SetNewColumn(ctUndefined, EmptyStr);
 end;
 
 procedure TVSTEdit.SetRowTitlesColumn(const AValues: TStrVector;
@@ -667,13 +877,52 @@ begin
   FTree.Header.Columns[FTitleColumnIndex].Alignment:= AValuesAlignment;
 end;
 
-procedure TVSTEdit.AddValuesColumn(const ACaption: String; const AWidth: Integer;
+procedure TVSTEdit.SetNewColumn(const AColumnType: TVSTColumnType;
+  const AFormatString: String);
+begin
+  MAppend(FDataValues, nil);
+  VAppend(FColumnFormatStrings, AFormatString);
+  SetLength(FColumnTypes, Length(FHeaderCaptions));
+  FColumnTypes[High(FColumnTypes)]:= AColumnType;
+end;
+
+procedure TVSTEdit.AddIntegerColumn(const ACaption: String;
+  const AWidth: Integer; const ACaptionAlignment: TAlignment;
+  const AValuesAlignment: TAlignment);
+begin
+  AddValuesColumn(ctInteger, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment);
+end;
+
+procedure TVSTEdit.AddStringColumn(const ACaption: String;
+  const AWidth: Integer; const ACaptionAlignment: TAlignment;
+  const AValuesAlignment: TAlignment);
+begin
+  AddValuesColumn(ctString, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment);
+end;
+
+procedure TVSTEdit.AddDateColumn(const ACaption, AFormatString: String;
+  const AWidth: Integer;
+  const ACaptionAlignment: TAlignment; const AValuesAlignment: TAlignment);
+begin
+  AddValuesColumn(ctDate, ACaption, AFormatString, AWidth, ACaptionAlignment, AValuesAlignment);
+end;
+
+procedure TVSTEdit.AddTimeColumn(const ACaption, AFormatString: String;
+  const AWidth: Integer;
+  const ACaptionAlignment: TAlignment; const AValuesAlignment: TAlignment);
+begin
+  AddValuesColumn(ctTime, ACaption, AFormatString, AWidth, ACaptionAlignment, AValuesAlignment);
+end;
+
+procedure TVSTEdit.AddValuesColumn(const AColumnType: TVSTColumnType;
+                             const ACaption, AFormatString: String;
+                             const AWidth: Integer;
                              const ACaptionAlignment: TAlignment;
                              const AValuesAlignment: TAlignment);
 begin
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTree.Header.Columns[High(FHeaderCaptions)].Alignment:= AValuesAlignment;
-  MAppend(FDataValues, nil);
+  SetNewColumn(AColumnType, AFormatString);
 end;
 
 procedure TVSTEdit.UnSelect;
@@ -1305,6 +1554,7 @@ procedure TVSTCoreTable.SetGridLinesColor(AValue: TColor);
 begin
   if FGridLinesColor=AValue then Exit;
   FGridLinesColor:=AValue;
+  FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Refresh;
 end;
 
@@ -1436,6 +1686,7 @@ procedure TVSTCoreTable.AdvancedHeaderDraw(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
 begin
   PaintInfo.TargetCanvas.Font.Assign(FHeaderFont);
+
   if (not Assigned(PaintInfo.Column)) or VIsNil(FHeaderCaptions) then
     VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
   else begin

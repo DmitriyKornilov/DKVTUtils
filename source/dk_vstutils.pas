@@ -120,19 +120,20 @@ begin
   if not (hpeBackground in Elements) then Exit;
 
   R:= PaintInfo.PaintRectangle;
-
   PaintInfo.TargetCanvas.Pen.Color:= ABorderColor;
   PaintInfo.TargetCanvas.Brush.Color:= ABackgroundColor;
-
   PaintInfo.TargetCanvas.Pen.Style:= psSolid;
   PaintInfo.TargetCanvas.Brush.Style:= bsSolid;
 
-
-  if R.Left>0 then
-    R.Left:= R.Left-1;
-
-
-  PaintInfo.TargetCanvas.Rectangle(R);
+  if R.Left=0 then
+    PaintInfo.TargetCanvas.Rectangle(R)
+  else begin
+    PaintInfo.TargetCanvas.FillRect(R);
+    PaintInfo.TargetCanvas.MoveTo(R.Left, R.Top);
+    PaintInfo.TargetCanvas.LineTo(R.Right-1, R.Top);
+    PaintInfo.TargetCanvas.LineTo(R.Right-1, R.Bottom-1);
+    PaintInfo.TargetCanvas.LineTo(R.Left-1, R.Bottom-1);
+  end;
 end;
 
 procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;

@@ -25,6 +25,9 @@
     </Files>
     <RequiredPkgs>
       <Item>
+        <PackageName Value="DateTimeCtrls"/>
+      </Item>
+      <Item>
         <PackageName Value="virtualtreeview_package"/>
       </Item>
       <Item>
