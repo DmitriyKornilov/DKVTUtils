@@ -18,6 +18,7 @@ type
     FTree: TVirtualStringTree;
 
     FAutosizeColumnIndex: Integer; //-2 last clolumn, -1 none
+    FFixedColumnsCount: Integer;
 
     FGridLinesColor: TColor;
     FGridLinesVisible: Boolean;
@@ -51,6 +52,7 @@ type
     procedure SetSelectedFont(AValue: TFont);
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
+    procedure SetFixedColumnsCount(AValue: Integer);
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var {%H-}PaintInfo: THeaderPaintInfo;
                             var Elements: THeaderPaintElements);
@@ -98,7 +100,7 @@ type
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
-
+    property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
   end;
 
   TVSTColumnType = (
@@ -175,11 +177,8 @@ type
     procedure ValuesClear; override;
     procedure Draw; //virtual;
 
-
-
     procedure AddRowTitlesColumn(const ACaption: String; const AWidth: Integer = 100;
-                        const ACaptionAlignment: TAlignment = taCenter;
-                        const AFixColumn: Boolean = False);
+                        const ACaptionAlignment: TAlignment = taCenter);
     procedure SetRowTitlesColumn(const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
     procedure AddIntegerColumn(const ACaption: String; const AWidth: Integer = 100;
@@ -194,7 +193,6 @@ type
     procedure AddTimeColumn(const ACaption, AFormatString: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-
 
     procedure UnSelect;
     procedure Select(const ARowIndex, AColIndex: Integer);
@@ -854,19 +852,13 @@ begin
 end;
 
 procedure TVSTEdit.AddRowTitlesColumn(const ACaption: String;
-  const AWidth: Integer; const ACaptionAlignment: TAlignment;
-  const AFixColumn: Boolean = False);
+  const AWidth: Integer; const ACaptionAlignment: TAlignment);
 begin
   if IsRowTitlesColumnExists then Exit;
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTitleColumnIndex:= High(FHeaderCaptions);
-  if AFixColumn then
-    FTree.Header.Columns[FTitleColumnIndex].Options:=
-      FTree.Header.Columns[FTitleColumnIndex].Options + [coFixed]
-  else
-    FTree.Header.Columns[FTitleColumnIndex].Options:=
-      FTree.Header.Columns[FTitleColumnIndex].Options - [coFixed];
   SetNewColumn(ctUndefined, EmptyStr);
+
 end;
 
 procedure TVSTEdit.SetRowTitlesColumn(const AValues: TStrVector;
@@ -1561,7 +1553,21 @@ end;
 procedure TVSTCoreTable.SetGridLinesVisible(AValue: Boolean);
 begin
   if FGridLinesVisible=AValue then Exit;
-  FGridLinesVisible:=AValue;
+  FGridLinesVisible:= AValue;
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetFixedColumnsCount(AValue: Integer);
+var
+  i: Integer;
+begin
+  if FFixedColumnsCount=AValue then Exit;
+  if (FFixedColumnsCount<0) or (FFixedColumnsCount>High(FHeaderCaptions)) then Exit;
+  FFixedColumnsCount:= AValue;
+  for i:= 0 to FFixedColumnsCount-1 do
+    FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options + [coFixed];
+  for i:= FFixedColumnsCount to High(FHeaderCaptions) do
+    FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options - [coFixed];
   FTree.Refresh;
 end;
 
@@ -1746,6 +1752,7 @@ begin
   FTree:= ATree;
 
   Clear;
+  FFixedColumnsCount:= 0;
 
   FHeaderFont:= TFont.Create;
   FValuesFont:= TFont.Create;
