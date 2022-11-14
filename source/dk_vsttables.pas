@@ -111,6 +111,12 @@ type
     ctTime
   );
 
+
+
+
+  //TVSTEdititingDoneEvent = procedure(const ARowIndex, AColIndex: Integer;
+  //                              const ANewText: String) of object;
+
   { TVSTEdit }
 
   TVSTEdit = class (TVSTCoreTable)
@@ -121,6 +127,7 @@ type
     FSelectedRowIndex, FSelectedColIndex: Integer;
     FTitleColumnIndex: Integer;
     FEditor: TWinControl;
+    //FOnEdititingDone: TVSTEdititingDoneEvent;
 
     FRowTitlesFont: TFont;
     FRowTitlesBGColor: TColor;
@@ -131,12 +138,17 @@ type
 
     procedure HeaderClear; override;
 
+    function IsColumnValuesExists(const AColIndex: Integer): Boolean;
+
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
     function GetIsSelected: Boolean;
     function GetSelectedText: String;
     procedure SetSelectedText(AValue: String);
     function SelectedCellRect: TRect;
 
+    function IsColIndexCorrect(const AIndex: Integer): Boolean;
+    function IsEditingColIndexCorrect(const AIndex: Integer): Boolean;
+    function IsRowIndexCorrect(const AIndex: Integer): Boolean;
 
     procedure SetRowTitlesBGColor(AValue: TColor);
     procedure SetRowTitlesFont(AValue: TFont);
@@ -199,6 +211,14 @@ type
     procedure Select(const ARowIndex: Integer; const AColumnCaption: String);
     procedure Select(const ARowTitle, AColumnCaption: String);
 
+    function ColumnAsInteger(out AValues: TIntVector; const ACoIndex: Integer;
+                             const ADefaultValue: Integer = 0): Boolean;
+    function ColumnAsString(out AValues: TStrVector; const AColIndex: Integer;
+                             const ADefaultValue: String = ''): Boolean;
+    function ColumnAsDate(out AValues: TDblVector; const AColIndex: Integer;
+                          const ADefaultValue: TDate = 0): Boolean;
+    function ColumnAsTime(out AValues: TDblVector; const AColIndex: Integer;
+                          const ADefaultValue: TTime = 0): Boolean;
 
     property RowTitlesFont: TFont read FRowTitlesFont write SetRowTitlesFont;
     property RowTitlesBGColor: TColor read FRowTitlesBGColor write SetRowTitlesBGColor;
@@ -210,6 +230,8 @@ type
     property SelectedRowIndex: Integer read FSelectedRowIndex;
     property SelectedColIndex: Integer read FSelectedColIndex;
     property SelectedText: String read GetSelectedText write SetSelectedText;
+
+    //property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
   end;
 
   { TVSTCustomTable }
@@ -479,8 +501,9 @@ var
 begin
   Node:= NodeFromIndex(ARowIndex);
   if not Assigned(Node) then Exit;
-  if not ((AColIndex<>FTitleColumnIndex) and
-          (AColIndex>=0) and (AColIndex<=High(FHeaderCaptions))) then Exit;
+  //if not ((AColIndex<>FTitleColumnIndex)
+  //        (AColIndex>=0) and (AColIndex<=High(FHeaderCaptions))) then Exit;
+  if not IsEditingColIndexCorrect(AColIndex) then Exit;
   SelectCell(Node, AColIndex);
 end;
 
@@ -489,7 +512,8 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeadercaptions, AColumnCaption);
-  if (ColIndex<0) or (ColIndex=FTitleColumnIndex) then Exit;
+  //if (ColIndex<0) or (ColIndex=FTitleColumnIndex) then Exit;
+  if not IsEditingColIndexCorrect(ColIndex) then Exit;
   Select(ARowIndex, ColIndex);
 end;
 
@@ -499,8 +523,76 @@ var
 begin
   if not IsRowTitlesColumnExists then Exit;
   RowIndex:= VIndexOf(FDataValues[FTitleColumnIndex], ARowTitle);
-  if RowIndex<0 then Exit;
+  //if RowIndex<0 then Exit;
+  if not IsRowIndexCorrect(RowIndex) then Exit;
   Select(RowIndex, AColumnCaption);
+end;
+
+function TVSTEdit.IsColumnValuesExists(const AColIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if not IsEditingColIndexCorrect(AColIndex) then Exit;
+  if MIsNil(FDataValues) then Exit;
+  if VIsNil(FDataValues[AColIndex]) then Exit;
+  Result:= True;
+end;
+
+function TVSTEdit.ColumnAsInteger(out AValues: TIntVector;
+  const ACoIndex: Integer; const ADefaultValue: Integer): Boolean;
+var
+  i: Integer;
+  Value: Integer;
+begin
+  AValues:= nil;
+  Result:= IsColumnValuesExists(ACoIndex);
+  if not Result then Exit;
+  VDim(AValues, Length(FDataValues[ACoIndex]), ADefaultValue);
+  for i:= 0 to High(FDataValues[ACoIndex]) do
+    if TryStrToInt(FDataValues[ACoIndex,i], Value) then
+      AValues[i]:= Value;
+end;
+
+function TVSTEdit.ColumnAsString(out AValues: TStrVector;
+  const AColIndex: Integer; const ADefaultValue: String): Boolean;
+var
+  i: Integer;
+begin
+  AValues:= nil;
+  Result:= IsColumnValuesExists(AColIndex);
+  if not Result then Exit;
+  VDim(AValues, Length(FDataValues[AColIndex]), ADefaultValue);
+  for i:= 0 to High(FDataValues[AColIndex]) do
+      AValues[i]:= FDataValues[AColIndex,i];
+end;
+
+function TVSTEdit.ColumnAsDate(out AValues: TDblVector;
+  const AColIndex: Integer; const ADefaultValue: TDate): Boolean;
+var
+  i: Integer;
+  Value: TDate;
+begin
+  AValues:= nil;
+  Result:= IsColumnValuesExists(AColIndex);
+  if not Result then Exit;
+  VDim(AValues, Length(FDataValues[AColIndex]), ADefaultValue);
+  for i:= 0 to High(FDataValues[AColIndex]) do
+    if TryStrToDate(FDataValues[AColIndex,i], Value) then
+      AValues[i]:= Value;
+end;
+
+function TVSTEdit.ColumnAsTime(out AValues: TDblVector;
+  const AColIndex: Integer; const ADefaultValue: TTime): Boolean;
+var
+  i: Integer;
+  Value: TTime;
+begin
+  AValues:= nil;
+  Result:= IsColumnValuesExists(AColIndex);
+  if not Result then Exit;
+  VDim(AValues, Length(FDataValues[AColIndex]), ADefaultValue);
+  for i:= 0 to High(FDataValues[AColIndex]) do
+    if TryStrToTime(FDataValues[AColIndex,i], Value) then
+      AValues[i]:= Value;
 end;
 
 
@@ -565,7 +657,8 @@ begin
   if Key=VK_RETURN then
   begin
     R:= FSelectedRowIndex + 1;
-    if (R<0) or (R>High(FDataValues[FTitleColumnIndex])) then
+    //if (R<0) or (R>High(FDataValues[FTitleColumnIndex])) then
+    if not IsRowIndexCorrect(R) then
       EditorEscape
     else begin
       PostMessage(FTree.Handle, LM_KEYDOWN, VK_DOWN, 0);
@@ -597,7 +690,7 @@ procedure TVSTEdit.UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
 begin
   if not IsSelected then Exit;
   if SPos(SYMBOLS_KEYBOARD, UTF8Key)=0 then Exit;
-  FDataValues[FSelectedColIndex, FSelectedRowIndex]:=
+    FDataValues[FSelectedColIndex, FSelectedRowIndex]:=
       FDataValues[FSelectedColIndex, FSelectedRowIndex] + UTF8Key;
   BeginEdit;
   FTree.Refresh;
@@ -661,8 +754,9 @@ var
 begin
   if not IsSelected then Exit;
   NewRowIndex:= FSelectedRowIndex + ADirection;
-  if (NewRowIndex<0) or (NewRowIndex>High(FDataValues[FTitleColumnIndex])) then
-    Exit;
+  //if (NewRowIndex<0) or (NewRowIndex>High(FDataValues[FTitleColumnIndex])) then
+  //  Exit;
+  if not IsRowIndexCorrect(NewRowIndex) then Exit;
   Select(NewRowIndex, FSelectedColIndex);
 end;
 
@@ -675,8 +769,9 @@ begin
   repeat
     NewColIndex:= NewColIndex + ADirection;
   until NewColIndex<>FTitleColumnIndex;
-  if (NewColIndex<0) or (NewColIndex>High(FHeaderCaptions)) then
-    Exit;
+  //if (NewColIndex<0) or (NewColIndex>High(FHeaderCaptions)) then
+  //  Exit;
+  if not IsColIndexCorrect(NewColIndex) then Exit;
   Select(FSelectedRowIndex, NewColIndex);
 end;
 
@@ -720,6 +815,28 @@ var
     TDateTimePicker(FEditor).Time:= StrToTimeDef(SelectedText, 0);
   end;
 
+  procedure GoEditInteger;
+  begin
+    FEditor.SetFocus;
+    TSpinEdit(FEditor).SelStart:= SLength(TSpinEdit(FEditor).Text);
+  end;
+
+  procedure GoEditString;
+  begin
+    FEditor.SetFocus;
+    TEdit(FEditor).SelStart:= SLength(TEdit(FEditor).Text);
+  end;
+
+  procedure GoEditDate;
+  begin
+    FEditor.SetFocus;
+  end;
+
+  procedure GoEditTime;
+  begin
+    FEditor.SetFocus;
+  end;
+
 begin
   if Assigned(FEditor) then FreeAndNil(FEditor);
 
@@ -738,7 +855,13 @@ begin
   FEditor.AutoSize:= False;
   FEditor.BoundsRect:= SelectedCellRect;
   FEditor.Show;
-  FEditor.SetFocus;
+
+  case ColumnType of
+    ctInteger: GoEditInteger;
+    ctString:  GoEditString;
+    ctDate:    GoEditDate;
+    ctTime:    GoEditTime;
+  end;
 end;
 
 procedure TVSTEdit.EndEdit;
@@ -752,7 +875,7 @@ begin
     ctInteger: if TSpinEdit(FEditor).Value=0 then
                  SelectedText:= EmptyStr
                else
-                 SelectedText:= TSpinEdit(FEditor).Text;
+                 SelectedText:= IntToStr(TSpinEdit(FEditor).Value);
     ctString:  SelectedText:= TEdit(FEditor).Text;
     ctDate:    SelectedText:= FormatDateTime(
                                     FColumnFormatStrings[FSelectedColIndex],
@@ -761,6 +884,10 @@ begin
                                     FColumnFormatStrings[FSelectedColIndex],
                                     TDateTimePicker(FEditor).Time);
   end;
+
+  //if Assigned(FOnEdititingDone) then
+  //  FOnEdititingDone(FSelectedRowIndex, FSelectedColIndex, SelectedText);
+
   FreeAndNil(FEditor);
 end;
 
@@ -849,6 +976,24 @@ begin
   Node:= NodeFromIndex(FSelectedRowIndex);
   Result:= FTree.GetDisplayRect(Node, FSelectedColIndex, False);
   Result.Bottom:= Result.Bottom - 1;
+end;
+
+function TVSTEdit.IsColIndexCorrect(const AIndex: Integer): Boolean;
+begin
+  Result:= (AIndex>=0) and (AIndex<=High(FHeaderCaptions));
+end;
+
+function TVSTEdit.IsEditingColIndexCorrect(const AIndex: Integer): Boolean;
+begin
+  Result:= (AIndex<>FTitleColumnIndex) and IsColIndexCorrect(AIndex);
+end;
+
+function TVSTEdit.IsRowIndexCorrect(const AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if not IsRowTitlesColumnExists then Exit;
+  if MIsNil(FDataValues) then Exit;
+  Result:= (AIndex>=0) and (AIndex<=High(FDataValues[FTitleColumnIndex]));
 end;
 
 procedure TVSTEdit.AddRowTitlesColumn(const ACaption: String;
