@@ -29,6 +29,8 @@ type
     FValuesBGColor: TColor;
     FHeaderBGColor: TColor;
     FSelectedBGColor: TColor;
+    FColumnValuesBGColors: TColorVector;
+    FColumnHeaderBGColors: TColorVector;
 
     FHeaderCaptions: TStrVector;
     FColumnWidths: TIntVector;
@@ -53,6 +55,7 @@ type
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
     procedure SetFixedColumnsCount(AValue: Integer);
+
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var {%H-}PaintInfo: THeaderPaintInfo;
                             var Elements: THeaderPaintElements);
@@ -71,8 +74,12 @@ type
 
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; virtual;
 
-    function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; virtual;
+    procedure HeaderCellColors(const PaintInfo: THeaderPaintInfo;
+                              out ALineColor, ABGColor: TColor);
+    function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor;
     function CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex): TFont; virtual;
+
+    function IsColIndexCorrect(const AIndex: Integer): Boolean;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -83,7 +90,12 @@ type
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); virtual;
 
-    procedure AutosizeColumnEnable(const AColumnIndex: Integer);
+    procedure SetColumnValuesBGColor(const AColIndex: Integer; const ABGColor: TColor);
+    procedure SetColumnValuesBGColor(const ACaption: String; const ABGColor: TColor);
+    procedure SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
+    procedure SetColumnHeaderBGColor(const ACaption: String; const ABGColor: TColor);
+
+    procedure AutosizeColumnEnable(const AColIndex: Integer);
     procedure AutosizeColumnDisable;
 
     property GridLinesColor: TColor read FGridLinesColor write SetGridLinesColor;
@@ -101,6 +113,7 @@ type
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
     property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
+
   end;
 
   TVSTColumnType = (
@@ -120,6 +133,8 @@ type
   { TVSTEdit }
 
   TVSTEdit = class (TVSTCoreTable)
+
+
   protected
     FDataValues: TStrMatrix;
     FColumnTypes: array of TVSTColumnType;
@@ -129,8 +144,8 @@ type
     FEditor: TWinControl;
     //FOnEdititingDone: TVSTEdititingDoneEvent;
 
-    FRowTitlesFont: TFont;
-    FRowTitlesBGColor: TColor;
+    FColumnRowTitlesFont: TFont;
+    //FColumnRowTitlesBGColor: TColor;
 
 
     procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex);
@@ -146,13 +161,15 @@ type
     procedure SetSelectedText(AValue: String);
     function SelectedCellRect: TRect;
 
-    function IsColIndexCorrect(const AIndex: Integer): Boolean;
+
     function IsEditingColIndexCorrect(const AIndex: Integer): Boolean;
     function IsRowIndexCorrect(const AIndex: Integer): Boolean;
 
-    procedure SetRowTitlesBGColor(AValue: TColor);
-    procedure SetRowTitlesFont(AValue: TFont);
-    procedure SetRowTitlesColumnVisible(AValue: Boolean);
+    function GetColumnRowTitlesBGColor: TColor;
+    procedure SetColumnRowTitlesBGColor(AValue: TColor);
+    procedure SetColumnRowTitlesFont(AValue: TFont);
+    procedure SetColumnRowTitlesVisible(AValue: Boolean);
+
     procedure SetNewColumn(const AColumnType: TVSTColumnType;
                            const AFormatString: String);
     procedure AddValuesColumn(const AColumnType: TVSTColumnType;
@@ -163,8 +180,9 @@ type
 
     function GetIsRowTitlesColumnExists: Boolean;
 
-    function CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor; override;
+
     function CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont; override;
+    procedure DeleteSelectedCellText;
 
     procedure MoveSelectionVertical(const ADirection {1 down, -1 up}: Integer);
     procedure MoveSelectionHorizontal(const ADirection {1 right, -1 left}: Integer);
@@ -189,20 +207,20 @@ type
     procedure ValuesClear; override;
     procedure Draw; //virtual;
 
-    procedure AddRowTitlesColumn(const ACaption: String; const AWidth: Integer = 100;
+    procedure AddColumnRowTitles(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter);
-    procedure SetRowTitlesColumn(const AValues: TStrVector;
+    procedure SetColumnRowTitles(const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
-    procedure AddIntegerColumn(const ACaption: String; const AWidth: Integer = 100;
+    procedure AddColumnInteger(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-    procedure AddStringColumn(const ACaption: String; const AWidth: Integer = 100;
+    procedure AddColumnString(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-    procedure AddDateColumn(const ACaption, AFormatString: String; const AWidth: Integer = 100;
+    procedure AddColumnDate(const ACaption, AFormatString: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-    procedure AddTimeColumn(const ACaption, AFormatString: String; const AWidth: Integer = 100;
+    procedure AddColumnTime(const ACaption, AFormatString: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
 
@@ -220,11 +238,12 @@ type
     function ColumnAsTime(out AValues: TDblVector; const AColIndex: Integer;
                           const ADefaultValue: TTime = 0): Boolean;
 
-    property RowTitlesFont: TFont read FRowTitlesFont write SetRowTitlesFont;
-    property RowTitlesBGColor: TColor read FRowTitlesBGColor write SetRowTitlesBGColor;
+    procedure SetColumnRowTitlesHeaderBGColor(const ABGColor: TColor);
+    property ColumnRowTitlesFont: TFont read FColumnRowTitlesFont write SetColumnRowTitlesFont;
+    property ColumnRowTitlesBGColor: TColor read GetColumnRowTitlesBGColor write SetColumnRowTitlesBGColor;
 
-    property IsRowTitlesColumnExists: Boolean read GetIsRowTitlesColumnExists;
-    property RowTitlesColumnVisible: Boolean write SetRowTitlesColumnVisible;
+    property IsColumnRowTitlesExists: Boolean read GetIsRowTitlesColumnExists;
+    property ColumnRowTitlesVisible: Boolean write SetColumnRowTitlesVisible;
 
     property IsSelected: Boolean read GetIsSelected;
     property SelectedRowIndex: Integer read FSelectedRowIndex;
@@ -260,7 +279,7 @@ type
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); override;
-    procedure SetColumn(const AColumnIndex: Integer; const AValues: TStrVector;
+    procedure SetColumn(const AColIndex: Integer; const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
     procedure SetColumn(const ACaption: String; const AValues: TStrVector;
                         const AValuesAlignment: TAlignment = taCenter);
@@ -298,7 +317,7 @@ type
 
     procedure UnSelect;
     procedure Select(const AIndex: Integer);
-    procedure Select(const AColumnIndex: Integer; const AValue: String);
+    procedure Select(const AColIndex: Integer; const AValue: String);
     procedure Select(const AColumnCaption, AValue: String);
     property SelectedIndex: Integer read GetSelectedIndex;
 
@@ -367,7 +386,7 @@ type
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); override;
-    procedure SetColumn(const AColumnIndex: Integer; const AValues: TStrMatrix;
+    procedure SetColumn(const AColIndex: Integer; const AValues: TStrMatrix;
                         const AValuesAlignment: TAlignment = taCenter);
     procedure SetColumn(const ACaption: String; const AValues: TStrMatrix;
                         const AValuesAlignment: TAlignment = taCenter);
@@ -448,8 +467,8 @@ type
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
 
-    function IsAllCheckedCategory(const AIndex: Integer): Boolean;
-    function IsAllUncheckedCategory(const AIndex: Integer): Boolean;
+    function IsCategoryAllChecked(const AIndex: Integer): Boolean;
+    function IsCategoryAllUnchecked(const AIndex: Integer): Boolean;
 
     procedure CheckAll(const AChecked: Boolean);
     procedure CheckCategory(const AIndex: Integer; const AChecked: Boolean);
@@ -470,16 +489,24 @@ begin
   Result:= (Node^.Index=FSelectedRowIndex) and (Column=FSelectedColIndex);
 end;
 
-procedure TVSTEdit.SetRowTitlesBGColor(AValue: TColor);
+function TVSTEdit.GetColumnRowTitlesBGColor: TColor;
 begin
-  if FRowTitlesBGColor=AValue then Exit;
-  FRowTitlesBGColor:=AValue;
+  Result:= clNone;
+  if not IsColumnRowTitlesExists then Exit;
+  Result:= FColumnValuesBGColors[FTitleColumnIndex];
+end;
+
+procedure TVSTEdit.SetColumnRowTitlesBGColor(AValue: TColor);
+begin
+  if not IsColumnRowTitlesExists then Exit;
+  if FColumnValuesBGColors[FTitleColumnIndex]=AValue then Exit;
+  FColumnValuesBGColors[FTitleColumnIndex]:= AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTEdit.SetRowTitlesFont(AValue: TFont);
+procedure TVSTEdit.SetColumnRowTitlesFont(AValue: TFont);
 begin
-  FRowTitlesFont.Assign(AValue);
+  FColumnRowTitlesFont.Assign(AValue);
   FTree.Refresh;
 end;
 
@@ -521,7 +548,7 @@ procedure TVSTEdit.Select(const ARowTitle, AColumnCaption: String);
 var
   RowIndex: Integer;
 begin
-  if not IsRowTitlesColumnExists then Exit;
+  if not IsColumnRowTitlesExists then Exit;
   RowIndex:= VIndexOf(FDataValues[FTitleColumnIndex], ARowTitle);
   //if RowIndex<0 then Exit;
   if not IsRowIndexCorrect(RowIndex) then Exit;
@@ -594,6 +621,13 @@ begin
     if TryStrToTime(FDataValues[AColIndex,i], Value) then
       AValues[i]:= Value;
 end;
+
+procedure TVSTEdit.SetColumnRowTitlesHeaderBGColor(const ABGColor: TColor);
+begin
+  if not IsColumnRowTitlesExists then Exit;
+  SetColumnHeaderBGColor(FTitleColumnIndex, ABGColor);
+end;
+
 
 
 
@@ -674,6 +708,7 @@ begin
   if not IsSelected then Exit;
   case Key of
    VK_RETURN: BeginEdit;
+   VK_DELETE, VK_BACK: DeleteSelectedCellText;
    VK_ESCAPE: if Assigned(FEditor) then
                 MoveSelectionVertical(0)
               else
@@ -687,12 +722,37 @@ begin
 end;
 
 procedure TVSTEdit.UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
+var
+  n: Integer;
+  Key: Word;
 begin
   if not IsSelected then Exit;
-  if SPos(SYMBOLS_KEYBOARD, UTF8Key)=0 then Exit;
-    FDataValues[FSelectedColIndex, FSelectedRowIndex]:=
-      FDataValues[FSelectedColIndex, FSelectedRowIndex] + UTF8Key;
-  BeginEdit;
+
+  case FColumnTypes[FSelectedColIndex] of
+  ctInteger:
+    begin
+      if SPos(SYMBOLS_DIGITS, UTF8Key)=0 then Exit;
+      FDataValues[FSelectedColIndex, FSelectedRowIndex]:= UTF8Key;
+      BeginEdit;
+    end;
+  ctString:
+    begin
+      if SPos(SYMBOLS_KEYBOARD, UTF8Key)=0 then Exit;
+      FDataValues[FSelectedColIndex, FSelectedRowIndex]:= UTF8Key;
+      BeginEdit;
+    end;
+  ctDate, ctTime:
+    begin
+      n:= SPos(SYMBOLS_DIGITS, UTF8Key);
+      if n=0 then Exit;
+      BeginEdit;
+      Key:= VK_0;
+      if n<10 then
+        Key:= Key + n;
+      PostMessage(FEditor.Handle, LM_KEYDOWN, Key, 0);
+    end;
+  end;
+
   FTree.Refresh;
 end;
 
@@ -709,9 +769,9 @@ begin
   FTree.OnKeyDown:= @KeyDown;
   FTree.OnUTF8KeyPress:= @UTF8KeyPress;
 
-  FRowTitlesFont:= TFont.Create;
-  FRowTitlesFont.Assign(FTree.Font);
-  FRowTitlesBGColor:= clWindow;
+  FColumnRowTitlesFont:= TFont.Create;
+  FColumnRowTitlesFont.Assign(FTree.Font);
+  //FColumnRowTitlesBGColor:= clWindow;
 
   FTitleColumnIndex:= -1;
   FSelectedRowIndex:= -1;
@@ -722,7 +782,7 @@ end;
 
 destructor TVSTEdit.Destroy;
 begin
-  FreeAndNil(FRowTitlesFont);
+  FreeAndNil(FColumnRowTitlesFont);
   if Assigned(FEditor) then FreeAndNil(FEditor);
   inherited Destroy;
 end;
@@ -732,20 +792,18 @@ begin
   Result:= FTitleColumnIndex>=0;
 end;
 
-function TVSTEdit.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
-begin
-  if Column=FTitleColumnIndex then
-    Result:= FRowTitlesBGColor
-  else
-    Result:= inherited CellBGColor(Node, Column);
-end;
-
 function TVSTEdit.CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont;
 begin
   if Column=FTitleColumnIndex then
-    Result:= FRowTitlesFont
+    Result:= FColumnRowTitlesFont
   else
     Result:= inherited CellFont(Node, Column);
+end;
+
+procedure TVSTEdit.DeleteSelectedCellText;
+begin
+  FDataValues[FSelectedColIndex, FSelectedRowIndex]:= EmptyStr;
+  FTree.Refresh;
 end;
 
 procedure TVSTEdit.MoveSelectionVertical(const ADirection: Integer);
@@ -782,7 +840,7 @@ var
   procedure CreateEditorInteger;
   begin
     FEditor:= TSpinEdit.Create(FTree);
-    TSpinEdit(FEditor).BorderStyle:= bsNone;
+    //TSpinEdit(FEditor).AutoSelect:= False;
     TSpinEdit(FEditor).Text:= SelectedText;
     TSpinEdit(FEditor).Alignment:= FTree.Header.Columns[FSelectedColIndex].Alignment;
   end;
@@ -790,7 +848,7 @@ var
   procedure CreateEditorString;
   begin
     FEditor:= TEdit.Create(FTree);
-    TEdit(FEditor).BorderStyle:= bsNone;
+    //TSpinEdit(FEditor).AutoSelect:= False;
     TEdit(FEditor).Text:= SelectedText;
     TEdit(FEditor).Alignment:= FTree.Header.Columns[FSelectedColIndex].Alignment;
   end;
@@ -799,7 +857,6 @@ var
   begin
     FEditor:= TDateTimePicker.Create(FTree);
     TDateTimePicker(FEditor).Kind:= dtkDate;
-    TDateTimePicker(FEditor).BorderStyle:= bsNone;
     TDateTimePicker(FEditor).Alignment:=FTree.Header.Columns[FSelectedColIndex].Alignment;
     TDateTimePicker(FEditor).Date:= StrToDateDef(SelectedText, Date);
   end;
@@ -810,7 +867,6 @@ var
     TDateTimePicker(FEditor).Kind:= dtkTime;
     TDateTimePicker(FEditor).TimeDisplay:= tdHMSMs;
     TDateTimePicker(FEditor).TimeFormat:= tf24;
-    TDateTimePicker(FEditor).BorderStyle:= bsNone;
     TDateTimePicker(FEditor).Alignment:=FTree.Header.Columns[FSelectedColIndex].Alignment;
     TDateTimePicker(FEditor).Time:= StrToTimeDef(SelectedText, 0);
   end;
@@ -819,12 +875,14 @@ var
   begin
     FEditor.SetFocus;
     TSpinEdit(FEditor).SelStart:= SLength(TSpinEdit(FEditor).Text);
+    //TSpinEdit(FEditor).SelLength:= 0;
   end;
 
   procedure GoEditString;
   begin
     FEditor.SetFocus;
     TEdit(FEditor).SelStart:= SLength(TEdit(FEditor).Text);
+    //TEdit(FEditor).SelLength:= 0;
   end;
 
   procedure GoEditDate;
@@ -854,6 +912,8 @@ begin
   FEditor.Parent:= FTree;
   FEditor.AutoSize:= False;
   FEditor.BoundsRect:= SelectedCellRect;
+  //FEditor.Color:= FSelectedBGColor;
+  //FEditor.Font.Assign(FSelectedFont);
   FEditor.Show;
 
   case ColumnType of
@@ -891,9 +951,9 @@ begin
   FreeAndNil(FEditor);
 end;
 
-procedure TVSTEdit.SetRowTitlesColumnVisible(AValue: Boolean);
+procedure TVSTEdit.SetColumnRowTitlesVisible(AValue: Boolean);
 begin
-  if not IsRowTitlesColumnExists then Exit;
+  if not IsColumnRowTitlesExists then Exit;
   if AValue then
     FTree.Header.Columns[FTitleColumnIndex].Options:=
       FTree.Header.Columns[FTitleColumnIndex].Options + [coVisible]
@@ -954,7 +1014,7 @@ begin
   FTree.Clear;
   if VIsNil(FHeaderCaptions) then Exit;
 
-  if IsRowTitlesColumnExists then
+  if IsColumnRowTitlesExists then
   begin
     n:= Length(FDataValues[FTitleColumnIndex]);
     for i:= 0 to High(FDataValues) do
@@ -978,10 +1038,7 @@ begin
   Result.Bottom:= Result.Bottom - 1;
 end;
 
-function TVSTEdit.IsColIndexCorrect(const AIndex: Integer): Boolean;
-begin
-  Result:= (AIndex>=0) and (AIndex<=High(FHeaderCaptions));
-end;
+
 
 function TVSTEdit.IsEditingColIndexCorrect(const AIndex: Integer): Boolean;
 begin
@@ -991,25 +1048,25 @@ end;
 function TVSTEdit.IsRowIndexCorrect(const AIndex: Integer): Boolean;
 begin
   Result:= False;
-  if not IsRowTitlesColumnExists then Exit;
+  if not IsColumnRowTitlesExists then Exit;
   if MIsNil(FDataValues) then Exit;
   Result:= (AIndex>=0) and (AIndex<=High(FDataValues[FTitleColumnIndex]));
 end;
 
-procedure TVSTEdit.AddRowTitlesColumn(const ACaption: String;
+procedure TVSTEdit.AddColumnRowTitles(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 begin
-  if IsRowTitlesColumnExists then Exit;
+  if IsColumnRowTitlesExists then Exit;
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTitleColumnIndex:= High(FHeaderCaptions);
   SetNewColumn(ctUndefined, EmptyStr);
 
 end;
 
-procedure TVSTEdit.SetRowTitlesColumn(const AValues: TStrVector;
+procedure TVSTEdit.SetColumnRowTitles(const AValues: TStrVector;
   const AValuesAlignment: TAlignment);
 begin
-  if not IsRowTitlesColumnExists then Exit;
+  if not IsColumnRowTitlesExists then Exit;
   FDataValues[FTitleColumnIndex]:= VCut(AValues);
   FTree.Header.Columns[FTitleColumnIndex].Alignment:= AValuesAlignment;
 end;
@@ -1023,28 +1080,28 @@ begin
   FColumnTypes[High(FColumnTypes)]:= AColumnType;
 end;
 
-procedure TVSTEdit.AddIntegerColumn(const ACaption: String;
+procedure TVSTEdit.AddColumnInteger(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment;
   const AValuesAlignment: TAlignment);
 begin
   AddValuesColumn(ctInteger, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment);
 end;
 
-procedure TVSTEdit.AddStringColumn(const ACaption: String;
+procedure TVSTEdit.AddColumnString(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment;
   const AValuesAlignment: TAlignment);
 begin
   AddValuesColumn(ctString, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment);
 end;
 
-procedure TVSTEdit.AddDateColumn(const ACaption, AFormatString: String;
+procedure TVSTEdit.AddColumnDate(const ACaption, AFormatString: String;
   const AWidth: Integer;
   const ACaptionAlignment: TAlignment; const AValuesAlignment: TAlignment);
 begin
   AddValuesColumn(ctDate, ACaption, AFormatString, AWidth, ACaptionAlignment, AValuesAlignment);
 end;
 
-procedure TVSTEdit.AddTimeColumn(const ACaption, AFormatString: String;
+procedure TVSTEdit.AddColumnTime(const ACaption, AFormatString: String;
   const AWidth: Integer;
   const ACaptionAlignment: TAlignment; const AValuesAlignment: TAlignment);
 begin
@@ -1260,7 +1317,7 @@ begin
   Result:= VIsTrue(FSelected[AIndex]);
 end;
 
-function TVSTCategoryCheckTable.IsAllCheckedCategory(const AIndex: Integer): Boolean;
+function TVSTCategoryCheckTable.IsCategoryAllChecked(const AIndex: Integer): Boolean;
 begin
   Result:= False;
   if MIsNil(FSelected) then Exit;
@@ -1268,7 +1325,7 @@ begin
   Result:= VIsAllTrue(FSelected[AIndex]);
 end;
 
-function TVSTCategoryCheckTable.IsAllUncheckedCategory(const AIndex: Integer): Boolean;
+function TVSTCategoryCheckTable.IsCategoryAllUnchecked(const AIndex: Integer): Boolean;
 begin
   Result:= False;
   if MIsNil(FSelected) then Exit;
@@ -1281,7 +1338,7 @@ begin
   Result:= False;
   if not Assigned(Node) then Exit;
   if not FTree.GetNodeLevel(Node)=0 then Exit;
-  Result:= IsAllCheckedCategory(Node^.Index);
+  Result:= IsCategoryAllChecked(Node^.Index);
 end;
 
 function TVSTCategoryCheckTable.IsAllUncheckedCategory(Node: PVirtualNode): Boolean;
@@ -1289,7 +1346,7 @@ begin
   Result:= False;
   if not Assigned(Node) then Exit;
   if not FTree.GetNodeLevel(Node)=0 then Exit;
-  Result:= IsAllUncheckedCategory(Node^.Index);
+  Result:= IsCategoryAllUnchecked(Node^.Index);
 end;
 
 
@@ -1572,21 +1629,21 @@ begin
   MAppend(FDataValues, nil);
 end;
 
-procedure TVSTCategoryCustomTable.SetColumn(const AColumnIndex: Integer;
+procedure TVSTCategoryCustomTable.SetColumn(const AColIndex: Integer;
   const AValues: TStrMatrix; const AValuesAlignment: TAlignment);
 begin
-  FDataValues[AColumnIndex]:= MCut(AValues);
-  FTree.Header.Columns[AColumnIndex].Alignment:= AValuesAlignment;
+  FDataValues[AColIndex]:= MCut(AValues);
+  FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
 end;
 
 procedure TVSTCategoryCustomTable.SetColumn(const ACaption: String;
   const AValues: TStrMatrix; const AValuesAlignment: TAlignment);
 var
-  ColumnIndex: Integer;
+  ColIndex: Integer;
 begin
-  ColumnIndex:= VIndexOf(FHeaderCaptions, ACaption);
-  if ColumnIndex>=0 then
-    SetColumn(ColumnIndex, AValues, AValuesAlignment);
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  if ColIndex>=0 then
+    SetColumn(ColIndex, AValues, AValuesAlignment);
 end;
 
 procedure TVSTCategoryCustomTable.SetCategories(const AValues: TStrVector);
@@ -1613,33 +1670,33 @@ end;
 
 procedure TVSTCategoryCustomTable.Draw;
 var
-  ColumnIndex, CategoryIndex, MaxLength: Integer;
+  ColIndex, CategoryIndex, MaxLength: Integer;
 begin
   FTree.Clear;
   if VIsNil(FHeaderCaptions) then Exit;
   if MIsNil(FDataValues) then Exit;
 
   MaxLength:= 0;
-  for ColumnIndex:= 0 to High(FHeaderCaptions) do
+  for ColIndex:= 0 to High(FHeaderCaptions) do
   begin
-    if Length(FDataValues[ColumnIndex])>MaxLength then
-      MaxLength:= Length(FDataValues[ColumnIndex]);
+    if Length(FDataValues[ColIndex])>MaxLength then
+      MaxLength:= Length(FDataValues[ColIndex]);
   end;
-  for ColumnIndex:= 0 to High(FHeaderCaptions) do
-    MReDim(FDataValues[ColumnIndex], MaxLength);
+  for ColIndex:= 0 to High(FHeaderCaptions) do
+    MReDim(FDataValues[ColIndex], MaxLength);
 
   VReDim(FCategoryValues, MaxLength, EmptyStr);
 
   for CategoryIndex:= 0 to High(FCategoryValues) do
   begin
     MaxLength:= 0;
-    for ColumnIndex:= 0 to High(FHeaderCaptions) do
+    for ColIndex:= 0 to High(FHeaderCaptions) do
     begin
-      if Length(FDataValues[ColumnIndex, CategoryIndex])>MaxLength then
-        MaxLength:= Length(FDataValues[ColumnIndex, CategoryIndex]);
+      if Length(FDataValues[ColIndex, CategoryIndex])>MaxLength then
+        MaxLength:= Length(FDataValues[ColIndex, CategoryIndex]);
     end;
-    for ColumnIndex:= 0 to High(FHeaderCaptions) do
-      VReDim(FDataValues[ColumnIndex, CategoryIndex], MaxLength);
+    for ColIndex:= 0 to High(FHeaderCaptions) do
+      VReDim(FDataValues[ColIndex, CategoryIndex], MaxLength);
   end;
 
   MReDim(FSelected, Length(FCategoryValues));
@@ -1766,8 +1823,9 @@ procedure TVSTCoreTable.HeaderClear;
 begin
   FHeaderCaptions:= nil;
   FColumnWidths:= nil;
+  FColumnValuesBGColors:= nil;
+  FColumnHeaderBGColors:= nil;
   FTree.Header.Columns.Clear;
-
 end;
 
 procedure TVSTCoreTable.SetColumnWidths;
@@ -1835,17 +1893,12 @@ end;
 
 procedure TVSTCoreTable.AdvancedHeaderDraw(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
+var
+  LineColor, BGColor: TColor;
 begin
   PaintInfo.TargetCanvas.Font.Assign(FHeaderFont);
-
-  if (not Assigned(PaintInfo.Column)) or VIsNil(FHeaderCaptions) then
-    VSTHeaderDraw(FTree.Color, FTree.Color, PaintInfo, Elements)
-  else begin
-    if FGridLinesVisible then
-      VSTHeaderDraw(FGridLinesColor, FHeaderBGColor, PaintInfo, Elements)
-    else
-      VSTHeaderDraw(FHeaderBGColor, FHeaderBGColor, PaintInfo, Elements);
-  end;
+  HeaderCellColors(PaintInfo, LineColor, BGColor);
+  VSTHeaderDraw(LineColor, BGColor, PaintInfo, Elements);
 end;
 
 procedure TVSTCoreTable.BeforeCellPaint(Sender: TBaseVirtualTree;
@@ -1876,10 +1929,32 @@ begin
   Result:= Assigned(Node) and (Column>=0) and (Column<=High(FHeaderCaptions));
 end;
 
+procedure TVSTCoreTable.HeaderCellColors(const PaintInfo: THeaderPaintInfo;
+                                     out ALineColor, ABGColor: TColor);
+begin
+  ALineColor:= FTree.Color;
+  ABGColor:= FTree.Color;
+
+  if (not Assigned(PaintInfo.Column)) or
+     (not IsColIndexCorrect(PaintInfo.Column.Index)) then Exit;
+
+  if FColumnHeaderBGColors[PaintInfo.Column.Index]<>clNone then
+    ABGColor:= FColumnHeaderBGColors[PaintInfo.Column.Index]
+  else
+    ABGColor:= FHeaderBGColor;
+
+  if FGridLinesVisible then
+    ALineColor:= FGridLinesColor
+  else
+    ALineColor:= ABGColor;
+end;
+
 function TVSTCoreTable.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
 begin
   if IsCellSelected(Node, Column) then
     Result:= FSelectedBGColor
+  else if FColumnValuesBGColors[Column]<>clNone then
+    Result:= FColumnValuesBGColors[Column]
   else
     Result:= FValuesBGColor;
 end;
@@ -1890,6 +1965,11 @@ begin
     Result:= FSelectedFont
   else
     Result:= FValuesFont;
+end;
+
+function TVSTCoreTable.IsColIndexCorrect(const AIndex: Integer): Boolean;
+begin
+  Result:= (AIndex>=0) and (AIndex<=High(FHeaderCaptions));
 end;
 
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
@@ -1913,6 +1993,9 @@ begin
   FSelectedBGColor:= clHighlight;
 
   FCanRightMouseButtonUnselect:= True;
+
+  FTree.HintMode:= hmTooltip;
+  FTree.ShowHint:= True;
 
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
@@ -1958,6 +2041,8 @@ var
 begin
   VAppend(FHeaderCaptions, ACaption);
   VAppend(FColumnWidths, AWidth);
+  VAppend(FColumnValuesBGColors, clNone);
+  VAppend(FColumnHeaderBGColors, clNone);
   Col:= FTree.Header.Columns.Add;
   Col.Text:= ACaption;
   Col.CaptionAlignment:= ACaptionAlignment;
@@ -1966,12 +2051,44 @@ begin
   Col.Width:= AWidth;
 end;
 
-procedure TVSTCoreTable.AutosizeColumnEnable(const AColumnIndex: Integer);
+procedure TVSTCoreTable.SetColumnValuesBGColor(const AColIndex: Integer; const ABGColor: TColor);
 begin
-  if AColumnIndex<0 then
-    if AColumnIndex<>-2 then
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FColumnValuesBGColors[AColIndex]:= ABGColor;
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetColumnValuesBGColor(const ACaption: String; const ABGColor: TColor);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  if ColIndex>=0 then
+    SetColumnValuesBGColor(ColIndex, ABGColor);
+end;
+
+procedure TVSTCoreTable.SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FColumnHeaderBGColors[AColIndex]:= ABGColor;
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetColumnHeaderBGColor(const ACaption: String;  const ABGColor: TColor);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  if ColIndex>=0 then
+    SetColumnHeaderBGColor(ColIndex, ABGColor);
+end;
+
+procedure TVSTCoreTable.AutosizeColumnEnable(const AColIndex: Integer);
+begin
+  if AColIndex<0 then
+    if AColIndex<>-2 then
       Exit;
-  FAutosizeColumnIndex:= AColumnIndex;
+  FAutosizeColumnIndex:= AColIndex;
   FTree.Header.Options:= FTree.Header.Options + [hoAutoResize];
   FTree.ScrollBarOptions.ScrollBars:= ssVertical;
   SetColumnWidths;
@@ -2243,21 +2360,21 @@ begin
   MAppend(FDataValues, nil);
 end;
 
-procedure TVSTCustomTable.SetColumn(const AColumnIndex: Integer;
+procedure TVSTCustomTable.SetColumn(const AColIndex: Integer;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 begin
-  FDataValues[AColumnIndex]:= VCut(AValues);
-  FTree.Header.Columns[AColumnIndex].Alignment:= AValuesAlignment;
+  FDataValues[AColIndex]:= VCut(AValues);
+  FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
 end;
 
 procedure TVSTCustomTable.SetColumn(const ACaption: String;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 var
-  ColumnIndex: Integer;
+  ColIndex: Integer;
 begin
-  ColumnIndex:= VIndexOf(FHeaderCaptions, ACaption);
-  if ColumnIndex>=0 then
-    SetColumn(ColumnIndex, AValues, AValuesAlignment);
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  if ColIndex>=0 then
+    SetColumn(ColIndex, AValues, AValuesAlignment);
 end;
 
 procedure TVSTCustomTable.Show(const AIndex: Integer);
@@ -2280,11 +2397,11 @@ begin
   if Assigned(Node) then SelectNode(Node);
 end;
 
-procedure TVSTTable.Select(const AColumnIndex: Integer; const AValue: String);
+procedure TVSTTable.Select(const AColIndex: Integer; const AValue: String);
 var
   Ind: Integer;
 begin
-  Ind:= VIndexOf(FDataValues[AColumnIndex], AValue);
+  Ind:= VIndexOf(FDataValues[AColIndex], AValue);
   if Ind>=0 then
     Select(Ind);
 end;
