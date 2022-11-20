@@ -295,17 +295,25 @@ type
 
   TVSTTable = class(TVSTCustomTable)
   protected
+    FAutosizeRowHeights: Boolean;
+
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
 
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
     procedure KeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
+    procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
+      Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+    procedure MeasureItem(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+                          Node: PVirtualNode; var NodeHeight: Integer);
 
     procedure SetCanSelect(AValue: Boolean); override;
     function GetSelectedIndex: Integer;
 
     procedure MoveSelection(const ADeltaIndex: Integer);
+
+    procedure SetAutosizeRowHeights(AValue: Boolean);
 
   public
     constructor Create(const ATree: TVirtualStringTree);
@@ -321,6 +329,7 @@ type
     procedure Select(const AColumnCaption, AValue: String);
     property SelectedIndex: Integer read GetSelectedIndex;
 
+    property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
   end;
 
   { TVSTCheckTable }
@@ -2415,6 +2424,20 @@ begin
     Select(Ind, AValue);
 end;
 
+procedure TVSTTable.SetAutosizeRowHeights(AValue: Boolean);
+begin
+  if FAutosizeRowHeights=AValue then Exit;
+  FAutosizeRowHeights:= AValue;
+
+  if FAutosizeRowHeights then
+    FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toVariableNodeHeight]
+  else
+    FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions - [toVariableNodeHeight];
+
+  FTree.ShowHint:= not FAutosizeRowHeights;
+  FTree.Refresh;
+end;
+
 procedure TVSTTable.SelectNode(Node: PVirtualNode);
 begin
   UnselectNode;
@@ -2473,6 +2496,37 @@ begin
     MoveSelection(1);
 end;
 
+procedure TVSTTable.InitNode(Sender: TBaseVirtualTree; ParentNode,
+  Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+begin
+  if FAutosizeRowHeights then
+  begin
+    InitialStates:= InitialStates + [ivsMultiline];
+    Node^.States:= Node^.States + [vsMultiline];
+  end
+  else begin
+    InitialStates:= InitialStates - [ivsMultiline];
+    Node^.States:= Node^.States - [vsMultiline];
+  end;
+end;
+
+procedure TVSTTable.MeasureItem(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
+  Node: PVirtualNode; var NodeHeight: Integer);
+var
+  Height, i: Integer;
+begin
+  NodeHeight:= FTree.DefaultNodeHeight;
+  if not FAutosizeRowHeights then Exit;
+
+  FTree.Font.Assign(FValuesFont);
+  for i:=0 to High(FHeaderCaptions) do
+  begin
+    Height:= FTree.ComputeNodeHeight(TargetCanvas, Node, i) + 4;
+    if Height>NodeHeight then
+      NodeHeight:= Height;
+  end;
+end;
+
 procedure TVSTTable.SetCanSelect(AValue: Boolean);
 begin
   if not AValue then UnselectNode;
@@ -2491,6 +2545,8 @@ begin
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions - [toCheckSupport];
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnKeyDown:= @KeyDown;
+  FTree.OnInitNode:= @InitNode;
+  FTree.OnMeasureItem:= @MeasureItem;
 end;
 
 destructor TVSTTable.Destroy;
