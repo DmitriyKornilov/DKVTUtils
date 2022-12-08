@@ -24,7 +24,7 @@ type
     FGridLinesVisible: Boolean;
 
     FCanSelect: Boolean;
-    FCanRightMouseButtonUnselect: Boolean;
+    FCanUnselect: Boolean;
 
     FValuesBGColor: TColor;
     FHeaderBGColor: TColor;
@@ -104,7 +104,7 @@ type
     property SelectedBGColor: TColor read FSelectedBGColor write SetSelectedBGColor;
 
     property CanSelect: Boolean read FCanSelect write SetCanSelect;
-    property CanRightMouseButtonUnselect: Boolean read FCanRightMouseButtonUnselect write FCanRightMouseButtonUnselect;
+    property CanUnselect: Boolean read FCanUnselect write FCanUnselect;
 
     property GridLinesVisible: Boolean write SetGridLinesVisible;
     property HeaderVisible: Boolean write SetHeaderVisible;
@@ -200,6 +200,7 @@ type
     procedure UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
 
     procedure EditorKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
+    procedure TreeExit(Sender: TObject);
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -737,7 +738,7 @@ procedure TVSTEdit.MouseDown(Sender: TObject; Button: TMouseButton;
 begin
   if Button=mbRight then
   begin
-    if FCanRightMouseButtonUnselect then
+    if FCanUnselect then
       UnselectCell;
   end
 end;
@@ -767,6 +768,12 @@ begin
   end
   else if Key=VK_ESCAPE then
     EditorEscape;
+end;
+
+procedure TVSTEdit.TreeExit(Sender: TObject);
+begin
+  if CanUnselect then
+    UnSelect;
 end;
 
 procedure TVSTEdit.KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -834,6 +841,7 @@ begin
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnKeyDown:= @KeyDown;
   FTree.OnUTF8KeyPress:= @UTF8KeyPress;
+  FTree.OnExit:= @TreeExit;
 
   FColumnRowTitlesFont:= TFont.Create;
   FColumnRowTitlesFont.Assign(FTree.Font);
@@ -1267,7 +1275,7 @@ begin
 
   if Button=mbRight then
   begin
-    if FCanRightMouseButtonUnselect then
+    if FCanUnselect then
       CheckAll(False);
   end
   else if Button=mbLeft then
@@ -1556,7 +1564,7 @@ begin
 
   if Button=mbRight then
   begin
-    if FCanRightMouseButtonUnselect then
+    if FCanUnselect then
       UnselectNode;
   end
   else if Button=mbLeft then
@@ -2100,7 +2108,7 @@ begin
   FHeaderBGColor:= FValuesBGColor;
   FSelectedBGColor:= clHighlight;
 
-  FCanRightMouseButtonUnselect:= True;
+  FCanUnselect:= True;
 
   FTree.HintMode:= hmTooltip;
   FTree.ShowHint:= True;
@@ -2320,7 +2328,7 @@ begin
 
   if Button=mbRight then
   begin
-    if FCanRightMouseButtonUnselect then
+    if FCanUnselect then
       CheckAll(False)
   end
   else if Button=mbLeft then
@@ -2567,7 +2575,7 @@ begin
 
   if Button=mbRight then
   begin
-    if FCanRightMouseButtonUnselect then
+    if FCanUnselect then
       UnselectNode;
   end
   else if Button=mbLeft then
