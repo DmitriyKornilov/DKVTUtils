@@ -98,6 +98,9 @@ type
     procedure AutosizeColumnEnable(const AColIndex: Integer);
     procedure AutosizeColumnDisable;
 
+    procedure RenameColumn(const AColIndex: Integer; const ANewName: String);
+    procedure RenameColumn(const AOldName, ANewName: String);
+
     property GridLinesColor: TColor read FGridLinesColor write SetGridLinesColor;
     property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
     property HeaderBGColor: TColor read FHeaderBGColor write SetHeaderBGColor;
@@ -2216,6 +2219,22 @@ begin
   FTree.Header.Options:= FTree.Header.Options - [hoAutoResize];
   FTree.ScrollBarOptions.ScrollBars:= ssBoth;
   SetColumnWidths;
+end;
+
+procedure TVSTCoreTable.RenameColumn(const AColIndex: Integer;
+  const ANewName: String);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FHeaderCaptions[AColIndex]:= ANewName;
+  //FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.RenameColumn(const AOldName, ANewName: String);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  RenameColumn(ColIndex, ANewName);
 end;
 
 { TVSTCheckTable }
