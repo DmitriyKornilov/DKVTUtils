@@ -143,6 +143,7 @@ type
     FSelectedRowIndex, FSelectedColIndex: Integer;
     FTitleColumnIndex: Integer;
     FShowZeros: Boolean;
+    FUnselectOnExit: Boolean;
     FEditor: TWinControl;
     //FOnEdititingDone: TVSTEdititingDoneEvent;
 
@@ -163,6 +164,7 @@ type
     procedure SetSelectedText(AValue: String);
     function SelectedCellRect: TRect;
 
+    procedure SetUnselectOnExit(AValue: Boolean);
     procedure SetShowZeros(AValue: Boolean);
 
     function IsEditingColIndexCorrect(const AIndex: Integer): Boolean;
@@ -235,6 +237,11 @@ type
     procedure SetColumnDate(const ACaption: String; const AValues: TDateVector);
     procedure SetColumnTime(const ACaption: String; const AValues: TTimeVector);
 
+    procedure SetColumnInteger(const AColIndex: Integer; const AValues: TIntVector);
+    procedure SetColumnString(const AColIndex: Integer; const AValues: TStrVector);
+    procedure SetColumnDate(const AColIndex: Integer; const AValues: TDateVector);
+    procedure SetColumnTime(const AColIndex: Integer; const AValues: TTimeVector);
+
     procedure UnSelect;
     procedure Select(const ARowIndex, AColIndex: Integer);
     procedure Select(const ARowIndex: Integer; const AColumnCaption: String);
@@ -269,7 +276,7 @@ type
     property SelectedRowIndex: Integer read FSelectedRowIndex;
     property SelectedColIndex: Integer read FSelectedColIndex;
     property SelectedText: String read GetSelectedText write SetSelectedText;
-
+    property UnselectOnExit: Boolean read FUnselectOnExit write SetUnselectOnExit;
     property ShowZeros: Boolean read FShowZeros write SetShowZeros;
 
     //property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
@@ -656,7 +663,7 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeadercaptions, ACaption);
-  ColumnAsInteger(AValues, ColIndex, ADefaultValue);
+  Result:= ColumnAsInteger(AValues, ColIndex, ADefaultValue);
 end;
 
 function TVSTEdit.ColumnAsString(out AValues: TStrVector;
@@ -665,7 +672,7 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeadercaptions, ACaption);
-  ColumnAsString(AValues, ColIndex, ADefaultValue);
+  Result:= ColumnAsString(AValues, ColIndex, ADefaultValue);
 end;
 
 function TVSTEdit.ColumnAsDate(out AValues: TDblVector; const ACaption: String;
@@ -674,7 +681,7 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeadercaptions, ACaption);
-  ColumnAsDate(AValues, ColIndex, ADefaultValue);
+  Result:= ColumnAsDate(AValues, ColIndex, ADefaultValue);
 end;
 
 function TVSTEdit.ColumnAsTime(out AValues: TDblVector; const ACaption: String;
@@ -683,7 +690,7 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeadercaptions, ACaption);
-  ColumnAsTime(AValues, ColIndex, ADefaultValue);
+  Result:= ColumnAsTime(AValues, ColIndex, ADefaultValue);
 end;
 
 procedure TVSTEdit.SetColumnRowTitlesHeaderBGColor(const ABGColor: TColor);
@@ -692,13 +699,17 @@ begin
   SetColumnHeaderBGColor(FTitleColumnIndex, ABGColor);
 end;
 
-
-
 procedure TVSTEdit.SetShowZeros(AValue: Boolean);
 begin
   if FShowZeros=AValue then Exit;
   FShowZeros:= AValue;
   FTree.Refresh;
+end;
+
+procedure TVSTEdit.SetUnselectOnExit(AValue: Boolean);
+begin
+  if FUnselectOnExit=AValue then Exit;
+  FUnselectOnExit:= AValue;
 end;
 
 procedure TVSTEdit.SelectCell(Node: PVirtualNode; Column: TColumnIndex);
@@ -775,7 +786,7 @@ end;
 
 procedure TVSTEdit.TreeExit(Sender: TObject);
 begin
-  if CanUnselect then
+  if CanUnselect and UnselectOnExit then
     UnSelect;
 end;
 
@@ -844,7 +855,7 @@ begin
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnKeyDown:= @KeyDown;
   FTree.OnUTF8KeyPress:= @UTF8KeyPress;
-  FTree.OnExit:= @TreeExit;
+  //FTree.OnExit:= @TreeExit;
 
   FColumnRowTitlesFont:= TFont.Create;
   FColumnRowTitlesFont.Assign(FTree.Font);
@@ -853,8 +864,7 @@ begin
   FSelectedRowIndex:= -1;
   FSelectedColIndex:= -1;
   FShowZeros:= False;
-
-
+  FUnselectOnExit:= True;
 end;
 
 destructor TVSTEdit.Destroy;
@@ -1196,8 +1206,7 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
-  if ColIndex>=0 then
-    FDataValues[ColIndex]:= VIntToStr(AValues);
+  SetColumnInteger(ColIndex, AValues);
 end;
 
 procedure TVSTEdit.SetColumnString(const ACaption: String; const AValues: TStrVector);
@@ -1205,8 +1214,7 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
-  if ColIndex>=0 then
-    FDataValues[ColIndex]:= VCut(AValues);
+  SetColumnString(ColIndex, AValues);
 end;
 
 procedure TVSTEdit.SetColumnDate(const ACaption: String; const AValues: TDateVector);
@@ -1214,8 +1222,7 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
-  if ColIndex>=0 then
-    FDataValues[ColIndex]:= VFormatDateTime(FColumnFormatStrings[ColIndex], AValues);
+  SetColumnDate(ColIndex, AValues);
 end;
 
 procedure TVSTEdit.SetColumnTime(const ACaption: String; const AValues: TTimeVector);
@@ -1223,8 +1230,31 @@ var
   ColIndex: Integer;
 begin
   ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
-  if ColIndex>=0 then
-    FDataValues[ColIndex]:= VFormatDateTime(FColumnFormatStrings[ColIndex], AValues);
+  SetColumnTime(ColIndex, AValues);
+end;
+
+procedure TVSTEdit.SetColumnInteger(const AColIndex: Integer; const AValues: TIntVector);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FDataValues[AColIndex]:= VIntToStr(AValues);
+end;
+
+procedure TVSTEdit.SetColumnString(const AColIndex: Integer; const AValues: TStrVector);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FDataValues[AColIndex]:= VCut(AValues);
+end;
+
+procedure TVSTEdit.SetColumnDate(const AColIndex: Integer; const AValues: TDateVector);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FDataValues[AColIndex]:= VFormatDateTime(FColumnFormatStrings[AColIndex], AValues);
+end;
+
+procedure TVSTEdit.SetColumnTime(const AColIndex: Integer; const AValues: TTimeVector);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FDataValues[AColIndex]:= VFormatDateTime(FColumnFormatStrings[AColIndex], AValues);
 end;
 
 procedure TVSTEdit.AddValuesColumn(const AColumnType: TVSTColumnType;
@@ -2221,12 +2251,11 @@ begin
   SetColumnWidths;
 end;
 
-procedure TVSTCoreTable.RenameColumn(const AColIndex: Integer;
-  const ANewName: String);
+procedure TVSTCoreTable.RenameColumn(const AColIndex: Integer; const ANewName: String);
 begin
   if not IsColIndexCorrect(AColIndex) then Exit;
   FHeaderCaptions[AColIndex]:= ANewName;
-  //FTree.Refresh;
+  FTree.Header.Columns[AColIndex].Text:= FHeaderCaptions[AColIndex];
 end;
 
 procedure TVSTCoreTable.RenameColumn(const AOldName, ANewName: String);
