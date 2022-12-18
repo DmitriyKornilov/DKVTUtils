@@ -2233,7 +2233,7 @@ procedure TVSTCoreTable.RenameColumn(const AOldName, ANewName: String);
 var
   ColIndex: Integer;
 begin
-  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  ColIndex:= VIndexOf(FHeaderCaptions, AOldName);
   RenameColumn(ColIndex, ANewName);
 end;
 
