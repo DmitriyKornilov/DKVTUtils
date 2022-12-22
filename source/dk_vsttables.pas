@@ -320,11 +320,14 @@ type
   end;
 
 
+  TVSTTableSelectEvent = procedure of object;
+
   { TVSTTable }
 
   TVSTTable = class(TVSTCustomTable)
   protected
     FAutosizeRowHeights: Boolean;
+    FOnSelect: TVSTTableSelectEvent;
 
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
@@ -359,6 +362,7 @@ type
     property SelectedIndex: Integer read GetSelectedIndex;
 
     property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
+    property OnSelect: TVSTTableSelectEvent read FOnSelect write FOnSelect;
   end;
 
   { TVSTCheckTable }
@@ -2599,6 +2603,8 @@ begin
   FSelected[Node^.Index]:= True;
   FTree.FocusedNode:= Node;
   FTree.Refresh;
+
+  if Assigned(FOnSelect) then FOnSelect;
 end;
 
 procedure TVSTTable.UnselectNode;
