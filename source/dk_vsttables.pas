@@ -372,6 +372,7 @@ type
   TVSTCheckTable = class(TVSTCustomTable)
   protected
     FOnSelect: TVSTCheckTableSelectEvent;
+    FMaxCheckedCount: Integer;
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
@@ -381,12 +382,16 @@ type
 
     function GetIsAllChecked: Boolean;
     function GetIsAllUnchecked: Boolean;
+    procedure SetMaxCheckedCount(AValue: Integer);
 
     procedure SetCanSelect(AValue: Boolean); override;
 
     procedure SetChecked(AIndex: Integer; AValue: Boolean);
     function GetChecked(AIndex: Integer): Boolean;
     function GetSelected: TBoolVector;
+
+    function GetCheckedCount: Integer;
+    function GetUncheckedCount: Integer;
 
     procedure CheckNode(Node: PVirtualNode; const AChecked: Boolean);
     procedure Check(Node: PVirtualNode);
@@ -406,6 +411,11 @@ type
     property IsAllChecked: Boolean read GetIsAllChecked;
     property IsAllUnchecked: Boolean read GetIsAllUnchecked;
     property Selected: TBoolVector read GetSelected;
+
+    property CheckedCount: Integer read GetCheckedCount;
+    property UncheckedCount: Integer read GetUncheckedCount;
+    property MaxCheckedCount: Integer read FMaxCheckedCount write SetMaxCheckedCount;
+    procedure MaxCheckedCountClear;
 
     property OnSelect: TVSTCheckTableSelectEvent read FOnSelect write FOnSelect;
   end;
@@ -2321,14 +2331,21 @@ end;
 procedure TVSTCheckTable.CheckNode(Node: PVirtualNode; const AChecked: Boolean);
 begin
   if (not Assigned(Node)) or VIsNil(FSelected) then Exit;
+
+  if FMaxCheckedCount>=0 then
+    if AChecked and (CheckedCount=FMaxCheckedCount) then
+      Exit;
+
   if AChecked then
     Node^.CheckState:= csCheckedNormal
   else
     Node^.CheckState:= csUnCheckedNormal;
   FSelected[Node^.Index]:= AChecked;
-  FTree.Refresh;
 
-  if Assigned(FOnSelect) then FOnSelect(Node^.Index, AChecked);
+  if Assigned(FOnSelect) then
+    FOnSelect(Node^.Index, AChecked);
+
+  FTree.Refresh;
 end;
 
 procedure TVSTCheckTable.Check(Node: PVirtualNode);
@@ -2354,7 +2371,6 @@ begin
       Check(Node)
     else
       Uncheck(Node);
-    FSelected[Node^.Index]:= AChecked;
     Node:= FTree.GetNext(Node);
   end;
   FTree.Refresh;
@@ -2373,6 +2389,47 @@ end;
 function TVSTCheckTable.GetSelected: TBoolVector;
 begin
   Result:= VCut(FSelected);
+end;
+
+function TVSTCheckTable.GetCheckedCount: Integer;
+begin
+  Result:= VCountIf(FSelected, True);
+end;
+
+function TVSTCheckTable.GetUncheckedCount: Integer;
+begin
+  Result:= VCountIf(FSelected, False);
+end;
+
+procedure TVSTCheckTable.MaxCheckedCountClear;
+begin
+  FMaxCheckedCount:= -1;
+end;
+
+procedure TVSTCheckTable.SetMaxCheckedCount(AValue: Integer);
+var
+  i, Count, Delta, N: Integer;
+begin
+  if FMaxCheckedCount=AValue then Exit;
+  FMaxCheckedCount:= AValue;
+
+  if FMaxCheckedCount<0 then Exit;
+
+  Count:= CheckedCount;
+  if Count<=FMaxCheckedCount then Exit;
+
+  Delta:= Count - FMaxCheckedCount;
+  N:= 0;
+  for i:= High(FSelected) downto 0 do
+  begin
+    if FSelected[i] then
+    begin
+      Uncheck(i);
+      N:= N + 1;
+    end;
+    if N=Delta then break;
+  end;
+
 end;
 
 procedure TVSTCheckTable.MouseDown(Sender: TObject; Button: TMouseButton;
@@ -2423,6 +2480,7 @@ begin
   inherited Create(ATree);
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
 
+  FMaxCheckedCount:= -1;
 
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
