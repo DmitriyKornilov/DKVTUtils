@@ -864,7 +864,7 @@ begin
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnKeyDown:= @KeyDown;
   FTree.OnUTF8KeyPress:= @UTF8KeyPress;
-  //FTree.OnExit:= @TreeExit;
+  FTree.OnExit:= @TreeExit;
 
   FColumnRowTitlesFont:= TFont.Create;
   FColumnRowTitlesFont.Assign(FTree.Font);
@@ -1171,6 +1171,7 @@ begin
   if not IsColumnRowTitlesExists then Exit;
   FDataValues[FTitleColumnIndex]:= VCut(AValues);
   FTree.Header.Columns[FTitleColumnIndex].Alignment:= AValuesAlignment;
+  FTree.Refresh;
 end;
 
 procedure TVSTEdit.SetNewColumn(const AColumnType: TVSTColumnType;
