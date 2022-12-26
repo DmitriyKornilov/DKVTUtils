@@ -365,10 +365,13 @@ type
     property OnSelect: TVSTTableSelectEvent read FOnSelect write FOnSelect;
   end;
 
+  TVSTCheckTableSelectEvent = procedure(const AIndex: Integer; const AChecked: Boolean) of object;
+
   { TVSTCheckTable }
 
   TVSTCheckTable = class(TVSTCustomTable)
   protected
+    FOnSelect: TVSTCheckTableSelectEvent;
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
@@ -403,6 +406,8 @@ type
     property IsAllChecked: Boolean read GetIsAllChecked;
     property IsAllUnchecked: Boolean read GetIsAllUnchecked;
     property Selected: TBoolVector read GetSelected;
+
+    property OnSelect: TVSTCheckTableSelectEvent read FOnSelect write FOnSelect;
   end;
 
   { TVSTCategoryCustomTable }
@@ -2321,6 +2326,8 @@ begin
     Node^.CheckState:= csUnCheckedNormal;
   FSelected[Node^.Index]:= AChecked;
   FTree.Refresh;
+
+  if Assigned(FOnSelect) then FOnSelect(Node^.Index, AChecked);
 end;
 
 procedure TVSTCheckTable.Check(Node: PVirtualNode);
