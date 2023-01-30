@@ -2665,9 +2665,15 @@ end;
 
 procedure TVSTTable.SelectNode(Node: PVirtualNode);
 begin
-  UnselectNode;
-  FSelected[Node^.Index]:= True;
-  FTree.FocusedNode:= Node;
+  if Assigned(Node) then //select
+  begin
+    FSelected[Node^.Index]:= True;
+    FTree.FocusedNode:= Node;
+  end
+  else begin //unselect
+    if IsSelected then
+      FSelected[SelectedIndex]:= False;
+  end;
   FTree.Refresh;
 
   if Assigned(FOnSelect) then FOnSelect;
@@ -2675,9 +2681,7 @@ end;
 
 procedure TVSTTable.UnselectNode;
 begin
-  if not IsSelected then Exit;
-  FSelected[SelectedIndex]:= False;
-  FTree.Refresh;
+  SelectNode(nil);
 end;
 
 procedure TVSTTable.MouseDown(Sender: TObject; Button: TMouseButton;
