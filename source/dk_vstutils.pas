@@ -154,7 +154,6 @@ begin
     R.Top:= R.Top-1;
 
   TargetCanvas.Rectangle(R);
-
 end;
 
 

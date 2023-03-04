@@ -9,6 +9,11 @@ uses
   DateTimePicker, LMessages, LCLIntf,
   DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const;
 
+const
+  COLOR_BG_DEFAULT = clWhite; //clWindow
+  COLOR_FONT_DEFAULT = clBlack; //clWindowText
+  COLOR_LINE_DEFAULT = clBlack; //clWindowText
+
 type
 
   { TVSTCoreTable }
@@ -64,7 +69,7 @@ type
                             const Elements: THeaderPaintElements);
     procedure BeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
                               Node: PVirtualNode; Column: TColumnIndex;
-                              {%H-}CellPaintMode: TVTCellPaintMode; CellRect: TRect;
+                              CellPaintMode: TVTCellPaintMode; CellRect: TRect;
                               var {%H-}ContentRect: TRect);
     procedure DrawText(Sender: TBaseVirtualTree;
                        TargetCanvas: TCanvas; Node: PVirtualNode;
@@ -2077,6 +2082,7 @@ var
   BGColor: TColor;
   NeedTopLine: Boolean;
 begin
+  if CellPaintMode<>cpmPaint then Exit;
   BGColor:= CellBGColor(Node, Column);
   NeedTopLine:= (Sender.GetNodeLevel(Node)=0) and (Node^.Index=0) and
                 (not (hoVisible in FTree.Header.Options));
@@ -2148,6 +2154,9 @@ begin
   Clear;
   FFixedColumnsCount:= 0;
 
+  FTree.Header.Font.Color:= COLOR_FONT_DEFAULT;
+  FTree.Font.Color:= COLOR_FONT_DEFAULT;
+
   FHeaderFont:= TFont.Create;
   FValuesFont:= TFont.Create;
   FSelectedFont:= TFont.Create;
@@ -2156,8 +2165,8 @@ begin
   FSelectedFont.Assign(FTree.Font);
 
   FGridLinesVisible:= True;
-  FGridLinesColor:= clWindowText;
-  FValuesBGColor:= clWindow;
+  FGridLinesColor:= COLOR_LINE_DEFAULT;
+  FValuesBGColor:= COLOR_BG_DEFAULT;
   FHeaderBGColor:= FValuesBGColor;
   FSelectedBGColor:= clHighlight;
 
@@ -2171,6 +2180,7 @@ begin
 
   FTree.DefaultNodeHeight:= 25;
   FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight + 1;
+  FTree.Header.Height:= FTree.Header.DefaultHeight;
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions +
                                    [toAlwaysHideSelection, toHideFocusRect];
