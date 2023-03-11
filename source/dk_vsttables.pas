@@ -16,6 +16,10 @@ const
 
 type
 
+  TVSTSelectEvent = procedure of object;
+  TVSTCheckEvent = procedure(const ARowIndex: Integer; const AChecked: Boolean) of object;
+  TVSTCellCheckEvent = procedure(const ARowIndex, AColIndex: Integer; const AChecked: Boolean) of object;
+
   { TVSTCoreTable }
 
   TVSTCoreTable = class(TObject)
@@ -155,6 +159,7 @@ type
     FColumnRowTitlesFont: TFont;
     //FColumnRowTitlesBGColor: TColor;
 
+    FOnSelect: TVSTSelectEvent;
 
     procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex);
     procedure UnselectCell;
@@ -284,6 +289,7 @@ type
     property UnselectOnExit: Boolean read FUnselectOnExit write SetUnselectOnExit;
     property ShowZeros: Boolean read FShowZeros write SetShowZeros;
 
+    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
     //property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
   end;
 
@@ -325,14 +331,14 @@ type
   end;
 
 
-  TVSTTableSelectEvent = procedure of object;
+
 
   { TVSTTable }
 
   TVSTTable = class(TVSTCustomTable)
   protected
     FAutosizeRowHeights: Boolean;
-    FOnSelect: TVSTTableSelectEvent;
+    FOnSelect: TVSTSelectEvent;
 
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
@@ -367,16 +373,15 @@ type
     property SelectedIndex: Integer read GetSelectedIndex;
 
     property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
-    property OnSelect: TVSTTableSelectEvent read FOnSelect write FOnSelect;
+    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
 
-  TVSTCheckTableSelectEvent = procedure(const AIndex: Integer; const AChecked: Boolean) of object;
 
   { TVSTCheckTable }
 
   TVSTCheckTable = class(TVSTCustomTable)
   protected
-    FOnSelect: TVSTCheckTableSelectEvent;
+    FOnSelect: TVSTCheckEvent;
     FMaxCheckedCount: Integer;
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
@@ -422,7 +427,7 @@ type
     property MaxCheckedCount: Integer read FMaxCheckedCount write SetMaxCheckedCount;
     procedure MaxCheckedCountClear;
 
-    property OnSelect: TVSTCheckTableSelectEvent read FOnSelect write FOnSelect;
+    property OnSelect: TVSTCheckEvent read FOnSelect write FOnSelect;
   end;
 
   { TVSTCategoryCustomTable }
@@ -739,31 +744,32 @@ end;
 procedure TVSTEdit.SelectCell(Node: PVirtualNode; Column: TColumnIndex);
 var
   RowIndex, ColIndex: Integer;
-  IsEditorExists: Boolean;
 begin
-  if Column<>FTitleColumnIndex then
+  if (not Assigned(Node)) and (Column=-1) then  //unselect
   begin
-    IsEditorExists:= Assigned(FEditor);
+    EndEdit;
+    FSelectedRowIndex:= -1;
+    FSelectedColIndex:= -1;
+  end
+  else if Assigned(Node) and (Column<>FTitleColumnIndex) then //select
+  begin
+    EndEdit;
     RowIndex:= FSelectedRowIndex;
     ColIndex:= FSelectedColIndex;
-    UnselectCell;
     FSelectedRowIndex:= Node^.Index;
     FSelectedColIndex:= Column;
     FTree.FocusedNode:= Node;
-    if (not IsEditorExists) and
-       (FSelectedRowIndex=RowIndex) and (FSelectedColIndex=ColIndex) then
+    if (FSelectedRowIndex=RowIndex) and (FSelectedColIndex=ColIndex) then
       BeginEdit;
   end;
+
+  if Assigned(FOnSelect) then FOnSelect;
   FTree.Refresh;
 end;
 
 procedure TVSTEdit.UnselectCell;
 begin
-  if not IsSelected then Exit;
-  EndEdit;
-  FSelectedRowIndex:= -1;
-  FSelectedColIndex:= -1;
-  FTree.Refresh;
+  SelectCell(nil, -1);
 end;
 
 procedure TVSTEdit.NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
@@ -810,8 +816,17 @@ end;
 
 procedure TVSTEdit.TreeExit(Sender: TObject);
 begin
-  if CanUnselect and UnselectOnExit then
-    UnSelect;
+  if CanUnselect then
+  begin
+    if UnselectOnExit then
+      Unselect
+    else
+      EndEdit;
+  end;
+
+
+  //if CanUnselect and UnselectOnExit then
+  //  UnSelect;
 end;
 
 procedure TVSTEdit.KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -2005,6 +2020,12 @@ end;
 procedure TVSTCoreTable.SetColumnWidths;
 var
   i: Integer;
+
+  function CalcWidth(const AWidth: Integer): Integer;
+  begin
+    Result:= Round(AWidth*ScreenInfo.PixelsPerInchX/96);
+  end;
+
 begin
   FTree.Header.AutoSizeIndex:= -1;
   if FAutosizeColumnIndex>=0 then
@@ -2015,7 +2036,7 @@ begin
   else if FAutosizeColumnIndex=-2 then
     FTree.Header.AutoSizeIndex:= High(FHeaderCaptions);
   for i:= 0 to High(FHeaderCaptions) do
-    FTree.Header.Columns[i].Width:= FColumnWidths[i];
+    FTree.Header.Columns[i].Width:= CalcWidth(FColumnWidths[i]);
 end;
 
 procedure TVSTCoreTable.SetHeaderBGColor(AValue: TColor);
@@ -2684,9 +2705,9 @@ begin
     FSelected[Node^.Index]:= True;
     FTree.FocusedNode:= Node;
   end;
-  FTree.Refresh;
 
   if Assigned(FOnSelect) then FOnSelect;
+  FTree.Refresh;
 end;
 
 procedure TVSTTable.UnselectNode;

@@ -13,6 +13,8 @@ uses
   procedure VSTLoad(const VST: TVirtualStringTree; const AMatrix: TStrMatrix;
                     const AExpandNodeIndex: Integer);
 
+  procedure VSTNodeHeights(const VST: TVirtualStringTree;
+                           const AHeight: Integer);
   function VSTShowNode(const VST: TVirtualStringTree;
                        const AInd1, AInd2: Integer): PVirtualNode;
 
@@ -67,6 +69,20 @@ begin
     for j:= 0 to High(AMatrix[i]) do VST.AddChild(Node);
     VST.Expanded[Node]:= i=AExpandNodeIndex;
   end;
+end;
+
+procedure VSTNodeHeights(const VST: TVirtualStringTree; const AHeight: Integer);
+var
+  Node: PVirtualNode;
+begin
+  Node:= VST.GetFirst;
+  while Assigned(Node) do
+  begin
+    if VST.GetNodeLevel(Node)=0 then
+      Node^.NodeHeight:= AHeight;
+    Node:= VST.GetNext(Node);
+  end;
+  VST.Refresh;
 end;
 
 function VSTShowNode(const VST: TVirtualStringTree; const AInd1, AInd2: Integer): PVirtualNode;
