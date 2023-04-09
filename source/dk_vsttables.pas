@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls, Spin,
-  DateTimePicker, LMessages, LCLIntf,
+  DateTimePicker, LMessages, LCLIntf, Forms, Math,
   DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const;
 
 const
@@ -26,11 +26,15 @@ type
   protected
     FTree: TVirtualStringTree;
 
+    FDesignTimePPI: Integer;
+
     FAutosizeColumnIndex: Integer; //-2 last clolumn, -1 none
     FFixedColumnsCount: Integer;
 
     FGridLinesColor: TColor;
     FGridLinesVisible: Boolean;
+
+    FHeaderVisible: Boolean;
 
     FCanSelect: Boolean;
     FCanUnselect: Boolean;
@@ -89,6 +93,10 @@ type
     function CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex): TFont; virtual;
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
+
+    procedure SetDesignTimePPI;
+    function HeightToPPI(const AHeight: Integer): Integer;
+    function WidthToPPI(const AWidth: Integer): Integer;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -118,14 +126,14 @@ type
     property CanSelect: Boolean read FCanSelect write SetCanSelect;
     property CanUnselect: Boolean read FCanUnselect write FCanUnselect;
 
-    property GridLinesVisible: Boolean write SetGridLinesVisible;
-    property HeaderVisible: Boolean write SetHeaderVisible;
+    property GridLinesVisible: Boolean read FGridLinesVisible write SetGridLinesVisible;
+    property HeaderVisible: Boolean read FHeaderVisible write SetHeaderVisible;
 
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
     property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
-
+    property DesignTimePPI: Integer read FDesignTimePPI;
   end;
 
   TVSTColumnType = (
@@ -299,6 +307,7 @@ type
   protected
     FDataValues: TStrMatrix;
     FSelected: TBoolVector;
+    FAutoHeight: Boolean;
 
     function GetIsSelected: Boolean;
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
@@ -308,7 +317,7 @@ type
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; {%H-}TextType: TVSTTextType;
                       var CellText: String);
-
+    function GetNeededHeight: Integer;
     function IsIndexCorrect(const AIndex: Integer): Boolean;
   public
     constructor Create(const ATree: TVirtualStringTree);
@@ -327,7 +336,8 @@ type
     procedure Show(const AIndex: Integer);
 
     property IsSelected: Boolean read GetIsSelected;
-
+    property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
+    property NeededHeight: Integer read GetNeededHeight;
   end;
 
 
@@ -1927,7 +1937,9 @@ end;
 
 procedure TVSTCoreTable.SetHeaderVisible(AValue: Boolean);
 begin
-  if AValue then
+  if FHeaderVisible=AValue then Exit;
+  FHeaderVisible:= AValue;
+  if FHeaderVisible then
     FTree.Header.Options:= FTree.Header.Options + [hoVisible]
   else
     FTree.Header.Options:= FTree.Header.Options - [hoVisible];
@@ -1936,7 +1948,7 @@ end;
 procedure TVSTCoreTable.SetGridLinesColor(AValue: TColor);
 begin
   if FGridLinesColor=AValue then Exit;
-  FGridLinesColor:=AValue;
+  FGridLinesColor:= AValue;
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Refresh;
 end;
@@ -2168,9 +2180,31 @@ begin
   Result:= (AIndex>=0) and (AIndex<=High(FHeaderCaptions));
 end;
 
+procedure TVSTCoreTable.SetDesignTimePPI;
+var
+  C: TWinControl;
+begin
+  C:= FTree.Parent;
+  while not (C is TForm) do
+    C:= C.Parent;
+  FDesignTimePPI:= (C as TForm).DesignTimePPI
+end;
+
+function TVSTCoreTable.HeightToPPI(const AHeight: Integer): Integer;
+begin
+  Result:= Ceil(AHeight*DesignTimePPI/ScreenInfo.PixelsPerInchY);
+end;
+
+function TVSTCoreTable.WidthToPPI(const AWidth: Integer): Integer;
+begin
+  Result:= Ceil(AWidth*DesignTimePPI/ScreenInfo.PixelsPerInchY);
+end;
+
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
 begin
   FTree:= ATree;
+
+  SetDesignTimePPI;
 
   Clear;
   FFixedColumnsCount:= 0;
@@ -2178,6 +2212,7 @@ begin
   FTree.Header.Font.Color:= COLOR_FONT_DEFAULT;
   FTree.Font.Color:= COLOR_FONT_DEFAULT;
 
+  FHeaderVisible:= True;
   FHeaderFont:= TFont.Create;
   FValuesFont:= TFont.Create;
   FSelectedFont:= TFont.Create;
@@ -2540,6 +2575,18 @@ end;
 
 { TVSTCustomTable }
 
+function TVSTCustomTable.GetNeededHeight: Integer;
+var
+  NodeCount, HeaderHeight, NodeHeight: Integer;
+begin
+  HeaderHeight:= 0;
+  if FHeaderVisible then
+    HeaderHeight:= HeightToPPI(FTree.Header.Height);
+  NodeHeight:= HeightToPPI(FTree.DefaultNodeHeight);
+  NodeCount:= MMaxLength(FDataValues);
+  Result:= HeaderHeight + NodeCount*NodeHeight;
+end;
+
 function TVSTCustomTable.GetIsSelected: Boolean;
 begin
   Result:= VIsTrue(FSelected);
@@ -2581,6 +2628,7 @@ end;
 constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree);
 begin
   inherited Create(ATree);
+  FAutoHeight:= False;
   FTree.Indent:= 0;
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
   FTree.OnGetText:= @GetText;
@@ -2630,6 +2678,11 @@ procedure TVSTCustomTable.SetColumn(const AColIndex: Integer;
 begin
   FDataValues[AColIndex]:= VCut(AValues);
   FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
+  if AutoHeight then
+  begin
+    FTree.Height:= NeededHeight;
+    FTree.Refresh;
+  end;
 end;
 
 procedure TVSTCustomTable.SetColumn(const ACaption: String;
