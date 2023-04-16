@@ -14,6 +14,8 @@ const
   COLOR_FONT_DEFAULT = clBlack; //clWindowText
   COLOR_LINE_DEFAULT = clBlack; //clWindowText
 
+  ROW_HEIGHT_DEFAULT = 25;
+
 type
 
   TVSTSelectEvent = procedure of object;
@@ -95,8 +97,10 @@ type
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
     procedure SetDesignTimePPI;
-    function HeightToPPI(const AHeight: Integer): Integer;
-    function WidthToPPI(const AWidth: Integer): Integer;
+    function HeightToDesignTime(const AHeight: Integer): Integer;
+    function WidthToDesignTime(const AWidth: Integer): Integer;
+    function HeightToScreen(const AHeight: Integer): Integer;
+    function WidthToScreen(const AWidth: Integer): Integer;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -349,7 +353,6 @@ type
   TVSTTable = class(TVSTCustomTable)
   protected
     FAutosizeRowHeights: Boolean;
-    //FOnSelect: TVSTSelectEvent;
 
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
@@ -384,7 +387,6 @@ type
     property SelectedIndex: Integer read GetSelectedIndex;
 
     property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
-    //property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
 
 
@@ -393,7 +395,6 @@ type
   TVSTCheckTable = class(TVSTCustomTable)
   protected
     FOnCheck: TVSTCheckEvent;
-    //FOnSelect: TVSTCheckEvent;
     FMaxCheckedCount: Integer;
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
@@ -2189,17 +2190,27 @@ begin
   C:= FTree.Parent;
   while not (C is TForm) do
     C:= C.Parent;
-  FDesignTimePPI:= (C as TForm).DesignTimePPI
+  FDesignTimePPI:= (C as TForm).DesignTimePPI;
 end;
 
-function TVSTCoreTable.HeightToPPI(const AHeight: Integer): Integer;
+function TVSTCoreTable.HeightToDesignTime(const AHeight: Integer): Integer;
 begin
   Result:= Ceil(AHeight*DesignTimePPI/ScreenInfo.PixelsPerInchY);
 end;
 
-function TVSTCoreTable.WidthToPPI(const AWidth: Integer): Integer;
+function TVSTCoreTable.WidthToDesignTime(const AWidth: Integer): Integer;
 begin
-  Result:= Ceil(AWidth*DesignTimePPI/ScreenInfo.PixelsPerInchY);
+  Result:= Ceil(AWidth*DesignTimePPI/ScreenInfo.PixelsPerInchX);
+end;
+
+function TVSTCoreTable.HeightToScreen(const AHeight: Integer): Integer;
+begin
+  Result:= Ceil(AHeight*ScreenInfo.PixelsPerInchY/96);
+end;
+
+function TVSTCoreTable.WidthToScreen(const AWidth: Integer): Integer;
+begin
+  Result:= Ceil(AWidth*ScreenInfo.PixelsPerInchX/96);
 end;
 
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
@@ -2236,8 +2247,8 @@ begin
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
 
-  FTree.DefaultNodeHeight:= 25;
-  FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight + 1;
+  FTree.DefaultNodeHeight:= HeightToScreen(ROW_HEIGHT_DEFAULT);
+  FTree.Header.DefaultHeight:= HeightToDesignTime(FTree.DefaultNodeHeight);
   FTree.Header.Height:= FTree.Header.DefaultHeight;
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions +
@@ -2585,8 +2596,8 @@ var
 begin
   HeaderHeight:= 0;
   if FHeaderVisible then
-    HeaderHeight:= HeightToPPI(FTree.Header.Height);
-  NodeHeight:= HeightToPPI(FTree.DefaultNodeHeight);
+    HeaderHeight:= HeightToDesignTime(FTree.Header.Height);
+  NodeHeight:= HeightToDesignTime(FTree.DefaultNodeHeight);
   NodeCount:= MMaxLength(FDataValues);
   Result:= HeaderHeight + NodeCount*NodeHeight;
 end;
