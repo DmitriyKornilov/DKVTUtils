@@ -309,6 +309,8 @@ type
     FSelected: TBoolVector;
     FAutoHeight: Boolean;
 
+    FOnSelect: TVSTSelectEvent;
+
     function GetIsSelected: Boolean;
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
 
@@ -338,17 +340,16 @@ type
     property IsSelected: Boolean read GetIsSelected;
     property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
     property NeededHeight: Integer read GetNeededHeight;
+
+    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
-
-
-
 
   { TVSTTable }
 
   TVSTTable = class(TVSTCustomTable)
   protected
     FAutosizeRowHeights: Boolean;
-    FOnSelect: TVSTSelectEvent;
+    //FOnSelect: TVSTSelectEvent;
 
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
@@ -383,7 +384,7 @@ type
     property SelectedIndex: Integer read GetSelectedIndex;
 
     property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
-    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
+    //property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
 
 
@@ -391,7 +392,8 @@ type
 
   TVSTCheckTable = class(TVSTCustomTable)
   protected
-    FOnSelect: TVSTCheckEvent;
+    FOnCheck: TVSTCheckEvent;
+    //FOnSelect: TVSTCheckEvent;
     FMaxCheckedCount: Integer;
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
@@ -437,7 +439,7 @@ type
     property MaxCheckedCount: Integer read FMaxCheckedCount write SetMaxCheckedCount;
     procedure MaxCheckedCountClear;
 
-    property OnSelect: TVSTCheckEvent read FOnSelect write FOnSelect;
+    property OnCheck: TVSTCheckEvent read FOnCheck write FOnCheck;
   end;
 
   { TVSTCategoryCustomTable }
@@ -2408,8 +2410,10 @@ begin
     Node^.CheckState:= csUnCheckedNormal;
   FSelected[Node^.Index]:= AChecked;
 
+  if Assigned(FOnCheck) then
+    FOnCheck(Node^.Index, AChecked);
   if Assigned(FOnSelect) then
-    FOnSelect(Node^.Index, AChecked);
+    FOnSelect;
 
   FTree.Refresh;
 end;
