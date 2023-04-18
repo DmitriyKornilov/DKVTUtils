@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls, Spin,
-  DateTimePicker, LMessages, LCLIntf, Forms, Math,
-  DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const;
+  DateTimePicker, LMessages, LCLIntf, Forms,
+  DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const, DK_PPI;
 
 const
   COLOR_BG_DEFAULT = clWhite; //clWindow
@@ -97,10 +97,6 @@ type
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
     procedure SetDesignTimePPI;
-    function HeightToDesignTime(const AHeight: Integer): Integer;
-    function WidthToDesignTime(const AWidth: Integer): Integer;
-    function HeightToScreen(const AHeight: Integer): Integer;
-    function WidthToScreen(const AWidth: Integer): Integer;
   public
     constructor Create(const ATree: TVirtualStringTree);
     destructor  Destroy; override;
@@ -2193,26 +2189,6 @@ begin
   FDesignTimePPI:= (C as TForm).DesignTimePPI;
 end;
 
-function TVSTCoreTable.HeightToDesignTime(const AHeight: Integer): Integer;
-begin
-  Result:= Ceil(AHeight*DesignTimePPI/ScreenInfo.PixelsPerInchY);
-end;
-
-function TVSTCoreTable.WidthToDesignTime(const AWidth: Integer): Integer;
-begin
-  Result:= Ceil(AWidth*DesignTimePPI/ScreenInfo.PixelsPerInchX);
-end;
-
-function TVSTCoreTable.HeightToScreen(const AHeight: Integer): Integer;
-begin
-  Result:= Ceil(AHeight*ScreenInfo.PixelsPerInchY/96);
-end;
-
-function TVSTCoreTable.WidthToScreen(const AWidth: Integer): Integer;
-begin
-  Result:= Ceil(AWidth*ScreenInfo.PixelsPerInchX/96);
-end;
-
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
 begin
   FTree:= ATree;
@@ -2247,8 +2223,9 @@ begin
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
 
-  FTree.DefaultNodeHeight:= HeightToScreen(ROW_HEIGHT_DEFAULT);
-  FTree.Header.DefaultHeight:= HeightToDesignTime(FTree.DefaultNodeHeight);
+
+  FTree.DefaultNodeHeight:= SizeFromDefaultToDesignTime(ROW_HEIGHT_DEFAULT, FDesignTimePPI);
+  FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight;
   FTree.Header.Height:= FTree.Header.DefaultHeight;
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions +
@@ -2596,8 +2573,8 @@ var
 begin
   HeaderHeight:= 0;
   if FHeaderVisible then
-    HeaderHeight:= HeightToDesignTime(FTree.Header.Height);
-  NodeHeight:= HeightToDesignTime(FTree.DefaultNodeHeight);
+    HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
+  NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
   NodeCount:= MMaxLength(FDataValues);
   Result:= HeaderHeight + NodeCount*NodeHeight;
 end;
