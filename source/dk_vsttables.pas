@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls, Spin,
-  DateTimePicker, LMessages, LCLIntf, Forms,
+  DateTimePicker, LMessages, LCLIntf, Forms, GraphUtil,
   DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const, DK_PPI;
 
 const
@@ -2192,6 +2192,16 @@ begin
 end;
 
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
+
+  function CalcDefaultSelectionColor: TColor;
+  var
+    H, L, S: Byte;
+  begin
+    ColorToHLS(clHighlight, H, L, S);
+    L:= L + 100;
+    Result:= HLSToColor(H, L, S);
+  end;
+
 begin
   FTree:= ATree;
 
@@ -2215,7 +2225,7 @@ begin
   FGridLinesColor:= COLOR_LINE_DEFAULT;
   FValuesBGColor:= COLOR_BG_DEFAULT;
   FHeaderBGColor:= FValuesBGColor;
-  FSelectedBGColor:= clHighlight;
+  FSelectedBGColor:= CalcDefaultSelectionColor;
 
   FCanUnselect:= True;
 

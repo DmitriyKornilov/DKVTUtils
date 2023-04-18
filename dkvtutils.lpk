@@ -22,6 +22,10 @@
         <Filename Value="source\dk_vsttables.pas"/>
         <UnitName Value="DK_VSTTables"/>
       </Item>
+      <Item>
+        <Filename Value="source\dk_vsttools.pas"/>
+        <UnitName Value="dk_vsttools"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
