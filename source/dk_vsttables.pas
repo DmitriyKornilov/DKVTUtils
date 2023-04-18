@@ -112,7 +112,9 @@ type
     procedure SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
     procedure SetColumnHeaderBGColor(const ACaption: String; const ABGColor: TColor);
 
-    procedure SetRowHeight(const ARowHeight: Integer);
+    procedure SetRowHeight(const AHeight: Integer);
+    procedure SetHeaderHeight(const AHeight: Integer);
+    procedure SetAllHeight(const AHeight: Integer);
 
     procedure AutosizeColumnEnable(const AColIndex: Integer);
     procedure AutosizeColumnDisable;
@@ -2198,7 +2200,7 @@ constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
     H, L, S: Byte;
   begin
     ColorToHLS(clHighlight, H, L, S);
-    L:= L + 100;
+    L:= L + 110;
     Result:= HLSToColor(H, L, S);
   end;
 
@@ -2235,7 +2237,7 @@ begin
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
 
-  SetRowHeight(ROW_HEIGHT_DEFAULT);
+  SetAllHeight(ROW_HEIGHT_DEFAULT);
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions +
                                    [toAlwaysHideSelection, toHideFocusRect];
@@ -2317,12 +2319,23 @@ begin
     SetColumnHeaderBGColor(ColIndex, ABGColor);
 end;
 
-procedure TVSTCoreTable.SetRowHeight(const ARowHeight: Integer);
+procedure TVSTCoreTable.SetRowHeight(const AHeight: Integer);
 begin
-  FTree.DefaultNodeHeight:= SizeFromDefaultToDesignTime(ARowHeight, FDesignTimePPI);
-  FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight;
+  FTree.DefaultNodeHeight:= SizeFromDefaultToDesignTime(AHeight, FDesignTimePPI);
+  VSTNodeHeights(FTree, FTree.DefaultNodeHeight);
+end;
+
+procedure TVSTCoreTable.SetHeaderHeight(const AHeight: Integer);
+begin
+  FTree.Header.DefaultHeight:= SizeFromDefaultToDesignTime(AHeight, FDesignTimePPI);
   FTree.Header.Height:= FTree.Header.DefaultHeight;
-  VSTNodeHeights(FTree, ARowHeight);
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetAllHeight(const AHeight: Integer);
+begin
+  SetRowHeight(AHeight);
+  SetHeaderHeight(AHeight);
 end;
 
 procedure TVSTCoreTable.AutosizeColumnEnable(const AColIndex: Integer);

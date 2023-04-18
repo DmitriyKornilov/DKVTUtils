@@ -7,6 +7,10 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, VirtualTrees, DK_Vector, DK_VSTTables;
 
+const
+  LIST_ROW_HEIGHT_DEFAULT = 20;
+  LIST_HEADER_HEIGHT_DEFAULT = 26;
+
 type
 
   { TVSTStringList }
@@ -34,6 +38,30 @@ type
 
 implementation
 
+{ TVSTStringList }
+
+constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
+                       const ACaption: String;
+                       const AItems: TStrVector;
+                       const AOnSelect: TVSTSelectEvent);
+begin
+  inherited Create(ATree);
+  SetHeaderHeight(LIST_HEADER_HEIGHT_DEFAULT);
+  SetRowHeight(LIST_ROW_HEIGHT_DEFAULT);
+  FTree.BorderStyle:= bsNone;
+  HeaderFont.Style:= HeaderFont.Style + [fsBold];
+  HeaderVisible:= ACaption<>EmptyStr;
+  AutoHeight:= True;
+  GridLinesVisible:= False;
+  CanSelect:= True;
+  CanUnselect:= False;
+  AddColumn(ACaption, 100, taLeftJustify);
+  SetColumn(ACaption, AItems, taLeftJustify);
+  Draw;
+  Select(0);
+  OnSelect:= AOnSelect;
+end;
+
 { TVSTCheckList }
 
 constructor TVSTCheckList.Create(const ATree: TVirtualStringTree;
@@ -46,6 +74,8 @@ var
   i: Integer;
 begin
   inherited Create(ATree);
+  SetHeaderHeight(LIST_HEADER_HEIGHT_DEFAULT);
+  SetRowHeight(LIST_ROW_HEIGHT_DEFAULT);
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= HeaderFont.Style + [fsBold];
   AutoHeight:= True;
@@ -62,28 +92,6 @@ begin
     for i:=0 to ACheckedCount-1 do
       Check(i);
 
-  OnSelect:= AOnSelect;
-end;
-
-{ TVSTStringList }
-
-constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
-                       const ACaption: String;
-                       const AItems: TStrVector;
-                       const AOnSelect: TVSTSelectEvent);
-begin
-  inherited Create(ATree);
-  FTree.BorderStyle:= bsNone;
-  HeaderFont.Style:= HeaderFont.Style + [fsBold];
-  HeaderVisible:= ACaption<>EmptyStr;
-  AutoHeight:= True;
-  GridLinesVisible:= False;
-  CanSelect:= True;
-  CanUnselect:= False;
-  AddColumn(ACaption, 100, taLeftJustify);
-  SetColumn(ACaption, AItems, taLeftJustify);
-  Draw;
-  Select(0);
   OnSelect:= AOnSelect;
 end;
 
