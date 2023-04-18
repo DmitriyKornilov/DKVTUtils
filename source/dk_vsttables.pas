@@ -2194,16 +2194,6 @@ begin
 end;
 
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
-
-  function CalcDefaultSelectionColor: TColor;
-  var
-    H, L, S: Byte;
-  begin
-    ColorToHLS(clHighlight, H, L, S);
-    L:= L + 110;
-    Result:= HLSToColor(H, L, S);
-  end;
-
 begin
   FTree:= ATree;
 
@@ -2227,7 +2217,7 @@ begin
   FGridLinesColor:= COLOR_LINE_DEFAULT;
   FValuesBGColor:= COLOR_BG_DEFAULT;
   FHeaderBGColor:= FValuesBGColor;
-  FSelectedBGColor:= CalcDefaultSelectionColor;
+  FSelectedBGColor:= DefaultSelectionBGColor;
 
   FCanUnselect:= True;
 

@@ -20,7 +20,8 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
                        const AItems: TStrVector;
-                       const AOnSelect: TVSTSelectEvent
+                       const AOnSelect: TVSTSelectEvent;
+                       const ASelectedIndex: Integer = 0
                        );
   end;
 
@@ -43,7 +44,8 @@ implementation
 constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
                        const AItems: TStrVector;
-                       const AOnSelect: TVSTSelectEvent);
+                       const AOnSelect: TVSTSelectEvent;
+                       const ASelectedIndex: Integer = 0);
 begin
   inherited Create(ATree);
   SetHeaderHeight(LIST_HEADER_HEIGHT_DEFAULT);
@@ -58,7 +60,7 @@ begin
   AddColumn(ACaption, 100, taLeftJustify);
   SetColumn(ACaption, AItems, taLeftJustify);
   Draw;
-  Select(0);
+  Select(ASelectedIndex);
   OnSelect:= AOnSelect;
 end;
 
