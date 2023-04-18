@@ -112,6 +112,8 @@ type
     procedure SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
     procedure SetColumnHeaderBGColor(const ACaption: String; const ABGColor: TColor);
 
+    procedure SetRowHeight(const ARowHeight: Integer);
+
     procedure AutosizeColumnEnable(const AColIndex: Integer);
     procedure AutosizeColumnDisable;
 
@@ -2223,10 +2225,7 @@ begin
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
 
-
-  FTree.DefaultNodeHeight:= SizeFromDefaultToDesignTime(ROW_HEIGHT_DEFAULT, FDesignTimePPI);
-  FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight;
-  FTree.Header.Height:= FTree.Header.DefaultHeight;
+  SetRowHeight(ROW_HEIGHT_DEFAULT);
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions +
                                    [toAlwaysHideSelection, toHideFocusRect];
@@ -2306,6 +2305,14 @@ begin
   ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
   if ColIndex>=0 then
     SetColumnHeaderBGColor(ColIndex, ABGColor);
+end;
+
+procedure TVSTCoreTable.SetRowHeight(const ARowHeight: Integer);
+begin
+  FTree.DefaultNodeHeight:= SizeFromDefaultToDesignTime(ARowHeight, FDesignTimePPI);
+  FTree.Header.DefaultHeight:= FTree.DefaultNodeHeight;
+  FTree.Header.Height:= FTree.Header.DefaultHeight;
+  VSTNodeHeights(FTree, ARowHeight);
 end;
 
 procedure TVSTCoreTable.AutosizeColumnEnable(const AColIndex: Integer);
