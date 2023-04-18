@@ -28,6 +28,8 @@ type
   protected
     FTree: TVirtualStringTree;
 
+    FOnSelect: TVSTSelectEvent;
+
     FDesignTimePPI: Integer;
 
     FAutosizeColumnIndex: Integer; //-2 last clolumn, -1 none
@@ -138,6 +140,8 @@ type
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
     property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
     property DesignTimePPI: Integer read FDesignTimePPI;
+
+    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
 
   TVSTColumnType = (
@@ -171,7 +175,7 @@ type
     FColumnRowTitlesFont: TFont;
     //FColumnRowTitlesBGColor: TColor;
 
-    FOnSelect: TVSTSelectEvent;
+
 
     procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex);
     procedure UnselectCell;
@@ -301,7 +305,6 @@ type
     property UnselectOnExit: Boolean read FUnselectOnExit write SetUnselectOnExit;
     property ShowZeros: Boolean read FShowZeros write SetShowZeros;
 
-    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
     //property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
   end;
 
@@ -312,8 +315,6 @@ type
     FDataValues: TStrMatrix;
     FSelected: TBoolVector;
     FAutoHeight: Boolean;
-
-    FOnSelect: TVSTSelectEvent;
 
     function GetIsSelected: Boolean;
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
@@ -344,8 +345,6 @@ type
     property IsSelected: Boolean read GetIsSelected;
     property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
     property NeededHeight: Integer read GetNeededHeight;
-
-    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
 
   { TVSTTable }
@@ -1667,33 +1666,36 @@ begin
 end;
 
 procedure TVSTCategoryRadioButtonTable.SelectNode(Node: PVirtualNode);
+var
+  SelectedNode: PVirtualNode;
+  i, j: Integer;
 begin
-  UnselectNode;
-  FSelected[(Node^.Parent)^.Index, Node^.Index]:= True;
-  FTree.FocusedNode:= Node;
-  Node^.CheckState:= csCheckedNormal;
+  //unselect
+  if IsSelected then
+  begin
+    SelectedIndexes(i,j);
+    SelectedNode:= NodeFromIndex(i,j);
+    SelectedNode^.CheckState:= csUncheckedNormal;
+    FSelected[i,j]:= False;
+  end;
+  //select
+  if Assigned(Node) then
+  begin
+    i:= (Node^.Parent)^.Index;
+    j:= Node^.Index;
+    FSelected[i, j]:= True;
+    FTree.FocusedNode:= Node;
+    Node^.CheckState:= csCheckedNormal;
+  end;
+
+  if Assigned(FOnSelect) then FOnSelect;
+
   FTree.Refresh;
 end;
 
 procedure TVSTCategoryRadioButtonTable.UnselectNode;
-var
-  Node: PVirtualNode;
-  i, j: Integer;
 begin
-  if not IsSelected then Exit;
-
-  Node:= FTree.GetFirst;
-  while Assigned(Node) do
-  begin
-    if FTree.GetNodeLevel(Node)=1 then
-      Node^.CheckState:= csUncheckedNormal;
-    Node:= FTree.GetNext(Node);
-  end;
-
-  SelectedIndexes(i,j);
-  FSelected[i,j]:= False;
-
-  FTree.Refresh;
+  SelectNode(nil);
 end;
 
 constructor TVSTCategoryRadioButtonTable.Create(const ATree: TVirtualStringTree);

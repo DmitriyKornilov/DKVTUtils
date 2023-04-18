@@ -5,7 +5,8 @@ unit DK_VSTTools;
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, VirtualTrees, DK_Vector, DK_VSTTables;
+  Classes, SysUtils, Controls, Graphics, VirtualTrees, DK_Vector, DK_Matrix,
+  DK_VSTTables;
 
 const
   LIST_ROW_HEIGHT_DEFAULT = 20;
@@ -37,6 +38,20 @@ type
                        );
   end;
 
+  { TVSTCategoryDatesList }
+
+  TVSTCategoryDatesList = class(TVSTCategoryRadioButtonTable)
+  public
+    constructor Create(const ATree: TVirtualStringTree;
+                       const ACaption: String;
+                       const AOnSelect: TVSTSelectEvent
+                       );
+    procedure Update(const ACategories: TStrVector;
+                     const ADates: TDateMatrix;
+                     const ASelectedDate: TDate = 0
+                     );
+  end;
+
 implementation
 
 { TVSTStringList }
@@ -51,7 +66,7 @@ begin
   SetHeaderHeight(LIST_HEADER_HEIGHT_DEFAULT);
   SetRowHeight(LIST_ROW_HEIGHT_DEFAULT);
   FTree.BorderStyle:= bsNone;
-  HeaderFont.Style:= HeaderFont.Style + [fsBold];
+  HeaderFont.Style:= [fsBold];
   HeaderVisible:= ACaption<>EmptyStr;
   AutoHeight:= True;
   GridLinesVisible:= False;
@@ -79,11 +94,11 @@ begin
   SetHeaderHeight(LIST_HEADER_HEIGHT_DEFAULT);
   SetRowHeight(LIST_ROW_HEIGHT_DEFAULT);
   FTree.BorderStyle:= bsNone;
-  HeaderFont.Style:= HeaderFont.Style + [fsBold];
+  HeaderFont.Style:= [fsBold];
   AutoHeight:= True;
   GridLinesVisible:= False;
   HeaderVisible:= ACaption<>EmptyStr;
-  SelectedBGColor:= COLOR_BG_DEFAULT;
+  SelectedBGColor:= FTree.Color;
   AddColumn(ACaption, 100, taLeftJustify);
   SetColumn(ACaption, AItems, taLeftJustify);
   Draw;
@@ -95,6 +110,55 @@ begin
       Check(i);
 
   OnSelect:= AOnSelect;
+end;
+
+{ TVSTCategoryDatesList }
+
+constructor TVSTCategoryDatesList.Create(const ATree: TVirtualStringTree;
+                       const ACaption: String;
+                       const AOnSelect: TVSTSelectEvent
+                       );
+begin
+  inherited Create(ATree);
+  SetHeaderHeight(LIST_HEADER_HEIGHT_DEFAULT);
+  SetRowHeight(LIST_ROW_HEIGHT_DEFAULT);
+  FTree.BorderStyle:= bsNone;
+  HeaderFont.Style:= [fsBold];
+  GridLinesVisible:= False;
+  HeaderVisible:= ACaption<>EmptyStr;
+  SelectedBGColor:= FTree.Color;
+  SelectedFont.Style:= [fsBold];
+  CanUnselect:= False;
+  AddColumn(ACaption);
+  Draw;
+  OnSelect:= AOnSelect;
+end;
+
+procedure TVSTCategoryDatesList.Update(const ACategories: TStrVector;
+                     const ADates: TDateMatrix;
+                     const ASelectedDate: TDate = 0);
+var
+  StrDates: TStrMatrix;
+  i, j: Integer;
+begin
+  ValuesClear;
+  Draw;
+  if VIsNil(ACategories) or MisNil(ADates) then Exit;
+
+  SetCategories(ACategories);
+  StrDates:= MFormatDateTime('dd.mm.yyyy', ADates);
+  SetColumn(0, StrDates, taLeftJustify);
+  Draw;
+
+
+  i:= 0;
+  j:= 0;
+  if ASelectedDate>0 then
+    MIndexOfDate(ADates, ASelectedDate, i, j);
+  if i<0 then i:= 0;
+  if j<0 then j:= 0;
+  Select(i, j);
+  Show(i, j);
 end;
 
 end.
