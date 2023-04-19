@@ -99,8 +99,11 @@ type
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
     procedure SetDesignTimePPI;
+    procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
     procedure ValuesClear; virtual;
@@ -233,7 +236,9 @@ type
     procedure EditorKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
     procedure TreeExit(Sender: TObject);
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
     procedure ValuesClear; override;
@@ -327,7 +332,9 @@ type
     function GetNeededHeight: Integer;
     function IsIndexCorrect(const AIndex: Integer): Boolean;
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
     procedure ValuesClear; override;
@@ -372,7 +379,9 @@ type
     procedure SetAutosizeRowHeights(AValue: Boolean);
 
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
     procedure ValuesClear; override;
@@ -422,7 +431,9 @@ type
     procedure Uncheck(const AIndex: Integer);
     procedure ReverseCheckState(Node: PVirtualNode);
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
     procedure ValuesClear; override;
     procedure Draw; override;
@@ -460,7 +471,9 @@ type
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
     function GetIsSelected: Boolean;
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
@@ -498,7 +511,9 @@ type
     function GetSelectedIndex1: Integer;
     function GetSelectedIndex2: Integer;
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
     procedure Draw;
@@ -543,7 +558,9 @@ type
     procedure CheckCategory(Node: PVirtualNode; const AChecked: Boolean);
     procedure SetCategoryCheckState(Node: PVirtualNode);
   public
-    constructor Create(const ATree: TVirtualStringTree);
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
     function IsCategoryAllChecked(const AIndex: Integer): Boolean;
@@ -896,9 +913,11 @@ end;
 
 
 
-constructor TVSTEdit.Create(const ATree: TVirtualStringTree);
+constructor TVSTEdit.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
   FTree.Indent:= 0;
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
   FTree.OnGetText:= @GetText;
@@ -1489,9 +1508,11 @@ end;
 
 
 
-constructor TVSTCategoryCheckTable.Create(const ATree: TVirtualStringTree);
+constructor TVSTCategoryCheckTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
   FTree.OnChecking:= @Checking;
@@ -1698,9 +1719,11 @@ begin
   SelectNode(nil);
 end;
 
-constructor TVSTCategoryRadioButtonTable.Create(const ATree: TVirtualStringTree);
+constructor TVSTCategoryRadioButtonTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
   FTree.OnInitNode:= @InitNode;
   FTree.OnMouseDown:= @MouseDown;
 end;
@@ -1808,9 +1831,11 @@ begin
   Result:= (Ind1>=0) and (Ind2>=0);
 end;
 
-constructor TVSTCategoryCustomTable.Create(const ATree: TVirtualStringTree);
+constructor TVSTCategoryCustomTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
   Clear;
   FTree.Margin:= 0;
   FCanSelect:= True;
@@ -2195,7 +2220,21 @@ begin
   FDesignTimePPI:= (C as TForm).DesignTimePPI;
 end;
 
-constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree);
+procedure TVSTCoreTable.SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
+var
+  H: Integer;
+begin
+  H:= SizeFromDesignTimeToDefault(FTree.DefaultNodeHeight, FDesignTimePPI);
+  if H<ARowHeight then
+    SetRowHeight(ARowHeight);
+  H:= SizeFromDesignTimeToDefault(FTree.Header.DefaultHeight, FDesignTimePPI);
+  if H<AHeaderHeight then
+    SetHeaderHeight(AHeaderHeight);
+end;
+
+constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
   FTree:= ATree;
 
@@ -2229,7 +2268,7 @@ begin
   FTree.Colors.GridLineColor:= FGridLinesColor;
   FTree.Color:= FValuesBGColor;
 
-  SetAllHeight(ROW_HEIGHT_DEFAULT);
+  SetDefaultHeights(AHeaderHeight, ARowHeight);
 
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions +
                                    [toAlwaysHideSelection, toHideFocusRect];
@@ -2555,9 +2594,11 @@ begin
   end;
 end;
 
-constructor TVSTCheckTable.Create(const ATree: TVirtualStringTree);
+constructor TVSTCheckTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
 
   FMaxCheckedCount:= -1;
@@ -2595,7 +2636,8 @@ var
 begin
   HeaderHeight:= 0;
   if FHeaderVisible then
-    HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
+    HeaderHeight:= FTree.Header.Height;
+    //HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
   NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
   NodeCount:= MMaxLength(FDataValues);
   Result:= HeaderHeight + NodeCount*NodeHeight;
@@ -2639,9 +2681,11 @@ begin
   Result:= (AIndex>=0) and (AIndex<=High(FDataValues[0]));
 end;
 
-constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree);
+constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
   FAutoHeight:= False;
   FTree.Indent:= 0;
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
@@ -2867,9 +2911,11 @@ begin
   Result:= VIndexOf(FSelected, True);
 end;
 
-constructor TVSTTable.Create(const ATree: TVirtualStringTree);
+constructor TVSTTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
   FTree.Margin:= 0;
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions - [toCheckSupport];
   FTree.OnMouseDown:= @MouseDown;
