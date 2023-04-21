@@ -204,7 +204,7 @@ type
     procedure SetColumnRowTitlesFont(AValue: TFont);
     procedure SetColumnRowTitlesVisible(AValue: Boolean);
 
-    procedure SetNewColumn(const AColumnType: TVSTColumnType;
+    procedure SetNewColumnSettings(const AColumnType: TVSTColumnType;
                            const AFormatString: String);
     procedure AddValuesColumn(const AColumnType: TVSTColumnType;
                         const ACaption, AFormatString: String;
@@ -1222,7 +1222,7 @@ begin
   if IsColumnRowTitlesExists then Exit;
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTitleColumnIndex:= High(FHeaderCaptions);
-  SetNewColumn(ctUndefined, EmptyStr);
+  SetNewColumnSettings(ctUndefined, EmptyStr);
 
 end;
 
@@ -1235,7 +1235,7 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTEdit.SetNewColumn(const AColumnType: TVSTColumnType;
+procedure TVSTEdit.SetNewColumnSettings(const AColumnType: TVSTColumnType;
   const AFormatString: String);
 begin
   MAppend(FDataValues, nil);
@@ -1336,7 +1336,7 @@ procedure TVSTEdit.AddValuesColumn(const AColumnType: TVSTColumnType;
 begin
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTree.Header.Columns[High(FHeaderCaptions)].Alignment:= AValuesAlignment;
-  SetNewColumn(AColumnType, AFormatString);
+  SetNewColumnSettings(AColumnType, AFormatString);
 end;
 
 procedure TVSTEdit.UnSelect;
