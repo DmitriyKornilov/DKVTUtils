@@ -8,10 +8,6 @@ uses
   Classes, SysUtils, Controls, Graphics, VirtualTrees, DK_Vector, DK_Matrix,
   DK_VSTTables;
 
-const
-  LIST_ROW_HEIGHT_DEFAULT = 20;
-  LIST_HEADER_HEIGHT_DEFAULT = 26;
-
 type
 
   { TVSTStringList }
@@ -85,7 +81,7 @@ constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        const AOnSelect: TVSTSelectEvent;
                        const ASelectedIndex: Integer = 0);
 begin
-  inherited Create(ATree, LIST_HEADER_HEIGHT_DEFAULT, LIST_ROW_HEIGHT_DEFAULT);
+  inherited Create(ATree);
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   HeaderVisible:= ACaption<>EmptyStr;
@@ -111,7 +107,7 @@ constructor TVSTCheckList.Create(const ATree: TVirtualStringTree;
 var
   i: Integer;
 begin
-  inherited Create(ATree, LIST_HEADER_HEIGHT_DEFAULT, LIST_ROW_HEIGHT_DEFAULT);
+  inherited Create(ATree);
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   AutoHeight:= True;
