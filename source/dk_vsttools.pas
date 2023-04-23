@@ -146,8 +146,6 @@ constructor TVSTCategoryList.Create(const ATree: TVirtualStringTree;
                        const AOnSelect: TVSTSelectEvent);
 begin
   inherited Create(ATree);
-  SetHeaderHeight(LIST_HEADER_HEIGHT_DEFAULT);
-  SetRowHeight(LIST_ROW_HEIGHT_DEFAULT);
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   GridLinesVisible:= False;
