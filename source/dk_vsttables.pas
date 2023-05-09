@@ -2736,11 +2736,9 @@ procedure TVSTCustomTable.SetColumn(const AColIndex: Integer;
 begin
   FDataValues[AColIndex]:= VCut(AValues);
   FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
-  if AutoHeight then
-  begin
+  if AutoHeight and (FTree.Align<>alLeft) and (FTree.Align<>alRight) and
+     (FTree.Align<>alClient) then
     FTree.Height:= NeededHeight;
-    FTree.Refresh;
-  end;
 end;
 
 procedure TVSTCustomTable.SetColumn(const ACaption: String;

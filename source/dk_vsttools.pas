@@ -16,10 +16,9 @@ type
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AItems: TStrVector;
-                       const AOnSelect: TVSTSelectEvent;
-                       const ASelectedIndex: Integer = 0
+                       const AOnSelect: TVSTSelectEvent
                        );
+    procedure Update(const AItems: TStrVector; const ASelectedIndex: Integer = 0);
   end;
 
   { TVSTCheckList }
@@ -77,9 +76,8 @@ implementation
 
 constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AItems: TStrVector;
-                       const AOnSelect: TVSTSelectEvent;
-                       const ASelectedIndex: Integer = 0);
+                       const AOnSelect: TVSTSelectEvent
+                       );
 begin
   inherited Create(ATree);
   FTree.BorderStyle:= bsNone;
@@ -90,10 +88,20 @@ begin
   CanSelect:= True;
   CanUnselect:= False;
   AddColumn(ACaption, 100, taLeftJustify);
-  SetColumn(ACaption, AItems, taLeftJustify);
   Draw;
-  Select(ASelectedIndex);
   OnSelect:= AOnSelect;
+end;
+
+procedure TVSTStringList.Update(const AItems: TStrVector; const ASelectedIndex: Integer = 0);
+begin
+  SetColumn(0, AItems, taLeftJustify);
+  Draw;
+  if VIsNil(AItems) then Exit;
+
+  if IsIndexCorrect(ASelectedIndex) then
+    Select(ASelectedIndex)
+  else
+    Select(0);
 end;
 
 { TVSTCheckList }
