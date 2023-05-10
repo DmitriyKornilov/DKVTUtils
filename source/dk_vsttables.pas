@@ -1120,10 +1120,10 @@ begin
   FTree.Refresh;
 end;
 
-
-
 function TVSTEdit.GetIsSelected: Boolean;
 begin
+  Result:= False;
+  if not Assigned(Self) then Exit;
   Result:= (FSelectedRowIndex>=0) and (FSelectedColIndex>=0);
 end;
 
@@ -1827,6 +1827,8 @@ function TVSTCategoryCustomTable.GetIsSelected: Boolean;
 var
   Ind1, Ind2: Integer;
 begin
+  Result:= False;
+  if not Assigned(Self) then Exit;
   MIndexOf(FSelected, True, Ind1, Ind2);
   Result:= (Ind1>=0) and (Ind2>=0);
 end;
@@ -2645,6 +2647,8 @@ end;
 
 function TVSTCustomTable.GetIsSelected: Boolean;
 begin
+  Result:= False;
+  if not Assigned(Self) then Exit;
   Result:= VIsTrue(FSelected);
 end;
 
