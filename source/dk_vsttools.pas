@@ -96,9 +96,9 @@ procedure TVSTStringList.Update(const AItems: TStrVector; const ASelectedIndex: 
 begin
   SetColumn(0, AItems, taLeftJustify);
   Draw;
-  if VIsNil(AItems) then Exit;
-
-  if IsIndexCorrect(ASelectedIndex) then
+  if VIsNil(AItems) then
+    Unselect
+  else if IsIndexCorrect(ASelectedIndex) then
     Select(ASelectedIndex)
   else
     Select(0);

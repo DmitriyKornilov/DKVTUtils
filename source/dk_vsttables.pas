@@ -386,8 +386,6 @@ type
 
     procedure ValuesClear; override;
 
-    procedure Draw; override;
-
     procedure UnSelect;
     procedure Select(const AIndex: Integer);
     procedure Select(const AColIndex: Integer; const AValue: String);
@@ -2937,17 +2935,9 @@ begin
   inherited ValuesClear;
 end;
 
-procedure TVSTTable.Draw;
-begin
-  //UnselectNode;
-  inherited Draw;
-  //FTree.Refresh;
-end;
-
 procedure TVSTTable.UnSelect;
 begin
-  if IsSelected then
-    UnselectNode;
+  UnselectNode;
 end;
 
 
