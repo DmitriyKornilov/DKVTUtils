@@ -26,7 +26,7 @@ uses
                          var PaintInfo: THeaderPaintInfo;
                          const Elements: THeaderPaintElements);
   procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
-                       TargetCanvas: TCanvas; Column: TColumnIndex;
+                       TargetCanvas: TCanvas; {%H-}Column: TColumnIndex;
                        CellRect: TRect; const ANeedTopLine: Boolean = False);
 
 
