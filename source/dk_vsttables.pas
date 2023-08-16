@@ -316,6 +316,9 @@ type
   { TVSTCustomTable }
 
   TVSTCustomTable = class(TVSTCoreTable)
+  private
+    function GetColCount: Integer;
+    function GetRowCount: Integer;
   protected
     FDataValues: TStrMatrix;
     FSelected: TBoolVector;
@@ -352,6 +355,9 @@ type
     property IsSelected: Boolean read GetIsSelected;
     property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
     property NeededHeight: Integer read GetNeededHeight;
+
+    property RowCount: Integer read GetRowCount;
+    property ColCount: Integer read GetColCount;
   end;
 
   { TVSTTable }
@@ -2641,6 +2647,18 @@ begin
   NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
   NodeCount:= MMaxLength(FDataValues);
   Result:= HeaderHeight + NodeCount*NodeHeight;
+end;
+
+function TVSTCustomTable.GetColCount: Integer;
+begin
+  Result:= Length(FHeaderCaptions);
+end;
+
+function TVSTCustomTable.GetRowCount: Integer;
+begin
+  Result:= 0;
+  if not MIsNil(FDataValues) then
+    Result:= Length(FDataValues[0]);
 end;
 
 function TVSTCustomTable.GetIsSelected: Boolean;
