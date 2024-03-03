@@ -29,6 +29,9 @@
     </Files>
     <RequiredPkgs>
       <Item>
+        <PackageName Value="DKSpreadSheet"/>
+      </Item>
+      <Item>
         <PackageName Value="DateTimeCtrls"/>
       </Item>
       <Item>

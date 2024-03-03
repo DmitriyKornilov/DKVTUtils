@@ -7,7 +7,8 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls, Spin,
   DateTimePicker, LMessages, LCLIntf, Forms, GraphUtil,
-  DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const, DK_PPI;
+  DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const, DK_PPI,
+  DK_SheetExporter, DK_SheetWriter;
 
 const
   COLOR_BG_DEFAULT = clWhite; //clWindow
@@ -138,6 +139,7 @@ type
     property GridLinesVisible: Boolean read FGridLinesVisible write SetGridLinesVisible;
     property HeaderVisible: Boolean read FHeaderVisible write SetHeaderVisible;
 
+    procedure SetSingleFont(const AFont: TFont);
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
@@ -152,9 +154,10 @@ type
     ctInteger,
     ctString,
     ctDate,
-    ctTime
+    ctTime,
+    ctFloat
   );
-
+  TVSTColumnTypes = array of TVSTColumnType;
 
 
 
@@ -166,7 +169,7 @@ type
   TVSTEdit = class (TVSTCoreTable)
   protected
     FDataValues: TStrMatrix;
-    FColumnTypes: array of TVSTColumnType;
+    FColumnTypes: TVSTColumnTypes;//array of TVSTColumnType;
     FColumnFormatStrings: TStrVector;
     FSelectedRowIndex, FSelectedColIndex: Integer;
     FTitleColumnIndex: Integer;
@@ -397,6 +400,11 @@ type
     procedure Select(const AColIndex: Integer; const AValue: String);
     procedure Select(const AColumnCaption, AValue: String);
     property SelectedIndex: Integer read GetSelectedIndex;
+
+    procedure Save(const AColumnTypes: TVSTColumnTypes;
+                   const ASheetName: String = 'Лист1';
+                   const ADoneMessage: String = 'Выполнено!';
+                   const ALandscape: Boolean = False);
 
     property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
   end;
@@ -2409,6 +2417,13 @@ begin
   RenameColumn(ColIndex, ANewName);
 end;
 
+procedure TVSTCoreTable.SetSingleFont(const AFont: TFont);
+begin
+  HeaderFont:= AFont;
+  ValuesFont:= AFont;
+  SelectedFont:= AFont;
+end;
+
 { TVSTCheckTable }
 
 function TVSTCheckTable.GetIsAllUnchecked: Boolean;
@@ -2807,6 +2822,116 @@ begin
   Ind:= VIndexOf(FHeaderCaptions, AColumnCaption);
   if Ind>=0 then
     Select(Ind, AValue);
+end;
+
+procedure TVSTTable.Save(const AColumnTypes: TVSTColumnTypes;
+                         const ASheetName: String = 'Лист1';
+                         const ADoneMessage: String = 'Выполнено!';
+                         const ALandscape: Boolean = False);
+var
+  Exporter: TSheetExporter;
+  Sheet: TsWorksheet;
+  Writer: TSheetWriter;
+
+  function AlignmentConvert(const AAlignment: TAlignment): TsHorAlignment;
+  begin
+    Result:= haDefault;
+    if AAlignment = taLeftJustify then
+      Result:= haLeft
+    else if AAlignment = taRightJustify then
+      Result:= haRight
+    else if AAlignment = taCenter then
+      Result:= haCenter;
+  end;
+
+  procedure ValueWrite(const ARow, ACol: Integer; const AValue: String; const AType: TVSTColumnType);
+  var
+    IntValue: Integer;
+    DTValue: TDateTime;
+    DblValue: Double;
+  begin
+    if AType = ctInteger then
+    begin
+      if TryStrToInt(AValue, IntValue) then
+        Writer.WriteNumber(ARow, ACol, IntValue, cbtOuter)
+      else
+        Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
+    end
+    else if AType = ctDate then
+    begin
+      if TryStrToDate(AValue, DTValue) then
+        Writer.WriteDate(ARow, ACol, DTValue, cbtOuter)
+      else
+        Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
+    end
+    else if AType = ctTime then
+    begin
+      if TryStrToTime(AValue, DTValue) then
+        Writer.WriteTime(ARow, ACol, DTValue, cbtOuter)
+      else
+        Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
+    end
+    else if AType = ctInteger then
+    begin
+      if TryStrToFloat(AValue, DblValue) then
+        Writer.WriteNumber(ARow, ACol, DblValue, cbtOuter)
+      else
+        Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
+    end
+    else Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
+  end;
+
+  procedure SheetWrite;
+  var
+    i, j, R, C: Integer;
+  begin
+
+    if HeaderVisible then
+    begin
+      Writer.SetFont(HeaderFont);
+      R:= 1;
+      for i:= 0 to High(FHeaderCaptions) do
+      begin
+        C:= 1 + i;
+        Writer.SetBackground(FColumnHeaderBGColors[i]);
+        Writer.SetAlignment(AlignmentConvert(FTree.Header.Columns[i].CaptionAlignment), vaCenter);
+        Writer.WriteText(R, C, FHeaderCaptions[i], cbtOuter);
+      end;
+      //Writer.SetRowHeight(R, FTree.Header.DefaultHeight);
+    end;
+
+    Writer.SetFont(ValuesFont);
+    for i:= 0 to High(FDataValues) do
+    begin
+      R:= Ord(HeaderVisible);
+      C:= 1 + i;
+      Writer.SetBackground(FColumnValuesBGColors[i]);
+      Writer.SetAlignment(AlignmentConvert(FTree.Header.Columns[i].Alignment), vaCenter);
+      for j:= 0 to High(FDataValues[i]) do
+      begin
+        R:= R + 1;
+        ValueWrite(R, C, FDataValues[i,j], AColumnTypes[i]);
+      end;
+    end;
+  end;
+
+begin
+  Exporter:= TSheetExporter.Create;
+  try
+    Sheet:= Exporter.AddWorksheet(ASheetName);
+
+    Writer:= TSheetWriter.Create(FColumnWidths, Sheet, nil, FTree.DefaultNodeHeight);
+    try
+      SheetWrite;
+    finally
+      FreeAndNil(Writer);
+    end;
+
+    if ALandscape then Exporter.PageSettings(spoLandscape);
+    Exporter.Save(ADoneMessage);
+  finally
+    FreeAndNil(Exporter);
+  end;
 end;
 
 procedure TVSTTable.SetAutosizeRowHeights(AValue: Boolean);
