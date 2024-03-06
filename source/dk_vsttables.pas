@@ -18,10 +18,23 @@ const
   ROW_HEIGHT_DEFAULT = 25;
 
 type
+  TVSTColumnType = (
+    ctUndefined,
+    ctInteger,
+    ctString,
+    ctDate,
+    ctTime,
+    ctFloat
+  );
+  TVSTColumnTypes = array of TVSTColumnType;
 
   TVSTSelectEvent = procedure of object;
   TVSTCheckEvent = procedure(const ARowIndex: Integer; const AChecked: Boolean) of object;
   TVSTCellCheckEvent = procedure(const ARowIndex, AColIndex: Integer; const AChecked: Boolean) of object;
+  TVSTEdititingDoneEvent = procedure(const ARowIndex, AColIndex: Integer;
+                                     const ANewText: String;
+                                     const AColumnType: TVSTColumnType) of object;
+  TVSTEdititingBeginEvent = procedure of object;
 
   { TVSTCoreTable }
 
@@ -149,21 +162,6 @@ type
     property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
 
-  TVSTColumnType = (
-    ctUndefined,
-    ctInteger,
-    ctString,
-    ctDate,
-    ctTime,
-    ctFloat
-  );
-  TVSTColumnTypes = array of TVSTColumnType;
-
-
-
-  //TVSTEdititingDoneEvent = procedure(const ARowIndex, AColIndex: Integer;
-  //                              const ANewText: String) of object;
-
   { TVSTEdit }
 
   TVSTEdit = class (TVSTCoreTable)
@@ -176,15 +174,15 @@ type
     FShowZeros: Boolean;
     FUnselectOnExit: Boolean;
     FEditor: TWinControl;
-    //FOnEdititingDone: TVSTEdititingDoneEvent;
-
+    FOnEdititingDone: TVSTEdititingDoneEvent;
+    FOnEdititingBegin: TVSTEdititingBeginEvent;
     FColumnRowTitlesFont: TFont;
     //FColumnRowTitlesBGColor: TColor;
 
 
 
-    procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex);
-    procedure UnselectCell;
+    procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex; const ASaveChanges: Boolean = True);
+    procedure UnselectCell(const ASaveChanges: Boolean = True);
 
     procedure HeaderClear; override;
 
@@ -225,7 +223,7 @@ type
     procedure MoveSelectionHorizontal(const ADirection {1 right, -1 left}: Integer);
 
     procedure BeginEdit;
-    procedure EndEdit;
+    procedure EndEdit(const ASaveChanges: Boolean = True);
 
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; {%H-}TextType: TVSTTextType;
@@ -276,7 +274,7 @@ type
     procedure SetColumnDate(const AColIndex: Integer; const AValues: TDateVector);
     procedure SetColumnTime(const AColIndex: Integer; const AValues: TTimeVector);
 
-    procedure UnSelect;
+    procedure UnSelect(const ASaveChanges: Boolean = True);
     procedure Select(const ARowIndex, AColIndex: Integer);
     procedure Select(const ARowIndex: Integer; const AColumnCaption: String);
     procedure Select(const ARowTitle, AColumnCaption: String);
@@ -313,7 +311,8 @@ type
     property UnselectOnExit: Boolean read FUnselectOnExit write SetUnselectOnExit;
     property ShowZeros: Boolean read FShowZeros write SetShowZeros;
 
-    //property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
+    property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
+    property OnEdititingBegin: TVSTEdititingBeginEvent read FOnEdititingBegin write FOnEdititingBegin;
   end;
 
   { TVSTCustomTable }
@@ -782,19 +781,19 @@ begin
   FUnselectOnExit:= AValue;
 end;
 
-procedure TVSTEdit.SelectCell(Node: PVirtualNode; Column: TColumnIndex);
+procedure TVSTEdit.SelectCell(Node: PVirtualNode; Column: TColumnIndex; const ASaveChanges: Boolean = True);
 var
   RowIndex, ColIndex: Integer;
 begin
   if (not Assigned(Node)) and (Column=-1) then  //unselect
   begin
-    EndEdit;
+    EndEdit(ASaveChanges);
     FSelectedRowIndex:= -1;
     FSelectedColIndex:= -1;
   end
   else if Assigned(Node) and (Column<>FTitleColumnIndex) then //select
   begin
-    EndEdit;
+    EndEdit(ASaveChanges);
     RowIndex:= FSelectedRowIndex;
     ColIndex:= FSelectedColIndex;
     FSelectedRowIndex:= Node^.Index;
@@ -808,9 +807,9 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTEdit.UnselectCell;
+procedure TVSTEdit.UnselectCell(const ASaveChanges: Boolean = True);
 begin
-  SelectCell(nil, -1);
+  SelectCell(nil, -1, ASaveChanges);
 end;
 
 procedure TVSTEdit.NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
@@ -1065,7 +1064,12 @@ var
   end;
 
 begin
+  if Assigned(FOnEdititingBegin) then
+    FOnEdititingBegin;
+
   if Assigned(FEditor) then FreeAndNil(FEditor);
+
+
 
   ColumnType:= FColumnTypes[FSelectedColIndex];
   case ColumnType of
@@ -1091,31 +1095,36 @@ begin
     ctDate:    GoEditDate;
     ctTime:    GoEditTime;
   end;
+
+
 end;
 
-procedure TVSTEdit.EndEdit;
+procedure TVSTEdit.EndEdit(const ASaveChanges: Boolean);
 var
   ColumnType: TVSTColumnType;
 begin
   if not Assigned(FEditor) then Exit;
 
   ColumnType:= FColumnTypes[FSelectedColIndex];
-  case ColumnType of
-    ctInteger: if TSpinEdit(FEditor).Value=0 then
-                 SelectedText:= EmptyStr
-               else
-                 SelectedText:= IntToStr(TSpinEdit(FEditor).Value);
-    ctString:  SelectedText:= TEdit(FEditor).Text;
-    ctDate:    SelectedText:= FormatDateTime(
-                                    FColumnFormatStrings[FSelectedColIndex],
-                                    TDateTimePicker(FEditor).Date);
-    ctTime:    SelectedText:= FormatDateTime(
-                                    FColumnFormatStrings[FSelectedColIndex],
-                                    TDateTimePicker(FEditor).Time);
+  if ASaveChanges then
+  begin
+    case ColumnType of
+      ctInteger: if TSpinEdit(FEditor).Value=0 then
+                   SelectedText:= EmptyStr
+                 else
+                   SelectedText:= IntToStr(TSpinEdit(FEditor).Value);
+      ctString:  SelectedText:= TEdit(FEditor).Text;
+      ctDate:    SelectedText:= FormatDateTime(
+                                      FColumnFormatStrings[FSelectedColIndex],
+                                      TDateTimePicker(FEditor).Date);
+      ctTime:    SelectedText:= FormatDateTime(
+                                      FColumnFormatStrings[FSelectedColIndex],
+                                      TDateTimePicker(FEditor).Time);
+    end;
   end;
 
-  //if Assigned(FOnEdititingDone) then
-  //  FOnEdititingDone(FSelectedRowIndex, FSelectedColIndex, SelectedText);
+  if Assigned(FOnEdititingDone) then
+    FOnEdititingDone(FSelectedRowIndex, FSelectedColIndex, SelectedText, ColumnType);
 
   FreeAndNil(FEditor);
 end;
@@ -1211,9 +1220,8 @@ begin
   Node:= NodeFromIndex(FSelectedRowIndex);
   Result:= FTree.GetDisplayRect(Node, FSelectedColIndex, False);
   Result.Bottom:= Result.Bottom - 1;
+  if Result.Top<=0 then Result.Top:= 1;
 end;
-
-
 
 function TVSTEdit.IsEditingColIndexCorrect(const AIndex: Integer): Boolean;
 begin
@@ -1351,10 +1359,10 @@ begin
   SetNewColumnSettings(AColumnType, AFormatString);
 end;
 
-procedure TVSTEdit.UnSelect;
+procedure TVSTEdit.UnSelect(const ASaveChanges: Boolean);
 begin
   if IsSelected then
-    UnselectCell;
+    UnselectCell(ASaveChanges);
 end;
 
 { TVSTCategoryCheckTable }
@@ -2161,8 +2169,8 @@ var
 begin
   if CellPaintMode<>cpmPaint then Exit;
   BGColor:= CellBGColor(Node, Column);
-  NeedTopLine:= (Sender.GetNodeLevel(Node)=0) and (Node^.Index=0) and
-                (not (hoVisible in FTree.Header.Options));
+  NeedTopLine:= (not (hoVisible in FTree.Header.Options)) and
+                (Sender.GetDisplayRect(Node, Column, False).Top=0);
   if FGridLinesVisible then
     VSTCellDraw(FGridLinesColor, BGColor, TargetCanvas, Column, CellRect, NeedTopLine)
   else
