@@ -33,7 +33,8 @@ type
   TVSTCellCheckEvent = procedure(const ARowIndex, AColIndex: Integer; const AChecked: Boolean) of object;
   TVSTEdititingDoneEvent = procedure(const ARowIndex, AColIndex: Integer;
                                      const ANewText: String;
-                                     const AColumnType: TVSTColumnType) of object;
+                                     const AColumnType: TVSTColumnType;
+                                     const ASaveChanges: Boolean) of object;
   TVSTEdititingBeginEvent = procedure of object;
 
   { TVSTCoreTable }
@@ -173,6 +174,7 @@ type
     FTitleColumnIndex: Integer;
     FShowZeros: Boolean;
     FUnselectOnExit: Boolean;
+    FIsEditing: Boolean;
     FEditor: TWinControl;
     FOnEdititingDone: TVSTEdititingDoneEvent;
     FOnEdititingBegin: TVSTEdititingBeginEvent;
@@ -304,6 +306,7 @@ type
     property IsColumnRowTitlesExists: Boolean read GetIsRowTitlesColumnExists;
     property ColumnRowTitlesVisible: Boolean write SetColumnRowTitlesVisible;
 
+    property IsEditing: Boolean read FIsEditing;
     property IsSelected: Boolean read GetIsSelected;
     property SelectedRowIndex: Integer read FSelectedRowIndex;
     property SelectedColIndex: Integer read FSelectedColIndex;
@@ -946,6 +949,7 @@ begin
   FSelectedColIndex:= -1;
   FShowZeros:= False;
   FUnselectOnExit:= True;
+  FIsEditing:= False;
 end;
 
 destructor TVSTEdit.Destroy;
@@ -1064,6 +1068,8 @@ var
   end;
 
 begin
+  FIsEditing:= True;
+
   if Assigned(FOnEdititingBegin) then
     FOnEdititingBegin;
 
@@ -1123,8 +1129,10 @@ begin
     end;
   end;
 
+  FIsEditing:= False;
+
   if Assigned(FOnEdititingDone) then
-    FOnEdititingDone(FSelectedRowIndex, FSelectedColIndex, SelectedText, ColumnType);
+    FOnEdititingDone(FSelectedRowIndex, FSelectedColIndex, SelectedText, ColumnType, ASaveChanges);
 
   FreeAndNil(FEditor);
 end;
