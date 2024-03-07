@@ -15,7 +15,7 @@ const
   COLOR_FONT_DEFAULT = clBlack; //clWindowText
   COLOR_LINE_DEFAULT = clBlack; //clWindowText
 
-  ROW_HEIGHT_DEFAULT = 25;
+  ROW_HEIGHT_DEFAULT = 23;
 
 type
   TVSTColumnType = (
