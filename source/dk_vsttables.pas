@@ -2386,13 +2386,8 @@ begin
 end;
 
 procedure TVSTCoreTable.SetDesignTimePPI;
-var
-  C: TWinControl;
 begin
-  C:= FTree.Parent;
-  while not (C is TForm) do
-    C:= C.Parent;
-  FDesignTimePPI:= (C as TForm).DesignTimePPI;
+  FDesignTimePPI:= ControlDesignTimePPI(FTree.Parent);
 end;
 
 procedure TVSTCoreTable.SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
