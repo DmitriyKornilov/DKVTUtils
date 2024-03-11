@@ -24,10 +24,13 @@
       </Item>
       <Item>
         <Filename Value="source\dk_vsttools.pas"/>
-        <UnitName Value="dk_vsttools"/>
+        <UnitName Value="DK_VSTTools"/>
       </Item>
     </Files>
     <RequiredPkgs>
+      <Item>
+        <PackageName Value="bgracontrols"/>
+      </Item>
       <Item>
         <PackageName Value="DKSpreadSheet"/>
       </Item>
