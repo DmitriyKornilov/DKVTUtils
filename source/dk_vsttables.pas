@@ -2484,18 +2484,20 @@ end;
 procedure TVSTCoreTable.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 var
-  Col: TVirtualTreeColumn;
+  C: TVirtualTreeColumn;
+  W: Integer;
 begin
+  W:= AWidth;//WidthFromDefaultToScreen(AWidth);
   VAppend(FHeaderCaptions, ACaption);
-  VAppend(FColumnWidths, AWidth);
+  VAppend(FColumnWidths, W);
   VAppend(FColumnValuesBGColors, clNone);
   VAppend(FColumnHeaderBGColors, clNone);
-  Col:= FTree.Header.Columns.Add;
-  Col.Text:= ACaption;
-  Col.CaptionAlignment:= ACaptionAlignment;
-  Col.Margin:= 3;
-  Col.Spacing:= 0;
-  Col.Width:= AWidth;
+  C:= FTree.Header.Columns.Add;
+  C.Text:= ACaption;
+  C.CaptionAlignment:= ACaptionAlignment;
+  C.Margin:= 3;
+  C.Spacing:= 0;
+  C.Width:= W;
 end;
 
 procedure TVSTCoreTable.SetColumnValuesBGColor(const AColIndex: Integer; const ABGColor: TColor);
