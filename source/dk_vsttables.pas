@@ -656,6 +656,7 @@ begin
   if VIsNil(FDataValues[Column]) then Exit;
   if FColumnTypes[Column] = ctKeyPick then
   begin
+    if SEmpty(FDataValues[Column, i]) then Exit;
     n:= VIndexOf(FKeys[Column], StrToInt(FDataValues[Column, i]));
     if n>=0 then
       CellText:= FPicks[Column, n]
@@ -813,10 +814,16 @@ end;
 procedure TVSTEdit.RowInsert(const ARowIndex: Integer; const AValues: TStrVector = nil);
 var
   Node: PVirtualNode;
+  i: Integer;
 begin
   Node:= NodeFromIndex(ARowIndex);
   if not Assigned(Node) then Exit;
   MRowIns(FDataValues, ARowIndex, AValues);
+  for i:= 0 to High(FDataValues) do
+  begin
+    if FColumnTypes[i]=ctKeyPick then
+      FDataValues[i, ARowIndex]:= IntToStr(FKeys[i, 0]);
+  end;
   FTree.InsertNode(Node, amInsertBefore);
   FTree.Refresh;
 end;
