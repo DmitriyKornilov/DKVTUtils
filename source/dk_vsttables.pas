@@ -873,8 +873,11 @@ begin
   begin
     if IsEditing and IsOneRowEditing then Exit;
     EndEdit(ASaveChanges);
-    FSelectedRowIndex:= -1;
-    FSelectedColIndex:= -1;
+    if FCanUnselect then
+    begin
+      FSelectedRowIndex:= -1;
+      FSelectedColIndex:= -1;
+    end;
   end
   else if Assigned(Node) and (Column<>FTitleColumnIndex) then //select
   begin
