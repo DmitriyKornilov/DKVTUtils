@@ -2487,7 +2487,8 @@ var
   C: TVirtualTreeColumn;
   W: Integer;
 begin
-  W:= AWidth;//WidthFromDefaultToScreen(AWidth);
+  //W:= AWidth;
+  W:= WidthFromScreenToDesignTime(AWidth, FDesignTimePPI);
   VAppend(FHeaderCaptions, ACaption);
   VAppend(FColumnWidths, W);
   VAppend(FColumnValuesBGColors, clNone);
@@ -2826,8 +2827,7 @@ var
 begin
   HeaderHeight:= 0;
   if FHeaderVisible then
-    HeaderHeight:= FTree.Header.Height;
-    //HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
+    HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
   NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
   NodeCount:= MMaxLength(FDataValues);
   Result:= HeaderHeight + NodeCount*NodeHeight;
@@ -3206,7 +3206,7 @@ begin
   FTree.Font.Assign(FValuesFont);
   for i:=0 to High(FHeaderCaptions) do
   begin
-    Height:= FTree.ComputeNodeHeight(TargetCanvas, Node, i) + 4;
+    Height:= FTree.ComputeNodeHeight(TargetCanvas, Node, i);
     if Height>NodeHeight then
       NodeHeight:= Height;
   end;

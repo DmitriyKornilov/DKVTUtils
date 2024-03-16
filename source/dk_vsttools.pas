@@ -6,7 +6,10 @@ interface
 
 uses
   Classes, SysUtils, Controls, Graphics, VirtualTrees, DK_Vector, DK_Matrix,
-  DK_VSTTables;
+  DK_VSTTables, DK_PPI;
+
+const
+  TOOLS_ROW_HEIGHT_DEFAULT = 18;
 
 type
 
@@ -80,6 +83,7 @@ constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        );
 begin
   inherited Create(ATree);
+  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   HeaderVisible:= ACaption<>EmptyStr;
@@ -116,6 +120,7 @@ var
   i: Integer;
 begin
   inherited Create(ATree);
+  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   AutoHeight:= True;
@@ -154,6 +159,7 @@ constructor TVSTCategoryList.Create(const ATree: TVirtualStringTree;
                        const AOnSelect: TVSTSelectEvent);
 begin
   inherited Create(ATree);
+  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   GridLinesVisible:= False;
