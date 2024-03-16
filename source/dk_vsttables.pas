@@ -124,6 +124,7 @@ type
 
     procedure ValuesClear; virtual;
     procedure Clear;
+    procedure Refresh;
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); virtual;
@@ -349,10 +350,12 @@ type
   private
     function GetColCount: Integer;
     function GetRowCount: Integer;
+    procedure SetColumnVisibles(AValue: TBoolVector);
   protected
     FDataValues: TStrMatrix;
     FSelected: TBoolVector;
     FAutoHeight: Boolean;
+    FColumnVisibles: TBoolVector;
 
     function GetIsSelected: Boolean;
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
@@ -388,6 +391,8 @@ type
 
     property RowCount: Integer read GetRowCount;
     property ColCount: Integer read GetColCount;
+
+    property ColumnVisibles: TBoolVector read FColumnVisibles write SetColumnVisibles;
   end;
 
   { TVSTTable }
@@ -413,7 +418,6 @@ type
     procedure MoveSelection(const ADeltaIndex: Integer);
 
     procedure SetAutosizeRowHeights(AValue: Boolean);
-
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -1368,6 +1372,9 @@ begin
   if not IsSelected then Exit;
   Node:= NodeFromIndex(FSelectedRowIndex);
   Result:= FTree.GetDisplayRect(Node, FSelectedColIndex, False);
+  if IsColumnRowTitlesExists then
+    if FSelectedColIndex=FTitleColumnIndex+1 then
+      Result.Left:= Result.Left + 1;
   Result.Bottom:= Result.Bottom - 1;
   if Result.Top<=0 then Result.Top:= 1;
 end;
@@ -2481,6 +2488,11 @@ begin
   HeaderClear;
 end;
 
+procedure TVSTCoreTable.Refresh;
+begin
+  FTree.Refresh;
+end;
+
 procedure TVSTCoreTable.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 var
@@ -2833,6 +2845,22 @@ begin
   Result:= HeaderHeight + NodeCount*NodeHeight;
 end;
 
+procedure TVSTCustomTable.SetColumnVisibles(AValue: TBoolVector);
+var
+  i: Integer;
+begin
+  if Length(AValue)<>Length(FHeaderCaptions) then Exit;
+  FColumnVisibles:= VCut(AValue);
+  for i:= 0 to High(FColumnVisibles) do
+  begin
+    if FColumnVisibles[i] then
+      FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options + [coVisible]
+    else
+      FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options - [coVisible];
+  end;
+  FTree.Refresh;
+end;
+
 function TVSTCustomTable.GetColCount: Integer;
 begin
   Result:= Length(FHeaderCaptions);
@@ -2863,6 +2891,7 @@ procedure TVSTCustomTable.HeaderClear;
 begin
   inherited HeaderClear;
   FDataValues:= nil;
+  FColumnVisibles:= nil;
 end;
 
 procedure TVSTCustomTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
@@ -2933,6 +2962,7 @@ procedure TVSTCustomTable.AddColumn(const ACaption: String;
 begin
   inherited AddColumn(ACaption, AWidth, ACaptionAlignment);
   MAppend(FDataValues, nil);
+  VAppend(FColumnVisibles, True);
 end;
 
 procedure TVSTCustomTable.SetColumn(const AColIndex: Integer;
@@ -3001,6 +3031,7 @@ var
   Exporter: TSheetExporter;
   Sheet: TsWorksheet;
   Writer: TSheetWriter;
+  VisibleColumnWidths: TIntVector;
 
   function AlignmentConvert(const AAlignment: TAlignment): TsHorAlignment;
   begin
@@ -3059,9 +3090,11 @@ var
     begin
       Writer.SetFont(HeaderFont);
       R:= 1;
+      C:= 0;
       for i:= 0 to High(FHeaderCaptions) do
       begin
-        C:= 1 + i;
+        if not FColumnVisibles[i] then continue;
+        C:= C + 1;
         Writer.SetBackground(FColumnHeaderBGColors[i]);
         Writer.SetAlignment(AlignmentConvert(FTree.Header.Columns[i].CaptionAlignment), vaCenter);
         Writer.WriteText(R, C, FHeaderCaptions[i], cbtOuter);
@@ -3070,10 +3103,12 @@ var
     end;
 
     Writer.SetFont(ValuesFont);
+    C:= 0;
     for i:= 0 to High(FDataValues) do
     begin
+      if not FColumnVisibles[i] then continue;
       R:= Ord(HeaderVisible);
-      C:= 1 + i;
+      C:= C + 1;
       Writer.SetBackground(FColumnValuesBGColors[i]);
       Writer.SetAlignment(AlignmentConvert(FTree.Header.Columns[i].Alignment), vaCenter);
       for j:= 0 to High(FDataValues[i]) do
@@ -3089,7 +3124,8 @@ begin
   try
     Sheet:= Exporter.AddWorksheet(ASheetName);
 
-    Writer:= TSheetWriter.Create(FColumnWidths, Sheet, nil, FTree.DefaultNodeHeight);
+    VisibleColumnWidths:= VCut(FColumnWidths, FColumnVisibles);
+    Writer:= TSheetWriter.Create(VisibleColumnWidths, Sheet, nil, FTree.DefaultNodeHeight);
     try
       SheetWrite;
     finally
