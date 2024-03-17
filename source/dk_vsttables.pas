@@ -88,6 +88,8 @@ type
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
     procedure SetFixedColumnsCount(AValue: Integer);
+    function GetVisible: Boolean;
+    procedure SetVisible(AValue: Boolean);
 
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var {%H-}PaintInfo: THeaderPaintInfo;
@@ -116,6 +118,8 @@ type
 
     procedure SetDesignTimePPI;
     procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
+
+
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -154,6 +158,7 @@ type
 
     property GridLinesVisible: Boolean read FGridLinesVisible write SetGridLinesVisible;
     property HeaderVisible: Boolean read FHeaderVisible write SetHeaderVisible;
+    property Visible: Boolean read GetVisible write SetVisible;
 
     procedure SetSingleFont(const AFont: TFont);
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
@@ -820,15 +825,17 @@ var
   Node: PVirtualNode;
   i: Integer;
 begin
-  Node:= NodeFromIndex(ARowIndex);
-  if not Assigned(Node) then Exit;
   MRowIns(FDataValues, ARowIndex, AValues);
   for i:= 0 to High(FDataValues) do
   begin
     if FColumnTypes[i]=ctKeyPick then
       FDataValues[i, ARowIndex]:= IntToStr(FKeys[i, 0]);
   end;
-  FTree.InsertNode(Node, amInsertBefore);
+  Node:= NodeFromIndex(ARowIndex);
+  if Assigned(Node) then
+    FTree.InsertNode(Node, amInsertBefore)
+  else
+    FTree.AddChild(FTree.RootNode);
   FTree.Refresh;
 end;
 
@@ -2194,6 +2201,16 @@ begin
   for i:= FFixedColumnsCount to High(FHeaderCaptions) do
     FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options - [coFixed];
   FTree.Refresh;
+end;
+
+function TVSTCoreTable.GetVisible: Boolean;
+begin
+  Result:= FTree.Visible;
+end;
+
+procedure TVSTCoreTable.SetVisible(AValue: Boolean);
+begin
+  FTree.Visible:= AValue;
 end;
 
 function TVSTCoreTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
