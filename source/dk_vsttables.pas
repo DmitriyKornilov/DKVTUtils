@@ -16,6 +16,7 @@ const
   COLOR_LINE_DEFAULT = clBlack; //clWindowText
 
   ROW_HEIGHT_DEFAULT = 24;
+  LAST_COLUMN_INDEX_FOR_AUTOSIZE = -2;
 
 type
   TVSTColumnType = (
@@ -48,7 +49,7 @@ type
 
     FDesignTimePPI: Integer;
 
-    FAutosizeColumnIndex: Integer; //-2 last clolumn, -1 none
+    FAutosizeColumnIndex: Integer; //LAST_COLUMN_INDEX_FOR_AUTOSIZE - last clolumn, -1 - none
     FFixedColumnsCount: Integer;
 
     FGridLinesColor: TColor;
@@ -142,7 +143,9 @@ type
     procedure SetHeaderHeight(const AHeight: Integer);
     procedure SetAllHeight(const AHeight: Integer);
 
+    procedure AutosizeColumnEnable(const ACaption: String);
     procedure AutosizeColumnEnable(const AColIndex: Integer);
+    procedure AutosizeColumnEnableLast;
     procedure AutosizeColumnDisable;
 
     procedure RenameColumn(const AColIndex: Integer; const ANewName: String);
@@ -2284,7 +2287,7 @@ begin
     if FAutosizeColumnIndex<=High(FHeaderCaptions) then
     FTree.Header.AutoSizeIndex:= FAutosizeColumnIndex;
   end
-  else if FAutosizeColumnIndex=-2 then
+  else if FAutosizeColumnIndex=LAST_COLUMN_INDEX_FOR_AUTOSIZE then
     FTree.Header.AutoSizeIndex:= High(FHeaderCaptions);
   for i:= 0 to High(FHeaderCaptions) do
     FTree.Header.Columns[i].Width:= CalcWidth(FColumnWidths[i]);
@@ -2449,6 +2452,8 @@ begin
 
   FTree.Header.Font.Color:= COLOR_FONT_DEFAULT;
   FTree.Font.Color:= COLOR_FONT_DEFAULT;
+  FTree.ScrollBarOptions.ScrollBars:= ssBoth;
+  FTree.ScrollBarOptions.AlwaysVisible:= False;
 
   FHeaderVisible:= True;
   FHeaderFont:= TFont.Create;
@@ -2478,7 +2483,7 @@ begin
                                    [toAlwaysHideSelection, toHideFocusRect];
 
   FTree.Header.Options:= FTree.Header.Options + [hoOwnerDraw, hoVisible];
-  AutosizeColumnEnable(-2); //last column
+  AutosizeColumnEnableLast;
 
   FTree.OnHeaderDrawQueryElements:= @HeaderDrawQueryElements;
   FTree.OnAdvancedHeaderDraw:= @AdvancedHeaderDraw;
@@ -2582,22 +2587,30 @@ begin
   SetHeaderHeight(AHeight);
 end;
 
+procedure TVSTCoreTable.AutosizeColumnEnable(const ACaption: String);
+begin
+  AutosizeColumnEnable(VIndexOf(FHeaderCaptions, ACaption));
+end;
+
 procedure TVSTCoreTable.AutosizeColumnEnable(const AColIndex: Integer);
 begin
   if AColIndex<0 then
-    if AColIndex<>-2 then
+    if AColIndex<>LAST_COLUMN_INDEX_FOR_AUTOSIZE then
       Exit;
   FAutosizeColumnIndex:= AColIndex;
   FTree.Header.Options:= FTree.Header.Options + [hoAutoResize];
-  FTree.ScrollBarOptions.ScrollBars:= ssVertical;
   SetColumnWidths;
+end;
+
+procedure TVSTCoreTable.AutosizeColumnEnableLast;
+begin
+  AutosizeColumnEnable(LAST_COLUMN_INDEX_FOR_AUTOSIZE);
 end;
 
 procedure TVSTCoreTable.AutosizeColumnDisable;
 begin
   FAutosizeColumnIndex:= -1;
   FTree.Header.Options:= FTree.Header.Options - [hoAutoResize];
-  FTree.ScrollBarOptions.ScrollBars:= ssBoth;
   SetColumnWidths;
 end;
 
