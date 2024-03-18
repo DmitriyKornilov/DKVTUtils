@@ -439,6 +439,7 @@ type
     procedure Select(const AColIndex: Integer; const AValue: String);
     procedure Select(const AColumnCaption, AValue: String);
     property SelectedIndex: Integer read GetSelectedIndex;
+    procedure ReSelect(const AIDVector: TIntVector; const AIDValue: Integer);
 
     procedure Save(const AColumnTypes: TVSTColumnTypes;
                    const ASheetName: String = 'Лист1';
@@ -3051,6 +3052,20 @@ begin
   Ind:= VIndexOf(FHeaderCaptions, AColumnCaption);
   if Ind>=0 then
     Select(Ind, AValue);
+end;
+
+procedure TVSTTable.ReSelect(const AIDVector: TIntVector; const AIDValue: Integer);
+var
+  Index: Integer;
+begin
+  if VIsNil(AIDVector) then Exit;
+  if AIDValue<=0 then
+    Index:= 0
+  else begin
+    Index:= VIndexOf(AIDVector, AIDValue);
+    if Index<0 then Index:= 0;
+  end;
+  Select(Index);
 end;
 
 procedure TVSTTable.Save(const AColumnTypes: TVSTColumnTypes;
