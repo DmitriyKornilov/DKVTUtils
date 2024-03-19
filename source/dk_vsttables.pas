@@ -3199,14 +3199,22 @@ begin
 end;
 
 procedure TVSTTable.SelectNode(Node: PVirtualNode);
+var
+  NewSelectedIndex: Integer;
 begin
+  //cancel same selection
+  NewSelectedIndex:= -1;
+  if Assigned(Node) then
+    NewSelectedIndex:= Node^.Index;
+  if NewSelectedIndex=SelectedIndex then Exit;
+
   //unselect
   if IsSelected then
     FSelected[SelectedIndex]:= False;
   //select
   if Assigned(Node) then
   begin
-    FSelected[Node^.Index]:= True;
+    FSelected[NewSelectedIndex]:= True;
     FTree.FocusedNode:= Node;
   end;
 
