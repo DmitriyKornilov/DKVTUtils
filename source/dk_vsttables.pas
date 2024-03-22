@@ -120,7 +120,6 @@ type
     procedure SetDesignTimePPI;
     procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
 
-
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -130,6 +129,8 @@ type
     procedure ValuesClear; virtual;
     procedure Clear;
     procedure Refresh;
+
+    procedure SetZoom(const APercents: Integer);
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); virtual;
@@ -2514,6 +2515,27 @@ end;
 procedure TVSTCoreTable.Refresh;
 begin
   FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetZoom(const APercents: Integer);
+var
+  ZoomFactor: Double;
+  i: Integer;
+begin
+  ZoomFactor:= APercents/100;
+  FTree.BeginUpdate;
+  try
+    FTree.Font.Height:= Round(ValuesFont.Height * ZoomFactor);
+    FTree.Header.Font.Height := Round(HeaderFont.Height * ZoomFactor);
+    //FTree.Font.Size:= Round(ValuesFont.Size * ZoomFactor);
+    //FTree.Header.Font.Size := Round(HeaderFont.Size * ZoomFactor);
+    FTree.Header.Height := Round(FTree.Header.DefaultHeight * ZoomFactor);
+    for i := 0 to High(FColumnWidths) do
+      FTree.Header.Columns.Items[i].Width := Round(FColumnWidths[i] * ZoomFactor);
+    VSTNodeHeights(FTree, Round(FTree.DefaultNodeHeight * ZoomFactor));
+  finally
+    FTree.EndUpdate;
+  end;
 end;
 
 procedure TVSTCoreTable.AddColumn(const ACaption: String;
