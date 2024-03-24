@@ -5,13 +5,24 @@ unit DK_VSTTools;
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, VirtualTrees, DK_Vector, DK_Matrix,
-  DK_VSTTables, DK_PPI;
+  Classes, SysUtils, Controls, StdCtrls, Graphics, VirtualTrees,
+
+  DK_Vector, DK_Matrix, DK_StrUtils, DK_VSTTables, DK_PPI;
 
 const
   TOOLS_ROW_HEIGHT_DEFAULT = 18;
 
 type
+
+  { TVSTColorList }
+
+  TVSTColorList = class(TVSTEdit)
+  private
+    procedure NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
+  public
+    constructor Create(const ATree: TVirtualStringTree);
+    procedure Update(const AItems: TStrVector; const AColors: TColorVector);
+  end;
 
   { TVSTStringList }
 
@@ -75,6 +86,39 @@ type
 
 implementation
 
+{ TVSTColorList }
+
+procedure TVSTColorList.NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
+begin
+  Select(HitInfo.HitNode^.Index, 0);
+end;
+
+constructor TVSTColorList.Create(const ATree: TVirtualStringTree);
+begin
+  inherited Create(ATree);
+  FTree.ShowHint:= False;
+  FTree.BorderStyle:= bsNone;
+  ColorColumnBorderColor:= clBlack;
+  ColorColumnCellMargin:= 3;
+  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
+  HeaderVisible:= False;
+  GridLinesVisible:= False;
+  CanSelect:= True;
+  CanUnselect:= True;
+  AddColumnColor('Цвет', 30);
+  AddColumnRowTitles('Наименование');
+  AutosizeColumnEnable('Наименование');
+  Draw;
+  FTree.OnNodeClick:= @NodeClick;
+end;
+
+procedure TVSTColorList.Update(const AItems: TStrVector; const AColors: TColorVector);
+begin
+  SetColumnRowTitles(AItems, taLeftJustify);
+  SetColumnColor('Цвет', AColors);
+  Draw;
+end;
+
 { TVSTStringList }
 
 constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
@@ -86,7 +130,7 @@ begin
   SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
-  HeaderVisible:= ACaption<>EmptyStr;
+  HeaderVisible:= not SEmpty(ACaption);
   AutoHeight:= True;
   GridLinesVisible:= False;
   CanSelect:= True;
@@ -125,7 +169,7 @@ begin
   HeaderFont.Style:= [fsBold];
   AutoHeight:= True;
   GridLinesVisible:= False;
-  HeaderVisible:= ACaption<>EmptyStr;
+  HeaderVisible:= not SEmpty(ACaption);
   SelectedBGColor:= FTree.Color;
   AddColumn(ACaption, 100, taLeftJustify);
   SetColumn(ACaption, AItems, taLeftJustify);
@@ -163,7 +207,7 @@ begin
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   GridLinesVisible:= False;
-  HeaderVisible:= ACaption<>EmptyStr;
+  HeaderVisible:= not SEmpty(ACaption);
   SelectedBGColor:= FTree.Color;
   SelectedFont.Style:= [fsBold];
   CanUnselect:= False;

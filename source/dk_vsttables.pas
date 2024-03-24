@@ -95,6 +95,8 @@ type
     function GetVisible: Boolean;
     procedure SetVisible(AValue: Boolean);
 
+
+
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var {%H-}PaintInfo: THeaderPaintInfo;
                             var Elements: THeaderPaintElements);
@@ -115,8 +117,11 @@ type
 
     procedure HeaderCellColors(const PaintInfo: THeaderPaintInfo;
                               out ALineColor, ABGColor: TColor);
+
+    function CellGridColor(Node: PVirtualNode; {%H-}Column: TColumnIndex; ABGColor: TColor): TColor; virtual;
     function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; virtual;
     function CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex): TFont; virtual;
+    function CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect; virtual;
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
@@ -199,7 +204,8 @@ type
     FOnEdititingBegin: TVSTEdititingBeginEvent;
     FColumnRowTitlesFont: TFont;
     //FColumnRowTitlesBGColor: TColor;
-
+    FColorColumnBorderColor: TColor;
+    FColorColumnCellMargin: Integer;
 
 
     procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex; const ASaveChanges: Boolean = True);
@@ -241,6 +247,8 @@ type
     function GetRowValues(const ARowIndex: Integer): TStrVector;
     procedure SetRowValues(const ARowIndex: Integer; const ARowValues: TStrVector);
 
+    function CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect; override;
+    function CellGridColor(Node: PVirtualNode; {%H-}Column: TColumnIndex; ABGColor: TColor): TColor; override;
     function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; override;
     function CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont; override;
     procedure DeleteSelectedCellText;
@@ -263,8 +271,6 @@ type
     procedure EditorKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
     procedure EditorExit;
     procedure TreeExit(Sender: TObject);
-
-
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -361,6 +367,9 @@ type
     property SelectedText: String read GetSelectedText write SetSelectedText;
     property UnselectOnExit: Boolean read FUnselectOnExit write SetUnselectOnExit;
     property ShowZeros: Boolean read FShowZeros write SetShowZeros;
+
+    property ColorColumnBorderColor: TColor read FColorColumnBorderColor write FColorColumnBorderColor;
+    property ColorColumnCellMargin: Integer read FColorColumnCellMargin write FColorColumnCellMargin;
 
     property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
     property OnEdititingBegin: TVSTEdititingBeginEvent read FOnEdititingBegin write FOnEdititingBegin;
@@ -925,6 +934,21 @@ begin
   FUnselectOnExit:= AValue;
 end;
 
+function TVSTEdit.CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect;
+begin
+  Result:= inherited CellRectangle(Column, ACellRect);
+  if FColumnTypes[Column]=ctColor then
+    Result.Inflate(-FColorColumnCellMargin,-FColorColumnCellMargin,
+                   -FColorColumnCellMargin,-FColorColumnCellMargin);
+end;
+
+function TVSTEdit.CellGridColor(Node: PVirtualNode; Column: TColumnIndex; ABGColor: TColor): TColor;
+begin
+  Result:= inherited CellGridColor(Node, Column, ABGColor);
+  if (FColumnTypes[Column]=ctColor) and (ColorColumnBorderColor<>clNone) then
+    Result:= FColorColumnBorderColor;
+end;
+
 procedure TVSTEdit.SelectCell(Node: PVirtualNode; Column: TColumnIndex; const ASaveChanges: Boolean = True);
 var
   RowIndex, ColIndex: Integer;
@@ -1103,6 +1127,8 @@ begin
   FIsOneRowEditing:= False;
   FIsBeginEditOnKeyPress:= True;
   FCellTextBeforeEditing:= 'FCellTextBeforeEditing';
+  FColorColumnCellMargin:= 0;
+  FColorColumnBorderColor:= clNone;
 end;
 
 destructor TVSTEdit.Destroy;
@@ -1285,8 +1311,8 @@ var
         TEdit(FEditor).Text:= IntToStr(ColorToRGB(ColorDialog.Color));
         TEdit(FEditor).Color:= ColorDialog.Color;
         TEdit(FEditor).Font.Color:= ColorDialog.Color;
-        Unselect;
       end;
+      Unselect;
     finally
       FreeAndNil(ColorDialog);
     end;
@@ -2309,6 +2335,11 @@ begin
   FTree.Visible:= AValue;
 end;
 
+function TVSTCoreTable.CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect;
+begin
+  Result:= ACellRect;
+end;
+
 function TVSTCoreTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
 var
   Node: PVirtualNode;
@@ -2447,17 +2478,16 @@ procedure TVSTCoreTable.BeforeCellPaint(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
 var
-  BGColor: TColor;
+  BGColor, GridColor: TColor;
   NeedTopLine: Boolean;
 begin
   if CellPaintMode<>cpmPaint then Exit;
   BGColor:= CellBGColor(Node, Column);
+  GridColor:= CellGridColor(Node, Column, BGColor);
+  CellRect:= CellRectangle(Column, CellRect);
   NeedTopLine:= (not (hoVisible in FTree.Header.Options)) and
                 (Sender.GetDisplayRect(Node, Column, False).Top=0);
-  if FGridLinesVisible then
-    VSTCellDraw(FGridLinesColor, BGColor, TargetCanvas, Column, CellRect, NeedTopLine)
-  else
-    VSTCellDraw(BGColor, BGColor, TargetCanvas, Column, CellRect, NeedTopLine);
+  VSTCellDraw(GridColor, BGColor, TargetCanvas, Column, CellRect, NeedTopLine);
 end;
 
 procedure TVSTCoreTable.DrawText(Sender: TBaseVirtualTree;
@@ -2490,6 +2520,14 @@ begin
     ALineColor:= FGridLinesColor
   else
     ALineColor:= ABGColor;
+end;
+
+function TVSTCoreTable.CellGridColor(Node: PVirtualNode; Column: TColumnIndex; ABGColor: TColor): TColor;
+begin
+  if FGridLinesVisible then
+    Result:= FGridLinesColor
+  else
+    Result:= ABGColor;
 end;
 
 function TVSTCoreTable.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
