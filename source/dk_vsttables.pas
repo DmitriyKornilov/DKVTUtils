@@ -118,10 +118,10 @@ type
     procedure HeaderCellColors(const PaintInfo: THeaderPaintInfo;
                               out ALineColor, ABGColor: TColor);
 
-    function CellGridColor(Node: PVirtualNode; {%H-}Column: TColumnIndex; ABGColor: TColor): TColor; virtual;
+    function CellGridColor({%H-}Node: PVirtualNode; {%H-}Column: TColumnIndex; ABGColor: TColor): TColor; virtual;
     function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; virtual;
     function CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex): TFont; virtual;
-    function CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect; virtual;
+    function CellRectangle({%H-}Column: TColumnIndex; ACellRect: TRect): TRect; virtual;
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
@@ -182,11 +182,27 @@ type
     property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
   end;
 
-  { TVSTEdit }
+  { TVSTCustomSimpleTable }
 
-  TVSTEdit = class (TVSTCoreTable)
+  TVSTCustomSimpleTable = class (TVSTCoreTable)
   protected
     FDataValues: TStrMatrix;
+    FAutoHeight: Boolean;
+    function GetTotalHeight: Integer;
+  public
+    constructor Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
+    procedure Draw; virtual;
+    procedure ValuesClear; override;
+    property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
+    property TotalHeight: Integer read GetTotalHeight;
+  end;
+
+  { TVSTEdit }
+
+  TVSTEdit = class (TVSTCustomSimpleTable)
+  protected
     FPicks: TStrMatrix;
     FKeys: TIntMatrix;
     FCellTextBeforeEditing: String;
@@ -278,7 +294,7 @@ type
     destructor  Destroy; override;
 
     procedure ValuesClear; override;
-    procedure Draw; //virtual;
+    procedure Draw; override;
 
     procedure AutosizeColumnRowTitlesEnable;
 
@@ -375,17 +391,15 @@ type
     property OnEdititingBegin: TVSTEdititingBeginEvent read FOnEdititingBegin write FOnEdititingBegin;
   end;
 
-  { TVSTCustomTable }
+  { TVSTSimpleTable }
 
-  TVSTCustomTable = class(TVSTCoreTable)
+  TVSTSimpleTable = class(TVSTCustomSimpleTable)
   private
     function GetColCount: Integer;
     function GetRowCount: Integer;
     procedure SetColumnVisibles(AValue: TBoolVector);
   protected
-    FDataValues: TStrMatrix;
     FSelected: TBoolVector;
-    FAutoHeight: Boolean;
     FColumnVisibles: TBoolVector;
 
     function GetIsSelected: Boolean;
@@ -396,7 +410,6 @@ type
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; {%H-}TextType: TVSTTextType;
                       var CellText: String);
-    function GetNeededHeight: Integer;
     function IsIndexCorrect(const AIndex: Integer): Boolean;
   public
     constructor Create(const ATree: TVirtualStringTree;
@@ -405,7 +418,7 @@ type
     destructor  Destroy; override;
 
     procedure ValuesClear; override;
-    procedure Draw; virtual;
+    procedure Draw; override;
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); override;
@@ -417,8 +430,6 @@ type
     procedure Show(const AIndex: Integer);
 
     property IsSelected: Boolean read GetIsSelected;
-    property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
-    property NeededHeight: Integer read GetNeededHeight;
 
     property RowCount: Integer read GetRowCount;
     property ColCount: Integer read GetColCount;
@@ -428,7 +439,7 @@ type
 
   { TVSTTable }
 
-  TVSTTable = class(TVSTCustomTable)
+  TVSTTable = class(TVSTSimpleTable)
   protected
     FAutosizeRowHeights: Boolean;
 
@@ -475,7 +486,7 @@ type
 
   { TVSTCheckTable }
 
-  TVSTCheckTable = class(TVSTCustomTable)
+  TVSTCheckTable = class(TVSTSimpleTable)
   protected
     FOnCheck: TVSTCheckEvent;
     FMaxCheckedCount: Integer;
@@ -528,9 +539,9 @@ type
     property OnCheck: TVSTCheckEvent read FOnCheck write FOnCheck;
   end;
 
-  { TVSTCategoryCustomTable }
+  { TVSTCustomCategoryTable }
 
-  TVSTCategoryCustomTable = class(TVSTCoreTable)
+  TVSTCustomCategoryTable = class(TVSTCoreTable)
   protected
     FCategoryValues: TStrVector;
     FDataValues: TStrMatrix3D;
@@ -572,7 +583,7 @@ type
 
   { TVSTCategoryRadioButtonTable }
 
-  TVSTCategoryRadioButtonTable = class(TVSTCategoryCustomTable)
+  TVSTCategoryRadioButtonTable = class(TVSTCustomCategoryTable)
   protected
 
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
@@ -603,7 +614,7 @@ type
 
   { TVSTCategoryCheckTable }
 
-  TVSTCategoryCheckTable = class(TVSTCategoryCustomTable)
+  TVSTCategoryCheckTable = class(TVSTCustomCategoryTable)
   protected
 
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
@@ -650,8 +661,6 @@ type
 implementation
 
 { TVSTEdit }
-
-
 
 function TVSTEdit.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
 begin
@@ -1106,7 +1115,6 @@ constructor TVSTEdit.Create(const ATree: TVirtualStringTree;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
-  FTree.Indent:= 0;
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
   FTree.OnGetText:= @GetText;
   FTree.OnNodeClick:= @NodeClick;
@@ -1437,13 +1445,9 @@ begin
 end;
 
 procedure TVSTEdit.ValuesClear;
-var
-  i: Integer;
 begin
   FSelectedRowIndex:= -1;
   FSelectedColIndex:= -1;
-  for i:=0 to High(FDataValues) do
-    FDataValues[i]:= nil;
   inherited ValuesClear;
 end;
 
@@ -1463,8 +1467,7 @@ begin
     VSTLoad(FTree, FDataValues[FTitleColumnIndex]);
   end;
 
-  SetColumnWidths;
-
+  inherited Draw;
 end;
 
 procedure TVSTEdit.AutosizeColumnRowTitlesEnable;
@@ -2078,9 +2081,9 @@ begin
   MIndexOf(FSelected, True, AIndex1, AIndex2);
 end;
 
-{ TVSTCategoryCustomTable }
+{ TVSTCustomCategoryTable }
 
-procedure TVSTCategoryCustomTable.SetTreeLinesVisible(AValue: Boolean);
+procedure TVSTCustomCategoryTable.SetTreeLinesVisible(AValue: Boolean);
 begin
   if Avalue then
     FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions + [toShowTreeLines]
@@ -2088,13 +2091,13 @@ begin
     FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
 end;
 
-procedure TVSTCategoryCustomTable.HeaderClear;
+procedure TVSTCustomCategoryTable.HeaderClear;
 begin
   inherited HeaderClear;
   FDataValues:= nil;
 end;
 
-procedure TVSTCategoryCustomTable.GetText(Sender: TBaseVirtualTree;
+procedure TVSTCustomCategoryTable.GetText(Sender: TBaseVirtualTree;
   Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: String);
 var
@@ -2120,7 +2123,7 @@ begin
   end;
 end;
 
-function TVSTCategoryCustomTable.IsIndexesCorrect(const AIndex1,AIndex2: Integer): Boolean;
+function TVSTCustomCategoryTable.IsIndexesCorrect(const AIndex1,AIndex2: Integer): Boolean;
 begin
   Result:= False;
   if MIsNil(FDataValues) then Exit;
@@ -2132,7 +2135,7 @@ begin
   end;
 end;
 
-function TVSTCategoryCustomTable.IsCellSelected(Node: PVirtualNode;
+function TVSTCustomCategoryTable.IsCellSelected(Node: PVirtualNode;
   Column: TColumnIndex): Boolean;
 begin
   Result:= inherited IsCellSelected(Node, Column);
@@ -2142,7 +2145,7 @@ begin
   Result:= FSelected[(Node^.Parent)^.Index, Node^.Index];
 end;
 
-function TVSTCategoryCustomTable.GetIsSelected: Boolean;
+function TVSTCustomCategoryTable.GetIsSelected: Boolean;
 var
   Ind1, Ind2: Integer;
 begin
@@ -2152,7 +2155,7 @@ begin
   Result:= (Ind1>=0) and (Ind2>=0);
 end;
 
-constructor TVSTCategoryCustomTable.Create(const ATree: TVirtualStringTree;
+constructor TVSTCustomCategoryTable.Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
@@ -2167,26 +2170,26 @@ begin
   FTree.OnGetText:= @GetText;
 end;
 
-destructor TVSTCategoryCustomTable.Destroy;
+destructor TVSTCustomCategoryTable.Destroy;
 begin
   inherited Destroy;
 end;
 
-procedure TVSTCategoryCustomTable.AddColumn(const ACaption: String;
+procedure TVSTCustomCategoryTable.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 begin
   inherited AddColumn(ACaption, AWidth, ACaptionAlignment);
   MAppend(FDataValues, nil);
 end;
 
-procedure TVSTCategoryCustomTable.SetColumn(const AColIndex: Integer;
+procedure TVSTCustomCategoryTable.SetColumn(const AColIndex: Integer;
   const AValues: TStrMatrix; const AValuesAlignment: TAlignment);
 begin
   FDataValues[AColIndex]:= MCut(AValues);
   FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
 end;
 
-procedure TVSTCategoryCustomTable.SetColumn(const ACaption: String;
+procedure TVSTCustomCategoryTable.SetColumn(const ACaption: String;
   const AValues: TStrMatrix; const AValuesAlignment: TAlignment);
 var
   ColIndex: Integer;
@@ -2196,18 +2199,18 @@ begin
     SetColumn(ColIndex, AValues, AValuesAlignment);
 end;
 
-procedure TVSTCategoryCustomTable.SetCategories(const AValues: TStrVector);
+procedure TVSTCustomCategoryTable.SetCategories(const AValues: TStrVector);
 begin
   FCategoryValues:= VCut(AValues);
 end;
 
-procedure TVSTCategoryCustomTable.Clear;
+procedure TVSTCustomCategoryTable.Clear;
 begin
   ValuesClear;
   HeaderClear;
 end;
 
-procedure TVSTCategoryCustomTable.ValuesClear;
+procedure TVSTCustomCategoryTable.ValuesClear;
 var
   i: Integer;
 begin
@@ -2218,7 +2221,7 @@ begin
   inherited ValuesClear;
 end;
 
-procedure TVSTCategoryCustomTable.Draw;
+procedure TVSTCustomCategoryTable.Draw;
 var
   ColIndex, CategoryIndex, MaxLength: Integer;
 begin
@@ -2259,7 +2262,7 @@ begin
 
 end;
 
-procedure TVSTCategoryCustomTable.ExpandAll(const AExpand: Boolean);
+procedure TVSTCustomCategoryTable.ExpandAll(const AExpand: Boolean);
 var
   Node: PVirtualNode;
 begin
@@ -2273,7 +2276,7 @@ begin
   end;
 end;
 
-procedure TVSTCategoryCustomTable.Show(const AIndex1, AIndex2: Integer);
+procedure TVSTCustomCategoryTable.Show(const AIndex1, AIndex2: Integer);
 var
   Node: PVirtualNode;
 begin
@@ -2399,10 +2402,10 @@ procedure TVSTCoreTable.SetColumnWidths;
 var
   i: Integer;
 
-  function CalcWidth(const AWidth: Integer): Integer;
-  begin
-    Result:= Round(AWidth*ScreenInfo.PixelsPerInchX/96);
-  end;
+  //function CalcWidth(const AWidth: Integer): Integer;
+  //begin
+  //  Result:= Round(AWidth*ScreenInfo.PixelsPerInchX/96);
+  //end;
 
 begin
   FTree.Header.AutoSizeIndex:= -1;
@@ -2414,7 +2417,7 @@ begin
   else if FAutosizeColumnIndex=LAST_COLUMN_INDEX_FOR_AUTOSIZE then
     FTree.Header.AutoSizeIndex:= High(FHeaderCaptions);
   for i:= 0 to High(FHeaderCaptions) do
-    FTree.Header.Columns[i].Width:= CalcWidth(FColumnWidths[i]);
+    FTree.Header.Columns[i].Width:= FColumnWidths[i];//CalcWidth(FColumnWidths[i]);
 end;
 
 procedure TVSTCoreTable.SetHeaderBGColor(AValue: TColor);
@@ -2673,8 +2676,7 @@ var
   C: TVirtualTreeColumn;
   W: Integer;
 begin
-  //W:= AWidth;
-  W:= WidthFromScreenToDesignTime(AWidth, FDesignTimePPI);
+  W:= SizeFromDefaultToDesignTime(AWidth, FDesignTimePPI);
   VAppend(FHeaderCaptions, ACaption);
   VAppend(FColumnWidths, W);
   VAppend(FColumnValuesBGColors, clNone);
@@ -2786,6 +2788,49 @@ begin
   HeaderFont:= AFont;
   ValuesFont:= AFont;
   SelectedFont:= AFont;
+end;
+
+{ TVSTCustomSimpleTable }
+
+function TVSTCustomSimpleTable.GetTotalHeight: Integer;
+var
+  NodeCount, HeaderHeight, NodeHeight: Integer;
+begin
+  HeaderHeight:= 0;
+  if FHeaderVisible then
+    HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
+  NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
+  NodeCount:= MMaxLength(FDataValues);
+  NodeCount:=VSTRowCount(FTree);
+  Result:= HeaderHeight + NodeCount*NodeHeight;
+end;
+
+constructor TVSTCustomSimpleTable.Create(const ATree: TVirtualStringTree;
+  const AHeaderHeight: Integer; const ARowHeight: Integer);
+begin
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
+  FAutoHeight:= False;
+  FTree.Indent:= 0;
+end;
+
+procedure TVSTCustomSimpleTable.Draw;
+begin
+  SetColumnWidths;
+
+  if AutoHeight and
+    (FTree.Align<>alLeft)   and
+    (FTree.Align<>alRight)  and
+    (FTree.Align<>alClient) then
+      FTree.Height:= TotalHeight;
+end;
+
+procedure TVSTCustomSimpleTable.ValuesClear;
+var
+  i: Integer;
+begin
+  for i:=0 to High(FDataValues) do
+    FDataValues[i]:= nil;
+  inherited ValuesClear;
 end;
 
 { TVSTCheckTable }
@@ -3013,21 +3058,9 @@ begin
   FTree.Refresh;
 end;
 
-{ TVSTCustomTable }
+{ TVSTSimpleTable }
 
-function TVSTCustomTable.GetNeededHeight: Integer;
-var
-  NodeCount, HeaderHeight, NodeHeight: Integer;
-begin
-  HeaderHeight:= 0;
-  if FHeaderVisible then
-    HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
-  NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
-  NodeCount:= MMaxLength(FDataValues);
-  Result:= HeaderHeight + NodeCount*NodeHeight;
-end;
-
-procedure TVSTCustomTable.SetColumnVisibles(AValue: TBoolVector);
+procedure TVSTSimpleTable.SetColumnVisibles(AValue: TBoolVector);
 var
   i: Integer;
 begin
@@ -3043,40 +3076,40 @@ begin
   FTree.Refresh;
 end;
 
-function TVSTCustomTable.GetColCount: Integer;
+function TVSTSimpleTable.GetColCount: Integer;
 begin
   Result:= Length(FHeaderCaptions);
 end;
 
-function TVSTCustomTable.GetRowCount: Integer;
+function TVSTSimpleTable.GetRowCount: Integer;
 begin
   Result:= 0;
   if not MIsNil(FDataValues) then
     Result:= Length(FDataValues[0]);
 end;
 
-function TVSTCustomTable.GetIsSelected: Boolean;
+function TVSTSimpleTable.GetIsSelected: Boolean;
 begin
   Result:= False;
   if not Assigned(Self) then Exit;
   Result:= VIsTrue(FSelected);
 end;
 
-function TVSTCustomTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
+function TVSTSimpleTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
 begin
   Result:= inherited IsCellSelected(Node, Column);
   if not Result then Exit;
   Result:= FSelected[Node^.Index];
 end;
 
-procedure TVSTCustomTable.HeaderClear;
+procedure TVSTSimpleTable.HeaderClear;
 begin
   inherited HeaderClear;
   FDataValues:= nil;
   FColumnVisibles:= nil;
 end;
 
-procedure TVSTCustomTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+procedure TVSTSimpleTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
   Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
 var
   i: Integer;
@@ -3088,7 +3121,7 @@ begin
     CellText:= FDataValues[Column, i];
 end;
 
-function TVSTCustomTable.IsIndexCorrect(const AIndex: Integer): Boolean;
+function TVSTSimpleTable.IsIndexCorrect(const AIndex: Integer): Boolean;
 begin
   Result:= False;
   if MIsNil(FDataValues) then Exit;
@@ -3096,33 +3129,27 @@ begin
   Result:= (AIndex>=0) and (AIndex<=High(FDataValues[0]));
 end;
 
-constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree;
+constructor TVSTSimpleTable.Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
-  FAutoHeight:= False;
-  FTree.Indent:= 0;
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
   FTree.OnGetText:= @GetText;
 end;
 
-destructor TVSTCustomTable.Destroy;
+destructor TVSTSimpleTable.Destroy;
 begin
   inherited Destroy;
 end;
 
-procedure TVSTCustomTable.ValuesClear;
-var
-  i: Integer;
+procedure TVSTSimpleTable.ValuesClear;
 begin
   FSelected:= nil;
-  for i:=0 to High(FDataValues) do
-    FDataValues[i]:= nil;
   inherited ValuesClear;
 end;
 
-procedure TVSTCustomTable.Draw;
+procedure TVSTSimpleTable.Draw;
 var
   i, MaxLength: Integer;
 begin
@@ -3136,10 +3163,11 @@ begin
       VReDim(FDataValues[i], MaxLength, EmptyStr);
 
   VSTLoad(FTree, FDataValues[0]);
-  SetColumnWidths;
+
+  inherited Draw;
 end;
 
-procedure TVSTCustomTable.AddColumn(const ACaption: String;
+procedure TVSTSimpleTable.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 begin
   inherited AddColumn(ACaption, AWidth, ACaptionAlignment);
@@ -3147,17 +3175,14 @@ begin
   VAppend(FColumnVisibles, True);
 end;
 
-procedure TVSTCustomTable.SetColumn(const AColIndex: Integer;
+procedure TVSTSimpleTable.SetColumn(const AColIndex: Integer;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 begin
   FDataValues[AColIndex]:= VCut(AValues);
   FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
-  if AutoHeight and (FTree.Align<>alLeft) and (FTree.Align<>alRight) and
-     (FTree.Align<>alClient) then
-    FTree.Height:= NeededHeight;
 end;
 
-procedure TVSTCustomTable.SetColumn(const ACaption: String;
+procedure TVSTSimpleTable.SetColumn(const ACaption: String;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 var
   ColIndex: Integer;
@@ -3167,7 +3192,7 @@ begin
     SetColumn(ColIndex, AValues, AValuesAlignment);
 end;
 
-procedure TVSTCustomTable.Show(const AIndex: Integer);
+procedure TVSTSimpleTable.Show(const AIndex: Integer);
 var
   Node: PVirtualNode;
 begin
