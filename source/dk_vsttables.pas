@@ -17,7 +17,7 @@ const
   COLOR_FONT_DEFAULT = clBlack; //clWindowText
   COLOR_LINE_DEFAULT = clBlack; //clWindowText
 
-  ROW_HEIGHT_DEFAULT = 24;
+  ROW_HEIGHT_DEFAULT = 25;
   LAST_COLUMN_INDEX_FOR_AUTOSIZE = -2;
 
 type
@@ -3395,11 +3395,13 @@ procedure TVSTTable.SelectNode(Node: PVirtualNode);
 var
   NewSelectedIndex: Integer;
 begin
-  //cancel same selection
   NewSelectedIndex:= -1;
   if Assigned(Node) then
+  begin
     NewSelectedIndex:= Node^.Index;
-  if NewSelectedIndex=SelectedIndex then Exit;
+    //cancel same selection
+    if NewSelectedIndex=SelectedIndex then Exit;
+  end;
 
   //unselect
   if IsSelected then
