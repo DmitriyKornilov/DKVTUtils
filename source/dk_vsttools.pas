@@ -100,7 +100,6 @@ begin
   FTree.BorderStyle:= bsNone;
   ColorColumnBorderColor:= clBlack;
   ColorColumnCellMargin:= 3;
-  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
   HeaderVisible:= False;
   GridLinesVisible:= False;
   CanSelect:= True;

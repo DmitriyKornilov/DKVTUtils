@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, StdCtrls, Spin,
   DateTimePicker, LMessages, LCLIntf, Forms, GraphUtil,
-  BCComboBox, BCTypes, BCButton, Dialogs,
+  BCComboBox, BCTypes, BCButton, Dialogs, fpstypes,
 
   DK_VSTUtils, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const, DK_Color, DK_PPI,
   DK_SheetExporter, DK_SheetWriter;
@@ -75,6 +75,7 @@ type
     FHeaderFont: TFont;
     FValuesFont: TFont;
     FSelectedFont: TFont;
+    FCellFont: TFont;
 
     function NodeFromIndex(const AIndex: Integer): PVirtualNode;
     function NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
@@ -120,7 +121,7 @@ type
 
     function CellGridColor({%H-}Node: PVirtualNode; {%H-}Column: TColumnIndex; ABGColor: TColor): TColor; virtual;
     function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; virtual;
-    function CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex): TFont; virtual;
+    procedure CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex); virtual;
     function CellRectangle({%H-}Column: TColumnIndex; ACellRect: TRect): TRect; virtual;
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
@@ -266,7 +267,7 @@ type
     function CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect; override;
     function CellGridColor(Node: PVirtualNode; {%H-}Column: TColumnIndex; ABGColor: TColor): TColor; override;
     function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; override;
-    function CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont; override;
+    procedure CellFont(Node: PVirtualNode; Column: TColumnIndex); override;
     procedure DeleteSelectedCellText;
 
     procedure MoveSelectionVertical(const ADirection {1 down, -1 up}: Integer);
@@ -474,6 +475,7 @@ type
     procedure Select(const AColumnCaption, AValue: String);
     property SelectedIndex: Integer read GetSelectedIndex;
     procedure ReSelect(const AIDVector: TIntVector; const AIDValue: Integer);
+    procedure ReSelect(const AIDVector: TDateVector; const AIDValue: TDate);
 
     procedure Save(const AColumnTypes: TVSTColumnTypes;
                    const ASheetName: String = 'Лист1';
@@ -1159,14 +1161,14 @@ begin
     Result:= inherited CellBGColor(Node, Column);
 end;
 
-function TVSTEdit.CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont;
+procedure TVSTEdit.CellFont(Node: PVirtualNode; Column: TColumnIndex);
 begin
   if Column=FTitleColumnIndex then
-    Result:= FColumnRowTitlesFont
+    FCellFont.Assign(FColumnRowTitlesFont)
   else begin
-    Result:= inherited CellFont(Node, Column);
+    inherited CellFont(Node, Column);
     if FColumnTypes[Column]=ctColor then
-      Result.Color:= StrToInt(FDataValues[Column, Node^.Index]);
+      FCellFont.Color:= StrToInt(FDataValues[Column, Node^.Index]);
   end;
 end;
 
@@ -2497,7 +2499,8 @@ procedure TVSTCoreTable.DrawText(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   const CellText: String; const CellRect: TRect; var DefaultDraw: Boolean);
 begin
-  TargetCanvas.Font.Assign(CellFont(Node, Column));
+  CellFont(Node, Column);
+  TargetCanvas.Font.Assign(FCellFont);
 end;
 
 function TVSTCoreTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
@@ -2543,12 +2546,12 @@ begin
     Result:= FValuesBGColor;
 end;
 
-function TVSTCoreTable.CellFont(Node: PVirtualNode; Column: TColumnIndex): TFont;
+procedure TVSTCoreTable.CellFont(Node: PVirtualNode; Column: TColumnIndex);
 begin
   if IsCellSelected(Node, Column) then
-    Result:= FSelectedFont
+    FCellFont.Assign(FSelectedFont)
   else
-    Result:= FValuesFont;
+    FCellFont.Assign(FValuesFont);
 end;
 
 function TVSTCoreTable.IsColIndexCorrect(const AIndex: Integer): Boolean;
@@ -2593,9 +2596,11 @@ begin
   FHeaderFont:= TFont.Create;
   FValuesFont:= TFont.Create;
   FSelectedFont:= TFont.Create;
+  FCellFont:= TFont.Create;
   FHeaderFont.Assign(FTree.Header.Font);
   FValuesFont.Assign(FTree.Font);
   FSelectedFont.Assign(FTree.Font);
+  FCellFont.Assign(FTree.Font);
 
   FGridLinesVisible:= True;
   FGridLinesColor:= COLOR_LINE_DEFAULT;
@@ -2630,6 +2635,7 @@ begin
   FreeAndNil(FHeaderFont);
   FreeAndNil(FValuesFont);
   FreeAndNil(FSelectedFont);
+  FreeAndNil(FCellFont);
   inherited Destroy;
 end;
 
@@ -2801,7 +2807,6 @@ begin
     HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
   NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
   NodeCount:= MMaxLength(FDataValues);
-  NodeCount:=VSTRowCount(FTree);
   Result:= HeaderHeight + NodeCount*NodeHeight;
 end;
 
@@ -3244,12 +3249,24 @@ begin
   Select(Index);
 end;
 
+procedure TVSTTable.ReSelect(const AIDVector: TDateVector; const AIDValue: TDate);
+var
+  Index: Integer;
+begin
+  if VIsNil(AIDVector) then Exit;
+  Index:= -1;
+  if AIDValue>0 then
+    Index:= VIndexOfDate(AIDVector, AIDValue);
+  if Index>=0 then
+    Select(Index);
+end;
+
 procedure TVSTTable.Save(const AColumnTypes: TVSTColumnTypes;
                          const ASheetName: String = 'Лист1';
                          const ADoneMessage: String = 'Выполнено!';
                          const ALandscape: Boolean = False);
 var
-  Exporter: TSheetExporter;
+  Exporter: TSheetsExporter;
   Sheet: TsWorksheet;
   Writer: TSheetWriter;
   VisibleColumnWidths: TIntVector;
@@ -3341,7 +3358,7 @@ var
   end;
 
 begin
-  Exporter:= TSheetExporter.Create;
+  Exporter:= TSheetsExporter.Create;
   try
     Sheet:= Exporter.AddWorksheet(ASheetName);
 
