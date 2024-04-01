@@ -13,9 +13,9 @@ uses
   DK_SheetExporter, DK_SheetWriter;
 
 const
-  COLOR_BG_DEFAULT = clWhite; //clWindow
-  COLOR_FONT_DEFAULT = clBlack; //clWindowText
-  COLOR_LINE_DEFAULT = clBlack; //clWindowText
+  COLOR_BG_DEFAULT = clWindow;
+  COLOR_FONT_DEFAULT = clWindowText;
+  COLOR_LINE_DEFAULT = clWindowText;
 
   ROW_HEIGHT_DEFAULT = 25;
   LAST_COLUMN_INDEX_FOR_AUTOSIZE = -2;
@@ -508,6 +508,7 @@ type
     procedure SetChecked(AIndex: Integer; AValue: Boolean);
     function GetChecked(AIndex: Integer): Boolean;
     function GetSelected: TBoolVector;
+    procedure SetSelected(AValue: TBoolVector);
 
     function GetCheckedCount: Integer;
     function GetUncheckedCount: Integer;
@@ -531,7 +532,7 @@ type
     property Checked[AIndex: Integer]: Boolean read GetChecked write SetChecked;
     property IsAllChecked: Boolean read GetIsAllChecked;
     property IsAllUnchecked: Boolean read GetIsAllUnchecked;
-    property Selected: TBoolVector read GetSelected;
+    property Selected: TBoolVector read GetSelected write SetSelected;
 
     property CheckedCount: Integer read GetCheckedCount;
     property UncheckedCount: Integer read GetUncheckedCount;
@@ -2984,6 +2985,19 @@ begin
     if N=Delta then break;
   end;
 
+end;
+
+procedure TVSTCheckTable.SetSelected(AValue: TBoolVector);
+var
+  i: Integer;
+begin
+  for i:= 0 to High(AValue) do
+  begin
+    if AValue[i] then
+      Check(i)
+    else
+      Uncheck(i);
+  end;
 end;
 
 procedure TVSTCheckTable.MouseDown(Sender: TObject; Button: TMouseButton;
