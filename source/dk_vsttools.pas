@@ -202,7 +202,6 @@ constructor TVSTCategoryList.Create(const ATree: TVirtualStringTree;
                        const AOnSelect: TVSTSelectEvent);
 begin
   inherited Create(ATree);
-  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
   FTree.BorderStyle:= bsNone;
   HeaderFont.Style:= [fsBold];
   GridLinesVisible:= False;
