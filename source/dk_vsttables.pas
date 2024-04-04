@@ -33,7 +33,7 @@ type
   );
   TVSTColumnTypes = array of TVSTColumnType;
 
-  TVSTSelectEvent = procedure of object;
+  TVSTEvent = procedure of object;
   TVSTCheckEvent = procedure(const ARowIndex: Integer; const AChecked: Boolean) of object;
   TVSTCellCheckEvent = procedure(const ARowIndex, AColIndex: Integer; const AChecked: Boolean) of object;
   TVSTEdititingDoneEvent = procedure(const ARowIndex, AColIndex: Integer;
@@ -48,7 +48,7 @@ type
   protected
     FTree: TVirtualStringTree;
 
-    FOnSelect: TVSTSelectEvent;
+    FOnSelect: TVSTEvent;
 
     FDesignTimePPI: Integer;
 
@@ -95,8 +95,6 @@ type
     procedure SetFixedColumnsCount(AValue: Integer);
     function GetVisible: Boolean;
     procedure SetVisible(AValue: Boolean);
-
-
 
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var {%H-}PaintInfo: THeaderPaintInfo;
@@ -180,7 +178,7 @@ type
     property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
     property DesignTimePPI: Integer read FDesignTimePPI;
 
-    property OnSelect: TVSTSelectEvent read FOnSelect write FOnSelect;
+    property OnSelect: TVSTEvent read FOnSelect write FOnSelect;
   end;
 
   { TVSTCustomSimpleTable }
@@ -223,7 +221,6 @@ type
     //FColumnRowTitlesBGColor: TColor;
     FColorColumnBorderColor: TColor;
     FColorColumnCellMargin: Integer;
-
 
     procedure SelectCell(Node: PVirtualNode; Column: TColumnIndex; const ASaveChanges: Boolean = True);
     procedure UnselectCell(const ASaveChanges: Boolean = True);
@@ -443,6 +440,7 @@ type
   TVSTTable = class(TVSTSimpleTable)
   protected
     FAutosizeRowHeights: Boolean;
+    FOnDelKeyDown: TVSTEvent;
 
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
@@ -474,8 +472,10 @@ type
     procedure Select(const AColIndex: Integer; const AValue: String);
     procedure Select(const AColumnCaption, AValue: String);
     property SelectedIndex: Integer read GetSelectedIndex;
-    procedure ReSelect(const AIDVector: TIntVector; const AIDValue: Integer);
-    procedure ReSelect(const AIDVector: TDateVector; const AIDValue: TDate);
+    function ReSelect(const AIDVector: TIntVector; const AIDValue: Integer;
+                      const AFirstRowSelectIfNotFound: Boolean = False): Boolean;
+    function ReSelect(const AIDVector: TDateVector; const AIDValue: TDate;
+                      const AFirstRowSelectIfNotFound: Boolean = False): Boolean;
 
     procedure Save(const AColumnTypes: TVSTColumnTypes;
                    const ASheetName: String = 'Лист1';
@@ -483,6 +483,7 @@ type
                    const ALandscape: Boolean = False);
 
     property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
+    property OnDelKeyDown: TVSTEvent read FOnDelKeyDown write FOnDelKeyDown;
   end;
 
 
@@ -3249,30 +3250,64 @@ begin
     Select(Ind, AValue);
 end;
 
-procedure TVSTTable.ReSelect(const AIDVector: TIntVector; const AIDValue: Integer);
+function TVSTTable.ReSelect(const AIDVector: TIntVector; const AIDValue: Integer;
+                            const AFirstRowSelectIfNotFound: Boolean = False): Boolean;
 var
   Index: Integer;
 begin
+  Result:= False;
   if VIsNil(AIDVector) then Exit;
+
+  Index:= -1;
   if AIDValue<=0 then
-    Index:= 0
+  begin
+    if AFirstRowSelectIfNotFound then
+      Index:= 0;
+  end
   else begin
     Index:= VIndexOf(AIDVector, AIDValue);
-    if Index<0 then Index:= 0;
+    if (Index<0) and AFirstRowSelectIfNotFound then
+      Index:= 0;
   end;
-  Select(Index);
+
+  if Index>=0 then
+  begin
+    Select(Index);
+    Result:= True;
+  end;
 end;
 
-procedure TVSTTable.ReSelect(const AIDVector: TDateVector; const AIDValue: TDate);
+function TVSTTable.ReSelect(const AIDVector: TDateVector; const AIDValue: TDate;
+                            const AFirstRowSelectIfNotFound: Boolean = False): Boolean;
 var
   Index: Integer;
 begin
+  Result:= False;
   if VIsNil(AIDVector) then Exit;
+
   Index:= -1;
-  if AIDValue>0 then
+  if AIDValue<=0 then
+  begin
+    if AFirstRowSelectIfNotFound then
+      Index:= 0;
+  end
+  else begin
     Index:= VIndexOfDate(AIDVector, AIDValue);
+    if (Index<0) and AFirstRowSelectIfNotFound then
+      Index:= 0;
+  end;
+
   if Index>=0 then
+  begin
     Select(Index);
+    Result:= True;
+  end;
+
+  //Index:= -1;
+  //if AIDValue>0 then
+  //  Index:= VIndexOfDate(AIDVector, AIDValue);
+  //if Index>=0 then
+  //  Select(Index);
 end;
 
 procedure TVSTTable.Save(const AColumnTypes: TVSTColumnTypes;
@@ -3473,7 +3508,12 @@ end;
 
 procedure TVSTTable.KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  if Key=VK_UP then
+  if Key=VK_DELETE then
+  begin
+    if Assigned(FOnDelKeyDown) then
+      FOnDelKeyDown
+  end
+  else if Key=VK_UP then
     MoveSelection(-1)
   else if Key=VK_DOWN then
     MoveSelection(1);

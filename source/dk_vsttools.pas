@@ -5,7 +5,7 @@ unit DK_VSTTools;
 interface
 
 uses
-  Classes, SysUtils, Controls, StdCtrls, Graphics, VirtualTrees,
+  Classes, SysUtils, Controls, Graphics, VirtualTrees,
 
   DK_Vector, DK_Matrix, DK_StrUtils, DK_VSTTables, DK_PPI;
 
@@ -30,7 +30,7 @@ type
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AOnSelect: TVSTSelectEvent
+                       const AOnSelect: TVSTEvent
                        );
     procedure Update(const AItems: TStrVector; const ASelectedIndex: Integer = 0);
   end;
@@ -42,7 +42,7 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
                        const AItems: TStrVector;
-                       const AOnSelect: TVSTSelectEvent;
+                       const AOnSelect: TVSTEvent;
                        const ACheckedCount: Integer = -1 //-1 check all, >=0 check [0..ACheckedCount-1]
                        );
   end;
@@ -58,7 +58,7 @@ type
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AOnSelect: TVSTSelectEvent
+                       const AOnSelect: TVSTEvent
                        );
 
   end;
@@ -122,7 +122,7 @@ end;
 
 constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AOnSelect: TVSTSelectEvent
+                       const AOnSelect: TVSTEvent
                        );
 begin
   inherited Create(ATree);
@@ -156,7 +156,7 @@ end;
 constructor TVSTCheckList.Create(const ATree: TVirtualStringTree;
      const ACaption: String;
      const AItems: TStrVector;
-     const AOnSelect: TVSTSelectEvent;
+     const AOnSelect: TVSTEvent;
      const ACheckedCount: Integer = -1 //-1 check all, >=0 check [0..ACheckedCount-1]
      );
 var
@@ -199,7 +199,7 @@ end;
 
 constructor TVSTCategoryList.Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AOnSelect: TVSTSelectEvent);
+                       const AOnSelect: TVSTEvent);
 begin
   inherited Create(ATree);
   FTree.BorderStyle:= bsNone;
