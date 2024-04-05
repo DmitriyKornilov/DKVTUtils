@@ -2684,7 +2684,7 @@ var
   C: TVirtualTreeColumn;
   W: Integer;
 begin
-  W:= SizeFromDefaultToDesignTime(AWidth, FDesignTimePPI);
+  W:= WidthFromDefaultToScreen(AWidth);
   VAppend(FHeaderCaptions, ACaption);
   VAppend(FColumnWidths, W);
   VAppend(FColumnValuesBGColors, clNone);
@@ -3272,6 +3272,7 @@ begin
 
   if Index>=0 then
   begin
+    Show(Index);
     Select(Index);
     Result:= True;
   end;
@@ -3299,6 +3300,7 @@ begin
 
   if Index>=0 then
   begin
+    Show(Index);
     Select(Index);
     Result:= True;
   end;
