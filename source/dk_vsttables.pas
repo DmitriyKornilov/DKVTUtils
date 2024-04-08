@@ -441,6 +441,7 @@ type
   protected
     FAutosizeRowHeights: Boolean;
     FOnDelKeyDown: TVSTEvent;
+    FOnReturnKeyDown: TVSTEvent;
 
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
@@ -484,6 +485,7 @@ type
 
     property AutosizeRowHeights: Boolean read FAutosizeRowHeights write SetAutosizeRowHeights;
     property OnDelKeyDown: TVSTEvent read FOnDelKeyDown write FOnDelKeyDown;
+    property OnReturnKeyDown: TVSTEvent read FOnReturnKeyDown write FOnReturnKeyDown;
   end;
 
 
@@ -3514,6 +3516,11 @@ begin
   begin
     if Assigned(FOnDelKeyDown) then
       FOnDelKeyDown
+  end
+  else if Key=VK_RETURN then
+  begin
+    if Assigned(FOnReturnKeyDown) then
+      FOnReturnKeyDown
   end
   else if Key=VK_UP then
     MoveSelection(-1)
