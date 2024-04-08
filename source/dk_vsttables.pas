@@ -187,6 +187,7 @@ type
   protected
     FDataValues: TStrMatrix;
     FAutoHeight: Boolean;
+    FMaxAutoHeightRowCount: Integer;
     function GetTotalHeight: Integer;
   public
     constructor Create(const ATree: TVirtualStringTree;
@@ -196,6 +197,7 @@ type
     procedure ValuesClear; override;
     property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
     property TotalHeight: Integer read GetTotalHeight;
+    property MaxAutoHeightRowCount: Integer read FMaxAutoHeightRowCount write FMaxAutoHeightRowCount;
   end;
 
   { TVSTEdit }
@@ -2811,6 +2813,10 @@ begin
     HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
   NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
   NodeCount:= MMaxLength(FDataValues);
+  if NodeCount=0 then
+    NodeCount:= 1;
+  if (MaxAutoHeightRowCount>0) and (NodeCount>MaxAutoHeightRowCount) then
+    NodeCount:= MaxAutoHeightRowCount;
   Result:= HeaderHeight + NodeCount*NodeHeight;
 end;
 
@@ -2819,6 +2825,7 @@ constructor TVSTCustomSimpleTable.Create(const ATree: TVirtualStringTree;
 begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
   FAutoHeight:= False;
+  FMaxAutoHeightRowCount:= 0;
   FTree.Indent:= 0;
 end;
 
