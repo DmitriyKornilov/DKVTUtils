@@ -138,6 +138,7 @@ type
     procedure Refresh;
 
     procedure SetZoom(const APercents: Integer);
+    procedure SetFocus;
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); virtual;
@@ -2680,6 +2681,11 @@ begin
   finally
     FTree.EndUpdate;
   end;
+end;
+
+procedure TVSTCoreTable.SetFocus;
+begin
+  if Assigned(FTree) then FTree.SetFocus;
 end;
 
 procedure TVSTCoreTable.AddColumn(const ACaption: String;
