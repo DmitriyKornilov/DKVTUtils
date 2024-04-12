@@ -27,7 +27,7 @@ type
     ctString,
     ctDate,
     ctTime,
-    ctFloat,
+    ctDouble,
     ctKeyPick,
     ctColor
   );
@@ -210,6 +210,7 @@ type
     FCellTextBeforeEditing: String;
     FColumnTypes: TVSTColumnTypes;//array of TVSTColumnType;
     FColumnFormatStrings: TStrVector;
+    FDecimalPlaces: TIntVector;
     FSelectedRowIndex, FSelectedColIndex: Integer;
     FTitleColumnIndex: Integer;
     FShowZeros: Boolean;
@@ -250,14 +251,16 @@ type
     procedure SetColumnRowTitlesVisible(AValue: Boolean);
 
     procedure SetNewColumnSettings(const AColumnType: TVSTColumnType;
-                           const AFormatString: String);
+                                   const AFormatString: String;
+                                   const ADecimalPlaces: Integer = 0);
     procedure AddValuesColumn(const AColumnType: TVSTColumnType;
                         const ACaption, AFormatString: String;
                         const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter;
                         const AKeys: TIntVector = nil;
-                        const APicks: TStrVector = nil);
+                        const APicks: TStrVector = nil;
+                        const ADecimalPlaces: Integer = 0);
 
     function GetIsRowTitlesColumnExists: Boolean;
 
@@ -306,6 +309,10 @@ type
     procedure AddColumnInteger(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
+    procedure AddColumnDouble(const ACaption: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AValuesAlignment: TAlignment = taCenter;
+                        const ADecimalPlaces: Integer = 2);
     procedure AddColumnString(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
@@ -324,12 +331,14 @@ type
                              const ACaptionAlignment: TAlignment = taCenter);
 
     procedure SetColumnInteger(const ACaption: String; const AValues: TIntVector);
+    procedure SetColumnDouble(const ACaption: String; const AValues: TDblVector);
     procedure SetColumnString(const ACaption: String; const AValues: TStrVector);
     procedure SetColumnDate(const ACaption: String; const AValues: TDateVector);
     procedure SetColumnTime(const ACaption: String; const AValues: TTimeVector);
     procedure SetColumnColor(const ACaption: String; const AValues: TColorVector);
 
     procedure SetColumnInteger(const AColIndex: Integer; const AValues: TIntVector);
+    procedure SetColumnDouble(const AColIndex: Integer; const AValues: TDblVector);
     procedure SetColumnString(const AColIndex: Integer; const AValues: TStrVector);
     procedure SetColumnDate(const AColIndex: Integer; const AValues: TDateVector);
     procedure SetColumnTime(const AColIndex: Integer; const AValues: TTimeVector);
@@ -1112,6 +1121,14 @@ begin
         Key:= Key + n;
       PostMessage(FEditor.Handle, LM_KEYDOWN, Key, 0);
     end;
+    ctDouble:
+      begin
+        if SPos(SYMBOLS_DIGITS+SYMBOL_COMMA+SYMBOL_DOT, UTF8Key)=0 then Exit;
+        if SSame(UTF8Key, SYMBOL_COMMA) or SSame(UTF8Key, SYMBOL_DOT) then
+          UTF8Key:= DefaultFormatSettings.DecimalSeparator;
+        FDataValues[FSelectedColIndex, FSelectedRowIndex]:= UTF8Key;
+        BeginEdit;
+      end;
   //ctKeyPick: ; //not need
   //ctColor:   ; //not need
   end;
@@ -1219,6 +1236,14 @@ var
     TSpinEdit(FEditor).Alignment:= FTree.Header.Columns[FSelectedColIndex].Alignment;
   end;
 
+  procedure CreateEditorDouble;
+  begin
+    FEditor:= TFloatSpinEdit.Create(FTree);
+    TFloatSpinEdit(FEditor).Text:= SelectedText;
+    TFloatSpinEdit(FEditor).DecimalPlaces:= FDecimalPlaces[FSelectedColIndex];
+    TFloatSpinEdit(FEditor).Alignment:= FTree.Header.Columns[FSelectedColIndex].Alignment;
+  end;
+
   procedure CreateEditorString;
   begin
     FEditor:= TEdit.Create(FTree);
@@ -1296,6 +1321,12 @@ var
     TSpinEdit(FEditor).SelStart:= SLength(TSpinEdit(FEditor).Text);
   end;
 
+  procedure GoEditDouble;
+  begin
+    FEditor.SetFocus;
+    TFloatSpinEdit(FEditor).SelStart:= SLength(TFloatSpinEdit(FEditor).Text);
+  end;
+
   procedure GoEditString;
   begin
     FEditor.SetFocus;
@@ -1353,6 +1384,7 @@ begin
       ctTime:    CreateEditorTime;
       ctKeyPick: CreateEditorKeyPick;
       ctColor:   CreateEditorColor;
+      ctDouble:  CreateEditorDouble;
     else
       Exit;
     end;
@@ -1370,6 +1402,7 @@ begin
     ctTime:    GoEditTime;
     ctKeyPick: GoEditKeyPick;
     ctColor:   GoEditColor;
+    ctDouble:  GoEditDouble;
   end;
 end;
 
@@ -1396,6 +1429,10 @@ begin
                                       TDateTimePicker(FEditor).Time);
       ctKeyPick: SelectedText:= IntToStr(FKeys[FSelectedColIndex, TBCComboBox(FEditor).ItemIndex]);
       ctColor:   SelectedText:= TEdit(FEditor).Text;
+      ctDouble:  if TFloatSpinEdit(FEditor).Value=0 then
+                   SelectedText:= EmptyStr
+                 else
+                   SelectedText:= FloatToStr(TFloatSpinEdit(FEditor).Value);
     end;
   end
   else begin
@@ -1450,6 +1487,7 @@ begin
   FDataValues:= nil;
   FColumnTypes:= nil;
   FColumnFormatStrings:= nil;
+  FDecimalPlaces:= nil;
   FTitleColumnIndex:= -1;
 end;
 
@@ -1534,10 +1572,11 @@ begin
 end;
 
 procedure TVSTEdit.SetNewColumnSettings(const AColumnType: TVSTColumnType;
-  const AFormatString: String);
+  const AFormatString: String; const ADecimalPlaces: Integer = 0);
 begin
   MAppend(FDataValues, nil);
   VAppend(FColumnFormatStrings, AFormatString);
+  VAppend(FDecimalPlaces, ADecimalPlaces);
   SetLength(FColumnTypes, Length(FHeaderCaptions));
   FColumnTypes[High(FColumnTypes)]:= AColumnType;
 end;
@@ -1547,6 +1586,15 @@ procedure TVSTEdit.AddColumnInteger(const ACaption: String;
   const AValuesAlignment: TAlignment);
 begin
   AddValuesColumn(ctInteger, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment);
+end;
+
+procedure TVSTEdit.AddColumnDouble(const ACaption: String; const AWidth: Integer = 100;
+                        const ACaptionAlignment: TAlignment = taCenter;
+                        const AValuesAlignment: TAlignment = taCenter;
+                        const ADecimalPlaces: Integer = 2);
+begin
+  AddValuesColumn(ctDouble, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment,
+                  nil, nil, ADecimalPlaces);
 end;
 
 procedure TVSTEdit.AddColumnString(const ACaption: String;
@@ -1593,6 +1641,14 @@ begin
   SetColumnInteger(ColIndex, AValues);
 end;
 
+procedure TVSTEdit.SetColumnDouble(const ACaption: String; const AValues: TDblVector);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  SetColumnDouble(ColIndex, AValues);
+end;
+
 procedure TVSTEdit.SetColumnString(const ACaption: String; const AValues: TStrVector);
 var
   ColIndex: Integer;
@@ -1631,6 +1687,12 @@ begin
   FDataValues[AColIndex]:= VIntToStr(AValues);
 end;
 
+procedure TVSTEdit.SetColumnDouble(const AColIndex: Integer; const AValues: TDblVector);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FDataValues[AColIndex]:= VFloatToStr(AValues);
+end;
+
 procedure TVSTEdit.SetColumnString(const AColIndex: Integer; const AValues: TStrVector);
 begin
   if not IsColIndexCorrect(AColIndex) then Exit;
@@ -1661,11 +1723,12 @@ procedure TVSTEdit.AddValuesColumn(const AColumnType: TVSTColumnType;
                              const ACaptionAlignment: TAlignment;
                              const AValuesAlignment: TAlignment;
                              const AKeys: TIntVector = nil;
-                             const APicks: TStrVector = nil);
+                             const APicks: TStrVector = nil;
+                             const ADecimalPlaces: Integer = 0);
 begin
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTree.Header.Columns[High(FHeaderCaptions)].Alignment:= AValuesAlignment;
-  SetNewColumnSettings(AColumnType, AFormatString);
+  SetNewColumnSettings(AColumnType, AFormatString, ADecimalPlaces);
   MAppend(FKeys, AKeys);
   MAppend(FPicks, APicks);
 end;
@@ -3375,7 +3438,7 @@ var
       else
         Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
     end
-    else if AType = ctInteger then
+    else if AType = ctDouble then
     begin
       if TryStrToFloat(AValue, DblValue) then
         Writer.WriteNumber(ARow, ACol, DblValue, cbtOuter)
