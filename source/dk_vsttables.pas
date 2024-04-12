@@ -309,10 +309,11 @@ type
     procedure AddColumnInteger(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-    procedure AddColumnDouble(const ACaption: String; const AWidth: Integer = 100;
+    procedure AddColumnDouble(const ACaption: String;
+                        const ADecimalPlaces: Integer = 2;
+                        const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
-                        const AValuesAlignment: TAlignment = taCenter;
-                        const ADecimalPlaces: Integer = 2);
+                        const AValuesAlignment: TAlignment = taCenter);
     procedure AddColumnString(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
@@ -1588,10 +1589,11 @@ begin
   AddValuesColumn(ctInteger, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment);
 end;
 
-procedure TVSTEdit.AddColumnDouble(const ACaption: String; const AWidth: Integer = 100;
+procedure TVSTEdit.AddColumnDouble(const ACaption: String;
+                        const ADecimalPlaces: Integer = 2;
+                        const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
-                        const AValuesAlignment: TAlignment = taCenter;
-                        const ADecimalPlaces: Integer = 2);
+                        const AValuesAlignment: TAlignment = taCenter);
 begin
   AddValuesColumn(ctDouble, ACaption, EmptyStr, AWidth, ACaptionAlignment, AValuesAlignment,
                   nil, nil, ADecimalPlaces);
