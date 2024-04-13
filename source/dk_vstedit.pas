@@ -173,6 +173,8 @@ type
 
     function ColumnAsInteger(out AValues: TIntVector; const AColIndex: Integer;
                              const ADefaultValue: Integer = 0): Boolean;
+    function ColumnAsDouble(out AValues: TDblVector; const AColIndex: Integer;
+                             const ADefaultValue: Integer = 0): Boolean;
     function ColumnAsString(out AValues: TStrVector; const AColIndex: Integer;
                              const ADefaultValue: String = ''): Boolean;
     function ColumnAsDate(out AValues: TDblVector; const AColIndex: Integer;
@@ -183,6 +185,8 @@ type
                           const ADefaultValue: TColor = clBlack): Boolean;
 
     function ColumnAsInteger(out AValues: TIntVector; const ACaption: String;
+                             const ADefaultValue: Integer = 0): Boolean;
+    function ColumnAsDouble(out AValues: TDblVector; const ACaption: String;
                              const ADefaultValue: Integer = 0): Boolean;
     function ColumnAsString(out AValues: TStrVector; const ACaption: String;
                              const ADefaultValue: String = ''): Boolean;
@@ -341,6 +345,21 @@ begin
       AValues[i]:= Value;
 end;
 
+function TVSTEdit.ColumnAsDouble(out AValues: TDblVector;
+  const AColIndex: Integer; const ADefaultValue: Integer): Boolean;
+var
+  i: Integer;
+  Value: Double;
+begin
+  AValues:= nil;
+  Result:= IsColumnValuesExists(AColIndex);
+  if not Result then Exit;
+  VDim(AValues, Length(FDataValues[AColIndex]), ADefaultValue);
+  for i:= 0 to High(FDataValues[AColIndex]) do
+    if TryStrToFloat(FDataValues[AColIndex,i], Value) then
+      AValues[i]:= Value;
+end;
+
 function TVSTEdit.ColumnAsString(out AValues: TStrVector;
   const AColIndex: Integer; const ADefaultValue: String): Boolean;
 var
@@ -406,6 +425,15 @@ var
 begin
   ColIndex:= VIndexOf(FHeadercaptions, ACaption);
   Result:= ColumnAsInteger(AValues, ColIndex, ADefaultValue);
+end;
+
+function TVSTEdit.ColumnAsDouble(out AValues: TDblVector;
+  const ACaption: String; const ADefaultValue: Integer): Boolean;
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeadercaptions, ACaption);
+  Result:= ColumnAsDouble(AValues, ColIndex, ADefaultValue);
 end;
 
 function TVSTEdit.ColumnAsString(out AValues: TStrVector;
