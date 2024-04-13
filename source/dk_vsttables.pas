@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, fpstypes,
 
-  DK_VSTCore, DK_VSTTypes, DK_Vector, DK_Matrix, DK_StrUtils, DK_Const,
+  DK_VSTCore, DK_VSTTypes, DK_Vector, DK_Matrix, DK_Const,
   DK_SheetExporter, DK_SheetWriter;
 
 type
@@ -36,8 +36,6 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    destructor  Destroy; override;
-
     procedure ValuesClear; override;
     procedure Draw; override;
 
@@ -87,8 +85,6 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    destructor  Destroy; override;
-
     procedure ValuesClear; override;
 
     procedure UnSelect;
@@ -116,7 +112,7 @@ type
 
   TVSTCheckTable = class(TVSTSimpleTable)
   protected
-    FOnCheck: TVSTCheckEvent;
+    FOnCheck: TVSTRowCheckEvent;
     FMaxCheckedCount: Integer;
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
@@ -149,7 +145,6 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    destructor  Destroy; override;
     procedure ValuesClear; override;
     procedure Draw; override;
 
@@ -165,7 +160,7 @@ type
     property MaxCheckedCount: Integer read FMaxCheckedCount write SetMaxCheckedCount;
     procedure MaxCheckedCountClear;
 
-    property OnCheck: TVSTCheckEvent read FOnCheck write FOnCheck;
+    property OnCheck: TVSTRowCheckEvent read FOnCheck write FOnCheck;
   end;
 
   { TVSTCustomCategoryTable }
@@ -189,7 +184,6 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    destructor  Destroy; override;
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); override;
@@ -214,7 +208,6 @@ type
 
   TVSTCategoryRadioButtonTable = class(TVSTCustomCategoryTable)
   protected
-
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
       Node: PVirtualNode; var {%H-}InitialStates: TVirtualNodeInitStates);
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
@@ -229,8 +222,6 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    destructor  Destroy; override;
-
     procedure Draw;
 
     procedure ValuesClear; override;
@@ -245,7 +236,6 @@ type
 
   TVSTCategoryCheckTable = class(TVSTCustomCategoryTable)
   protected
-
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
       Node: PVirtualNode; var {%H-}InitialStates: TVirtualNodeInitStates);
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
@@ -276,7 +266,6 @@ type
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    destructor  Destroy; override;
 
     function IsCategoryAllChecked(const AIndex: Integer): Boolean;
     function IsCategoryAllUnchecked(const AIndex: Integer): Boolean;
@@ -286,8 +275,6 @@ type
 
     property Checked[AIndex1, AIndex2: Integer]: Boolean read GetChecked write SetChecked;
   end;
-
-
 
 implementation
 
@@ -450,10 +437,6 @@ begin
     CheckCategory(Node, False);
 end;
 
-
-
-
-
 constructor TVSTCategoryCheckTable.Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
@@ -462,11 +445,6 @@ begin
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
   FTree.OnChecking:= @Checking;
-end;
-
-destructor TVSTCategoryCheckTable.Destroy;
-begin
-  inherited Destroy;
 end;
 
 function TVSTCategoryCheckTable.IsHasCheckedCategory(Node: PVirtualNode): Boolean;
@@ -516,8 +494,6 @@ begin
   if not FTree.GetNodeLevel(Node)=0 then Exit;
   Result:= IsCategoryAllUnchecked(Node^.Index);
 end;
-
-
 
 procedure TVSTCategoryCheckTable.CheckAll(const AChecked: Boolean);
 var
@@ -674,11 +650,6 @@ begin
   FTree.OnMouseDown:= @MouseDown;
 end;
 
-destructor TVSTCategoryRadioButtonTable.Destroy;
-begin
-  inherited Destroy;
-end;
-
 procedure TVSTCategoryRadioButtonTable.Draw;
 begin
   UnselectNode;
@@ -794,11 +765,6 @@ begin
   FTree.OnGetText:= @GetText;
 end;
 
-destructor TVSTCustomCategoryTable.Destroy;
-begin
-  inherited Destroy;
-end;
-
 procedure TVSTCustomCategoryTable.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 begin
@@ -883,7 +849,6 @@ begin
   VSTLoad(FTree, FDataValues[0], False);
 
   SetColumnWidths;
-
 end;
 
 procedure TVSTCustomCategoryTable.ExpandAll(const AExpand: Boolean);
@@ -910,10 +875,6 @@ begin
   FTree.Expanded[Node^.Parent]:= True;
   FTree.FocusedNode:= Node;
 end;
-
-
-
-
 
 { TVSTCheckTable }
 
@@ -1060,7 +1021,6 @@ begin
     end;
     if N=Delta then break;
   end;
-
 end;
 
 procedure TVSTCheckTable.SetSelected(AValue: TBoolVector);
@@ -1131,11 +1091,6 @@ begin
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
   FTree.OnChecking:= @Checking;
-end;
-
-destructor TVSTCheckTable.Destroy;
-begin
-  inherited Destroy;
 end;
 
 procedure TVSTCheckTable.ValuesClear;
@@ -1231,11 +1186,6 @@ begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
   FTree.OnGetText:= @GetText;
-end;
-
-destructor TVSTSimpleTable.Destroy;
-begin
-  inherited Destroy;
 end;
 
 procedure TVSTSimpleTable.ValuesClear;
@@ -1379,12 +1329,6 @@ begin
     Select(Index);
     Result:= True;
   end;
-
-  //Index:= -1;
-  //if AIDValue>0 then
-  //  Index:= VIndexOfDate(AIDVector, AIDValue);
-  //if Index>=0 then
-  //  Select(Index);
 end;
 
 procedure TVSTTable.Save(const AColumnTypes: TVSTColumnTypes;
@@ -1463,7 +1407,6 @@ var
         Writer.SetAlignment(AlignmentConvert(FTree.Header.Columns[i].CaptionAlignment), vaCenter);
         Writer.WriteText(R, C, FHeaderCaptions[i], cbtOuter);
       end;
-      //Writer.SetRowHeight(R, FTree.Header.DefaultHeight);
     end;
 
     Writer.SetFont(ValuesFont);
@@ -1580,7 +1523,6 @@ begin
   if not IsIndexCorrect(Ind) then Exit;
 
   Select(Ind);
-
 end;
 
 procedure TVSTTable.KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -1656,11 +1598,6 @@ begin
   FTree.OnMeasureItem:= @MeasureItem;
 end;
 
-destructor TVSTTable.Destroy;
-begin
-  inherited Destroy;
-end;
-
 procedure TVSTTable.ValuesClear;
 begin
   UnselectNode;
@@ -1671,8 +1608,6 @@ procedure TVSTTable.UnSelect;
 begin
   UnselectNode;
 end;
-
-
 
 end.
 

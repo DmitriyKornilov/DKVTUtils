@@ -25,23 +25,19 @@
       </Item>
       <Item>
         <Filename Value="source\dk_vsttabletools.pas"/>
-        <UnitName Value="dk_vsttabletools"/>
+        <UnitName Value="DK_VSTTableTools"/>
       </Item>
       <Item>
-        <Filename Value="source\dk_dropdown.pas"/>
-        <UnitName Value="DK_DropDown"/>
+        <Filename Value="source\dk_vstdropdown.pas"/>
+        <UnitName Value="DK_VSTDropDown"/>
       </Item>
       <Item>
-        <Filename Value="source\dk_dropdownconst.pas"/>
-        <UnitName Value="DK_DropDownConst"/>
+        <Filename Value="source\dk_vstdropdownconst.pas"/>
+        <UnitName Value="DK_VSTDropDownConst"/>
       </Item>
       <Item>
-        <Filename Value="source\dk_dropdownform.lfm"/>
-        <Type Value="LFM"/>
-      </Item>
-      <Item>
-        <Filename Value="source\dk_dropdownform.pas"/>
-        <UnitName Value="DK_DropDownForm"/>
+        <Filename Value="source\dk_vstdropdownform.pas"/>
+        <UnitName Value="dk_vstdropdownform"/>
       </Item>
       <Item>
         <Filename Value="source\dk_vstcore.pas"/>
@@ -53,7 +49,11 @@
       </Item>
       <Item>
         <Filename Value="source\dk_tvstedittools.pas"/>
-        <UnitName Value="dk_tvstedittools"/>
+        <UnitName Value="DK_TVSTEditTools"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_vstdropdownform.lfm"/>
+        <Type Value="LFM"/>
       </Item>
     </Files>
     <RequiredPkgs>

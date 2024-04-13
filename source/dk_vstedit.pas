@@ -9,7 +9,7 @@ uses
   LMessages, LCLIntf, DateTimePicker, BCButton, Dialogs,
 
   DK_VSTTypes, DK_VSTCore, DK_Const, DK_Vector, DK_Matrix, DK_StrUtils,
-  DK_DropDown;
+  DK_VSTDropDown;
 
 type
 
@@ -20,7 +20,7 @@ type
     FPicks: TStrMatrix;
     FKeys: TIntMatrix;
     FCellTextBeforeEditing: String;
-    FColumnTypes: TVSTColumnTypes;//array of TVSTColumnType;
+    FColumnTypes: TVSTColumnTypes;
     FColumnFormatStrings: TStrVector;
     FDecimalPlaces: TIntVector;
     FSelectedRowIndex, FSelectedColIndex: Integer;
@@ -35,7 +35,7 @@ type
     FEditor: TControl;
     FDropDown: TDropDown;
     FOnEdititingDone: TVSTEdititingDoneEvent;
-    FOnEdititingBegin: TVSTEdititingBeginEvent;
+    FOnEdititingBegin: TVSTEvent;
     FColumnRowTitlesFont: TFont;
     //FColumnRowTitlesBGColor: TColor;
     FColorColumnBorderColor: TColor;
@@ -219,7 +219,7 @@ type
     property ColorColumnCellMargin: Integer read FColorColumnCellMargin write FColorColumnCellMargin;
 
     property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
-    property OnEdititingBegin: TVSTEdititingBeginEvent read FOnEdititingBegin write FOnEdititingBegin;
+    property OnEdititingBegin: TVSTEvent read FOnEdititingBegin write FOnEdititingBegin;
   end;
 
 implementation
@@ -580,7 +580,6 @@ begin
   if Key=VK_RETURN then
   begin
     R:= FSelectedRowIndex + 1;
-    //if (R<0) or (R>High(FDataValues[FTitleColumnIndex])) then
     if not IsRowIndexCorrect(R) then
       EditorExit
     else begin
@@ -618,10 +617,10 @@ begin
                 MoveSelectionVertical(0)
               else
                 UnSelect;
-   VK_DOWN: MoveSelectionVertical(1);
-   VK_UP:   MoveSelectionVertical(-1);
-   VK_RIGHT: MoveSelectionHorizontal(1);
-   VK_LEFT: MoveSelectionHorizontal(-1);
+   VK_DOWN:   MoveSelectionVertical(1);
+   VK_UP:     MoveSelectionVertical(-1);
+   VK_RIGHT:  MoveSelectionHorizontal(1);
+   VK_LEFT:   MoveSelectionHorizontal(-1);
   end;
 end;
 
@@ -833,43 +832,6 @@ var
       FDropDown.ItemIndex:= n;
   end;
 
-  //procedure CreateEditorKeyPick;
-  //var
-  //  n: Integer;
-  //
-  //  procedure SetState(AState: TBCButtonState);
-  //  begin
-  //    AState.FontEx.Shadow:= False;
-  //    AState.FontEx.Name:= ValuesFont.Name;
-  //    AState.FontEx.Color:= ValuesFont.Color;
-  //    AState.FontEx.Style:= ValuesFont.Style;
-  //    AState.FontEx.Height:= - ValuesFont.Height;
-  //    case FTree.Header.Columns[FSelectedColIndex].Alignment of
-  //      taLeftJustify:  AState.FontEx.TextAlignment:= bcaLeftCenter;
-  //      taRightJustify: AState.FontEx.TextAlignment:= bcaRightCenter;
-  //      taCenter:       AState.FontEx.TextAlignment:= bcaCenter;
-  //    end;
-  //    AState.FontEx.PaddingLeft:= 5;
-  //    AState.Border.Color:= clHighlight;
-  //    AState.Border.Style:= bboSolid;
-  //    AState.Background.Color:= FColumnValuesBGColors[FSelectedColIndex];
-  //    AState.Background.Style:= bbsColor;
-  //  end;
-  //begin
-  //  FEditor:= TBCComboBox.Create(FTree);
-  //  TBCComboBox(FEditor).Rounding.RoundX:= 0;
-  //  TBCComboBox(FEditor).Rounding.RoundY:= 0;
-  //  TBCComboBox(FEditor).DropDownBorderColor:= clHighlight;
-  //  TBCComboBox(FEditor).FocusBorderColor:= clHighlight;
-  //  SetState(TBCComboBox(FEditor).StateNormal);
-  //  SetState(TBCComboBox(FEditor).StateHover);
-  //  SetState(TBCComboBox(FEditor).StateClicked);
-  //  VToStrings(FPicks[FSelectedColIndex], TBCComboBox(FEditor).Items);
-  //  n:= VIndexOf(FKeys[FSelectedColIndex], StrToInt(SelectedText));
-  //  if n>=0 then
-  //    TBCComboBox(FEditor).ItemIndex:= n;
-  //end;
-
   procedure CreateEditorColor;
   begin
     FEditor:= TEdit.Create(FTree);
@@ -909,7 +871,7 @@ var
 
   procedure GoEditKeyPick;
   begin
-    //FEditor.SetFocus;
+    FDropDown.Expand;
   end;
 
   procedure GoEditColor;
@@ -1011,7 +973,7 @@ begin
   FIsEditing:= False;
   if ColumnType=ctKeyPick then
   begin
-    FDropDown.Close;
+    FDropDown.Collapse;
     FreeAndNil(FDropDown);
   end;
   FreeAndNil(FEditor);

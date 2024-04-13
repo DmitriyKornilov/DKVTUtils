@@ -286,12 +286,6 @@ end;
 procedure TVSTCoreTable.SetColumnWidths;
 var
   i: Integer;
-
-  //function CalcWidth(const AWidth: Integer): Integer;
-  //begin
-  //  Result:= Round(AWidth*ScreenInfo.PixelsPerInchX/96);
-  //end;
-
 begin
   FTree.Header.AutoSizeIndex:= -1;
   if FAutosizeColumnIndex>=0 then
@@ -302,7 +296,7 @@ begin
   else if FAutosizeColumnIndex=LAST_COLUMN_INDEX_FOR_AUTOSIZE then
     FTree.Header.AutoSizeIndex:= High(FHeaderCaptions);
   for i:= 0 to High(FHeaderCaptions) do
-    FTree.Header.Columns[i].Width:= FColumnWidths[i];//CalcWidth(FColumnWidths[i]);
+    FTree.Header.Columns[i].Width:= FColumnWidths[i];
 end;
 
 procedure TVSTCoreTable.SetHeaderBGColor(AValue: TColor);

@@ -1,13 +1,12 @@
-unit DK_DropDown;
+unit DK_VSTDropDown;
 
 {$mode ObjFPC}{$H+}
 
 interface
 
 uses
-  Classes, SysUtils, Graphics, Controls,
-  BCButton, BCTypes, BGRABitmap,
-  DK_Vector, DK_DropDownForm, DK_DropDownConst, DK_PPI;
+  Classes, SysUtils, Graphics, Controls, BCButton, BCTypes, BGRABitmap,
+  DK_Vector, DK_VSTDropDownForm, DK_VSTTypes, DK_VSTDropDownConst, DK_PPI;
 
 type
 
@@ -17,48 +16,124 @@ type
   private
     FButton: TBCButton;
     FItems: TStrVector;
-    FForm: TDropDownForm;
+    FForm: TVSTDropDownForm;
     FDropDownCount: Integer;
-    FOnChange: TDropDownEvent;
+    FOnChange: TVSTEvent;
     FDesignTimePPI: Integer;
     FFont: TFont;
 
-    function GetEnabled: Boolean;
-    function GetItemIndex: Integer;
     procedure SetButtonSettings;
-    procedure ButtonClick(Sender: TObject);
-    procedure AfterRenderBCButton(Sender: TObject; const {%H-}ABGRA: TBGRABitmap;
-                                  {%H-}AState: TBCButtonState; {%H-}ARect: TRect);
     procedure SetDropDownCount(const AValue: Integer);
     procedure SetEnabled(const AValue: Boolean);
     procedure SetFont(AValue: TFont);
     procedure SetItemIndex(const AValue: Integer);
     procedure SetItems(const AValue: TStrVector);
-    procedure DropDownFormDeactivate(Sender: TObject);
-    procedure SetOnChange(const AValue: TDropDownEvent);
+    procedure SetOnChange(const AValue: TVSTEvent);
+
     function GetSize(const ASize: Integer): Integer;
+    function GetEnabled: Boolean;
+    function GetItemIndex: Integer;
+    function GetText: String;
+
+    procedure ButtonClick(Sender: TObject);
+    procedure DropDownFormDeactivate(Sender: TObject);
+    procedure AfterRenderBCButton(Sender: TObject; const {%H-}ABGRA: TBGRABitmap;
+                                  {%H-}AState: TBCButtonState; {%H-}ARect: TRect);
   public
     constructor Create(const AButton: TBCButton);
     destructor Destroy; override;
-    procedure Open;
-    procedure Close;
+
     procedure Clear;
+    procedure Expand;
+    procedure Collapse;
     procedure KeyPick(const APicks: TStrVector; const AKeys: TIntVector; const ASelectedKey: Integer = -1);
+
     property Items: TStrVector read FItems write SetItems;
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
     property DropDownCount: Integer read FDropDownCount write SetDropDownCount;
     property Enabled: Boolean read GetEnabled write SetEnabled;
-    property OnChange: TDropDownEvent read FOnChange write SetOnChange;
     property Font: TFont read FFont write SetFont;
+    property Text: String read GetText;
+
+    property OnChange: TVSTEvent read FOnChange write SetOnChange;
   end;
 
 implementation
 
 { TDropDown }
 
-function TDropDown.GetSize(const ASize: Integer): Integer;
+constructor TDropDown.Create(const AButton: TBCButton);
 begin
-  Result:= SizeFromDefaultToDesignTime(ASize, FDesignTimePPI);
+  FDesignTimePPI:= ControlDesignTimePPI(AButton.Parent);
+
+  FButton:= AButton;
+  FButton.OnClick:= @ButtonClick;
+  FButton.OnAfterRenderBCButton:= @AfterRenderBCButton;
+  SetButtonSettings;
+
+  FFont:= TFont.Create;
+  FFont.Name:= FButton.StateNormal.FontEx.Name;
+  FFont.Height:= -FButton.StateNormal.FontEx.Height;
+
+  FForm:= TVSTDropDownForm.Create(nil);
+  FForm.SetButton(FButton);
+  FForm.OnDeactivate:= @DropDownFormDeactivate;
+  DropDownCount:= DROPDOWN_COUNT_DEFAULT;
+end;
+
+destructor TDropDown.Destroy;
+begin
+  FreeAndNil(FForm);
+  FreeAndNil(FFont);
+  inherited Destroy;
+end;
+
+procedure TDropDown.Clear;
+begin
+  Items:= nil;
+  ItemIndex:= -1;
+end;
+
+procedure TDropDown.Expand;
+var
+  P: TPoint;
+begin
+  FButton.StateNormal.Border.Color:= FRAME_COLOR_SELECTED;
+  FButton.StateHover.Border.Color:= FRAME_COLOR_SELECTED;
+  P:= Point(0, FButton.Height);
+  P:= FButton.ClientToScreen(P);
+  FForm.Width:= FButton.Width;
+  FForm.Left:= P.X;
+  FForm.Top:= P.Y;
+  FForm.Show;
+end;
+
+procedure TDropDown.Collapse;
+begin
+  FForm.SetFormHide;
+  FButton.Down:= False;
+end;
+
+procedure TDropDown.KeyPick(const APicks: TStrVector; const AKeys: TIntVector;
+  const ASelectedKey: Integer = -1);
+var
+  Ind: Integer;
+begin
+  if VIsNil(APicks) then
+  begin
+    Clear;
+    Exit;
+  end;
+
+  Items:= APicks;
+  if ASelectedKey>=0 then
+  begin
+    Ind:= VIndexOf(AKeys, ASelectedKey);
+    if Ind<0 then Ind:= 0;
+    ItemIndex:= Ind;
+  end
+  else
+    ItemIndex:= 0;
 end;
 
 procedure TDropDown.SetButtonSettings;
@@ -98,50 +173,6 @@ begin
   FButton.StateClicked.Border.Color:= FRAME_COLOR_SELECTED;
 end;
 
-procedure TDropDown.Open;
-var
-  P: TPoint;
-begin
-  FButton.StateNormal.Border.Color:= FRAME_COLOR_SELECTED;
-  FButton.StateHover.Border.Color:= FRAME_COLOR_SELECTED;
-  P:= Point(0, FButton.Height);
-  P:= FButton.ClientToScreen(P);
-  FForm.Width:= FButton.Width;
-  FForm.Left:= P.X;
-  FForm.Top:= P.Y;
-  FForm.Show;
-end;
-
-procedure TDropDown.Close;
-begin
-  FForm.SetFormHide;
-  FButton.Down:= False;
-end;
-
-procedure TDropDown.DropDownFormDeactivate(Sender: TObject);
-begin
-  Close;
-end;
-
-procedure TDropDown.SetOnChange(const AValue: TDropDownEvent);
-begin
-  FOnChange:= AValue;
-  FForm.SetOnChange(AValue);
-end;
-
-procedure TDropDown.ButtonClick(Sender: TObject);
-begin
-  FButton.Down:= not FButton.Down;
-  if not FButton.Down then Exit;
-  Open;
-end;
-
-procedure TDropDown.AfterRenderBCButton(Sender: TObject;
-  const ABGRA: TBGRABitmap; AState: TBCButtonState; ARect: TRect);
-begin
-  FForm.SetDropDownText;
-end;
-
 procedure TDropDown.SetDropDownCount(const AValue: Integer);
 begin
   if FDropDownCount=AValue then Exit;
@@ -179,16 +210,6 @@ begin
   FButton.StateClicked.FontEx.Height:= -AValue.Height;
 end;
 
-function TDropDown.GetEnabled: Boolean;
-begin
-  Result:= FButton.Enabled;
-end;
-
-function TDropDown.GetItemIndex: Integer;
-begin
-  Result:= FButton.Tag;
-end;
-
 procedure TDropDown.SetItemIndex(const AValue: Integer);
 begin
   if AValue=FButton.Tag then Exit;
@@ -204,58 +225,50 @@ begin
   FForm.SetItems(FItems);
 end;
 
-constructor TDropDown.Create(const AButton: TBCButton);
+procedure TDropDown.SetOnChange(const AValue: TVSTEvent);
 begin
-  FDesignTimePPI:= ControlDesignTimePPI(AButton.Parent);
-
-  FButton:= AButton;
-  FButton.OnClick:= @ButtonClick;
-  FButton.OnAfterRenderBCButton:= @AfterRenderBCButton;
-  SetButtonSettings;
-
-  FFont:= TFont.Create;
-  FFont.Name:= FButton.StateNormal.FontEx.Name;
-  FFont.Height:= -FButton.StateNormal.FontEx.Height;
-
-  FForm:= TDropDownForm.Create(nil);
-  FForm.SetButton(FButton);
-  FForm.OnDeactivate:= @DropDownFormDeactivate;
-  DropDownCount:= DROPDOWN_COUNT_DEFAULT;
+  FOnChange:= AValue;
+  FForm.SetOnChange(AValue);
 end;
 
-destructor TDropDown.Destroy;
+function TDropDown.GetSize(const ASize: Integer): Integer;
 begin
-  FreeAndNil(FForm);
-  FreeAndNil(FFont);
-  inherited Destroy;
+  Result:= SizeFromDefaultToDesignTime(ASize, FDesignTimePPI);
 end;
 
-procedure TDropDown.Clear;
+function TDropDown.GetEnabled: Boolean;
 begin
-  Items:= nil;
-  ItemIndex:= -1;
+  Result:= FButton.Enabled;
 end;
 
-procedure TDropDown.KeyPick(const APicks: TStrVector; const AKeys: TIntVector;
-  const ASelectedKey: Integer = -1);
-var
-  Ind: Integer;
+function TDropDown.GetItemIndex: Integer;
 begin
-  if VIsNil(APicks) then
-  begin
-    Clear;
-    Exit;
-  end;
+  Result:= FButton.Tag;
+end;
 
-  Items:= APicks;
-  if ASelectedKey>=0 then
-  begin
-    Ind:= VIndexOf(AKeys, ASelectedKey);
-    if Ind<0 then Ind:= 0;
-    ItemIndex:= Ind;
-  end
-  else
-    ItemIndex:= 0;
+function TDropDown.GetText: String;
+begin
+  Result:= EmptyStr;
+  if VIsNil(Items) then Exit;
+  Result:= Items[FButton.Tag];
+end;
+
+procedure TDropDown.ButtonClick(Sender: TObject);
+begin
+  FButton.Down:= not FButton.Down;
+  if not FButton.Down then Exit;
+  Expand;
+end;
+
+procedure TDropDown.DropDownFormDeactivate(Sender: TObject);
+begin
+  Collapse;
+end;
+
+procedure TDropDown.AfterRenderBCButton(Sender: TObject;
+  const ABGRA: TBGRABitmap; AState: TBCButtonState; ARect: TRect);
+begin
+  FForm.SetDropDownText;
 end;
 
 end.

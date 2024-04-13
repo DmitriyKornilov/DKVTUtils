@@ -1,4 +1,4 @@
-unit DK_DropDownConst;
+unit DK_VSTDropDownConst;
 
 {$mode ObjFPC}{$H+}
 

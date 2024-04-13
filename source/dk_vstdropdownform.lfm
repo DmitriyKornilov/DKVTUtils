@@ -1,10 +1,10 @@
-object DropDownForm: TDropDownForm
+object VSTDropDownForm: TVSTDropDownForm
   Left = 548
   Height = 300
   Top = 250
   Width = 400
   BorderStyle = bsNone
-  Caption = 'DropDownForm'
+  Caption = 'VSTDropDownForm'
   ClientHeight = 300
   ClientWidth = 400
   DesignTimePPI = 120

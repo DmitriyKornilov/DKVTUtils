@@ -14,7 +14,6 @@ const
 
 type
 
-
   { TVSTStringList }
 
   TVSTStringList = class(TVSTTable)
@@ -51,7 +50,6 @@ type
                        const ACaption: String;
                        const AOnSelect: TVSTEvent
                        );
-
   end;
 
   { TVSTCategoryDateList }
@@ -76,8 +74,6 @@ type
   end;
 
 implementation
-
-
 
 { TVSTStringList }
 

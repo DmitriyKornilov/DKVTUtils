@@ -29,13 +29,12 @@ type
   TVSTColumnTypes = array of TVSTColumnType;
 
   TVSTEvent = procedure of object;
-  TVSTCheckEvent = procedure(const ARowIndex: Integer; const AChecked: Boolean) of object;
+  TVSTRowCheckEvent = procedure(const ARowIndex: Integer; const AChecked: Boolean) of object;
   TVSTCellCheckEvent = procedure(const ARowIndex, AColIndex: Integer; const AChecked: Boolean) of object;
   TVSTEdititingDoneEvent = procedure(const ARowIndex, AColIndex: Integer;
                                      const ANewText: String;
                                      const AColumnType: TVSTColumnType;
                                      const ASaveChanges: Boolean) of object;
-  TVSTEdititingBeginEvent = procedure of object;
 
   procedure VSTLoad(const VST: TVirtualStringTree; const AVector: TStrVector);
   procedure VSTLoad(const VST: TVirtualStringTree; const AMatrix: TStrMatrix;
@@ -58,7 +57,6 @@ type
   procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
                        TargetCanvas: TCanvas; {%H-}Column: TColumnIndex;
                        CellRect: TRect; const ANeedTopLine: Boolean = False);
-
 
 implementation
 
@@ -201,7 +199,6 @@ begin
 
   TargetCanvas.Rectangle(R);
 end;
-
 
 end.
 
