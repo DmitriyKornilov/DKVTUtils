@@ -8,6 +8,7 @@
       <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
+        <IncludeFiles Value="source"/>
         <OtherUnitFiles Value="source"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
@@ -15,16 +16,44 @@
     <Version Release="1"/>
     <Files>
       <Item>
-        <Filename Value="source\dk_vstutils.pas"/>
-        <UnitName Value="DK_VSTUtils"/>
+        <Filename Value="source\dk_vsttypes.pas"/>
+        <UnitName Value="DK_VSTTypes"/>
       </Item>
       <Item>
         <Filename Value="source\dk_vsttables.pas"/>
         <UnitName Value="DK_VSTTables"/>
       </Item>
       <Item>
-        <Filename Value="source\dk_vsttools.pas"/>
-        <UnitName Value="DK_VSTTools"/>
+        <Filename Value="source\dk_vsttabletools.pas"/>
+        <UnitName Value="dk_vsttabletools"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_dropdown.pas"/>
+        <UnitName Value="DK_DropDown"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_dropdownconst.pas"/>
+        <UnitName Value="DK_DropDownConst"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_dropdownform.lfm"/>
+        <Type Value="LFM"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_dropdownform.pas"/>
+        <UnitName Value="DK_DropDownForm"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_vstcore.pas"/>
+        <UnitName Value="DK_VSTCore"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_vstedit.pas"/>
+        <UnitName Value="DK_VSTEdit"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_tvstedittools.pas"/>
+        <UnitName Value="dk_tvstedittools"/>
       </Item>
     </Files>
     <RequiredPkgs>

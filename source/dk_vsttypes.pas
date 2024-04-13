@@ -1,4 +1,4 @@
-unit DK_VSTUtils;
+unit DK_VSTTypes;
 
 {$mode objfpc}{$H+}
 
@@ -6,6 +6,36 @@ interface
 
 uses
   Classes, SysUtils, Graphics, VirtualTrees, DK_Vector, DK_Matrix;
+
+const
+  COLOR_BG_DEFAULT = clWindow;
+  COLOR_FONT_DEFAULT = clWindowText;
+  COLOR_LINE_DEFAULT = clWindowText;
+
+  ROW_HEIGHT_DEFAULT = 25;
+  LAST_COLUMN_INDEX_FOR_AUTOSIZE = -2;
+
+type
+  TVSTColumnType = (
+    ctUndefined,
+    ctInteger,
+    ctString,
+    ctDate,
+    ctTime,
+    ctDouble,
+    ctKeyPick,
+    ctColor
+  );
+  TVSTColumnTypes = array of TVSTColumnType;
+
+  TVSTEvent = procedure of object;
+  TVSTCheckEvent = procedure(const ARowIndex: Integer; const AChecked: Boolean) of object;
+  TVSTCellCheckEvent = procedure(const ARowIndex, AColIndex: Integer; const AChecked: Boolean) of object;
+  TVSTEdititingDoneEvent = procedure(const ARowIndex, AColIndex: Integer;
+                                     const ANewText: String;
+                                     const AColumnType: TVSTColumnType;
+                                     const ASaveChanges: Boolean) of object;
+  TVSTEdititingBeginEvent = procedure of object;
 
   procedure VSTLoad(const VST: TVirtualStringTree; const AVector: TStrVector);
   procedure VSTLoad(const VST: TVirtualStringTree; const AMatrix: TStrMatrix;
