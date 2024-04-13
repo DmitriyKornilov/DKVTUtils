@@ -943,7 +943,7 @@ begin
   if ASaveChanges then
   begin
     case ColumnType of
-      ctInteger: if TSpinEdit(FEditor).Value=0 then
+      ctInteger: if (TSpinEdit(FEditor).Value=0) and (not IsShowZeros) then
                    SelectedText:= EmptyStr
                  else
                    SelectedText:= IntToStr(TSpinEdit(FEditor).Value);
@@ -956,7 +956,7 @@ begin
                                       TDateTimePicker(FEditor).Time);
       ctKeyPick: SelectedText:= IntToStr(FKeys[FSelectedColIndex, FDropDown.ItemIndex]);
       ctColor:   SelectedText:= TEdit(FEditor).Text;
-      ctDouble:  if TFloatSpinEdit(FEditor).Value=0 then
+      ctDouble:  if (TFloatSpinEdit(FEditor).Value=0) and (not IsShowZeros) then
                    SelectedText:= EmptyStr
                  else
                    SelectedText:= FloatToStr(TFloatSpinEdit(FEditor).Value);
