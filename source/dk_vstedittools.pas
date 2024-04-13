@@ -1,4 +1,4 @@
-unit DK_TVSTEditTools;
+unit DK_VSTEditTools;
 
 {$mode objfpc}{$H+}
 

@@ -37,7 +37,7 @@
       </Item>
       <Item>
         <Filename Value="source\dk_vstdropdownform.pas"/>
-        <UnitName Value="dk_vstdropdownform"/>
+        <UnitName Value="DK_VSTDropDownForm"/>
       </Item>
       <Item>
         <Filename Value="source\dk_vstcore.pas"/>
@@ -48,8 +48,8 @@
         <UnitName Value="DK_VSTEdit"/>
       </Item>
       <Item>
-        <Filename Value="source\dk_tvstedittools.pas"/>
-        <UnitName Value="DK_TVSTEditTools"/>
+        <Filename Value="source\dk_vstedittools.pas"/>
+        <UnitName Value="dk_vstedittools"/>
       </Item>
       <Item>
         <Filename Value="source\dk_vstdropdownform.lfm"/>
