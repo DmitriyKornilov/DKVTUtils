@@ -114,6 +114,10 @@ type
   protected
     FOnCheck: TVSTRowCheckEvent;
     FMaxCheckedCount: Integer;
+    //FStopSelectEventWhileCheckAll=True - OnSelect вызывается только после заверешения CheckAll
+    //FStopSelectEventWhileCheckAll=False - OnSelect вызывается на изменение каждой позиции (default)
+    FStopSelectEventWhileCheckAll: Boolean;
+    FCanDoSelectEvent: Boolean;
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
@@ -160,6 +164,7 @@ type
     property MaxCheckedCount: Integer read FMaxCheckedCount write SetMaxCheckedCount;
     procedure MaxCheckedCountClear;
 
+    property StopSelectEventWhileCheckAll: Boolean read FStopSelectEventWhileCheckAll write FStopSelectEventWhileCheckAll;
     property OnCheck: TVSTRowCheckEvent read FOnCheck write FOnCheck;
   end;
 
@@ -934,7 +939,7 @@ begin
 
   if Assigned(FOnCheck) then
     FOnCheck(Node^.Index, AChecked);
-  if Assigned(FOnSelect) then
+  if Assigned(FOnSelect) and FCanDoSelectEvent then
     FOnSelect;
 
   FTree.Refresh;
@@ -956,6 +961,9 @@ var
 begin
   if MIsNil(FDataValues) then Exit;
   if VIsNil(FDataValues[0]) then Exit;
+
+  if StopSelectEventWhileCheckAll then
+    FCanDoSelectEvent:= False;
   Node:= FTree.GetFirst;
   while Assigned(Node) do
   begin
@@ -965,6 +973,13 @@ begin
       Uncheck(Node);
     Node:= FTree.GetNext(Node);
   end;
+  if StopSelectEventWhileCheckAll then
+  begin
+    FCanDoSelectEvent:= True;
+    if Assigned(FOnSelect) then
+      FOnSelect;
+  end;
+
   FTree.Refresh;
 end;
 
@@ -1087,7 +1102,8 @@ begin
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
 
   FMaxCheckedCount:= -1;
-
+  FStopSelectEventWhileCheckAll:= False;
+  FCanDoSelectEvent:= True;
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
   FTree.OnChecking:= @Checking;
