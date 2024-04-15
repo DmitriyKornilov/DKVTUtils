@@ -10,9 +10,9 @@ uses
 
 type
 
-  { TDropDown }
+  { TVSTDropDown }
 
-  TDropDown = class(TObject)
+  TVSTDropDown = class(TObject)
   private
     FButton: TBCButton;
     FItems: TStrVector;
@@ -60,9 +60,9 @@ type
 
 implementation
 
-{ TDropDown }
+{ TVSTDropDown }
 
-constructor TDropDown.Create(const AButton: TBCButton);
+constructor TVSTDropDown.Create(const AButton: TBCButton);
 begin
   FDesignTimePPI:= ControlDesignTimePPI(AButton.Parent);
 
@@ -81,20 +81,20 @@ begin
   DropDownCount:= DROPDOWN_COUNT_DEFAULT;
 end;
 
-destructor TDropDown.Destroy;
+destructor TVSTDropDown.Destroy;
 begin
   FreeAndNil(FForm);
   FreeAndNil(FFont);
   inherited Destroy;
 end;
 
-procedure TDropDown.Clear;
+procedure TVSTDropDown.Clear;
 begin
   Items:= nil;
   ItemIndex:= -1;
 end;
 
-procedure TDropDown.Expand;
+procedure TVSTDropDown.Expand;
 var
   P: TPoint;
 begin
@@ -108,13 +108,13 @@ begin
   FForm.Show;
 end;
 
-procedure TDropDown.Collapse;
+procedure TVSTDropDown.Collapse;
 begin
   FForm.SetFormHide;
   FButton.Down:= False;
 end;
 
-procedure TDropDown.KeyPick(const APicks: TStrVector; const AKeys: TIntVector;
+procedure TVSTDropDown.KeyPick(const APicks: TStrVector; const AKeys: TIntVector;
   const ASelectedKey: Integer = -1);
 var
   Ind: Integer;
@@ -136,7 +136,7 @@ begin
     ItemIndex:= 0;
 end;
 
-procedure TDropDown.SetButtonSettings;
+procedure TVSTDropDown.SetButtonSettings;
 
   procedure SetStateCommonSettings(const AState: TBCButtonState);
   begin
@@ -173,14 +173,14 @@ begin
   FButton.StateClicked.Border.Color:= FRAME_COLOR_SELECTED;
 end;
 
-procedure TDropDown.SetDropDownCount(const AValue: Integer);
+procedure TVSTDropDown.SetDropDownCount(const AValue: Integer);
 begin
   if FDropDownCount=AValue then Exit;
   FDropDownCount:= AValue;
   FForm.SetDropDownCount(AValue);
 end;
 
-procedure TDropDown.SetEnabled(const AValue: Boolean);
+procedure TVSTDropDown.SetEnabled(const AValue: Boolean);
 begin
   if FButton.Enabled=AValue then Exit;
   FButton.Enabled:= AValue;
@@ -198,7 +198,7 @@ begin
   end;
 end;
 
-procedure TDropDown.SetFont(AValue: TFont);
+procedure TVSTDropDown.SetFont(AValue: TFont);
 begin
   FFont.Assign(AValue);
   FForm.SetListFont(AValue);
@@ -210,7 +210,7 @@ begin
   FButton.StateClicked.FontEx.Height:= -AValue.Height;
 end;
 
-procedure TDropDown.SetItemIndex(const AValue: Integer);
+procedure TVSTDropDown.SetItemIndex(const AValue: Integer);
 begin
   if AValue=FButton.Tag then Exit;
   FButton.Tag:= AValue;
@@ -219,53 +219,53 @@ begin
     FOnChange;
 end;
 
-procedure TDropDown.SetItems(const AValue: TStrVector);
+procedure TVSTDropDown.SetItems(const AValue: TStrVector);
 begin
   FItems:= VCut(AValue);
   FForm.SetItems(FItems);
 end;
 
-procedure TDropDown.SetOnChange(const AValue: TVSTEvent);
+procedure TVSTDropDown.SetOnChange(const AValue: TVSTEvent);
 begin
   FOnChange:= AValue;
   FForm.SetOnChange(AValue);
 end;
 
-function TDropDown.GetSize(const ASize: Integer): Integer;
+function TVSTDropDown.GetSize(const ASize: Integer): Integer;
 begin
   Result:= SizeFromDefaultToDesignTime(ASize, FDesignTimePPI);
 end;
 
-function TDropDown.GetEnabled: Boolean;
+function TVSTDropDown.GetEnabled: Boolean;
 begin
   Result:= FButton.Enabled;
 end;
 
-function TDropDown.GetItemIndex: Integer;
+function TVSTDropDown.GetItemIndex: Integer;
 begin
   Result:= FButton.Tag;
 end;
 
-function TDropDown.GetText: String;
+function TVSTDropDown.GetText: String;
 begin
   Result:= EmptyStr;
   if VIsNil(Items) then Exit;
   Result:= Items[FButton.Tag];
 end;
 
-procedure TDropDown.ButtonClick(Sender: TObject);
+procedure TVSTDropDown.ButtonClick(Sender: TObject);
 begin
   FButton.Down:= not FButton.Down;
   if not FButton.Down then Exit;
   Expand;
 end;
 
-procedure TDropDown.DropDownFormDeactivate(Sender: TObject);
+procedure TVSTDropDown.DropDownFormDeactivate(Sender: TObject);
 begin
   Collapse;
 end;
 
-procedure TDropDown.AfterRenderBCButton(Sender: TObject;
+procedure TVSTDropDown.AfterRenderBCButton(Sender: TObject;
   const ABGRA: TBGRABitmap; AState: TBCButtonState; ARect: TRect);
 begin
   FForm.SetDropDownText;

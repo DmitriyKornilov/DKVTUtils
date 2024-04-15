@@ -33,7 +33,7 @@ type
     FIsBeginEditOnKeyPress: Boolean;
 
     FEditor: TControl;
-    FDropDown: TDropDown;
+    FDropDown: TVSTDropDown;
     FOnEdititingDone: TVSTEdititingDoneEvent;
     FOnEdititingBegin: TVSTEvent;
     FColumnRowTitlesFont: TFont;
@@ -852,7 +852,7 @@ var
   begin
     FEditor:= TBCButton.Create(FTree);
     FEditor.Parent:= FTree;
-    FDropDown:= TDropDown.Create(FEditor as TBCButton);
+    FDropDown:= TVSTDropDown.Create(FEditor as TBCButton);
     FDropDown.Font:= ValuesFont;
     FDropDown.Items:= FPicks[FSelectedColIndex];
     n:= VIndexOf(FKeys[FSelectedColIndex], StrToInt(SelectedText));
