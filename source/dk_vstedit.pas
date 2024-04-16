@@ -908,6 +908,7 @@ var
   begin
     ColorDialog:= TColorDialog.Create(nil);
     try
+      ColorDialog.Color:= StrToInt(SelectedText);
       if ColorDialog.Execute then
       begin
         TEdit(FEditor).Text:= IntToStr(ColorToRGB(ColorDialog.Color));
