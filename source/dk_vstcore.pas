@@ -74,7 +74,7 @@ type
     procedure BeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
                               Node: PVirtualNode; Column: TColumnIndex;
                               CellPaintMode: TVTCellPaintMode; CellRect: TRect;
-                              var {%H-}ContentRect: TRect);
+                              var {%H-}ContentRect: TRect); virtual;
     procedure DrawText(Sender: TBaseVirtualTree;
                        TargetCanvas: TCanvas; Node: PVirtualNode;
                        {%H-}Column: TColumnIndex;
