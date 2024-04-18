@@ -90,6 +90,7 @@ end;
 
 procedure TVSTColorList.Update(const AItems: TStrVector; const AColors: TColorVector);
 begin
+  ValuesClear;
   SetColumnRowTitles(AItems, taLeftJustify);
   SetColumnColor('Цвет', AColors);
   Draw;
