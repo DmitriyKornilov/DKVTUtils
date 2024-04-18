@@ -90,10 +90,15 @@ end;
 
 procedure TVSTColorList.Update(const AItems: TStrVector; const AColors: TColorVector);
 begin
-  ValuesClear;
-  SetColumnRowTitles(AItems, taLeftJustify);
-  SetColumnColor('Цвет', AColors);
-  Draw;
+  FTree.Visible:= False;
+  try
+    ValuesClear;
+    SetColumnRowTitles(AItems, taLeftJustify);
+    SetColumnColor('Цвет', AColors);
+    Draw;
+  finally
+    FTree.Visible:= True;
+  end;
 end;
 
 end.

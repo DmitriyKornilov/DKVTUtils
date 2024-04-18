@@ -98,14 +98,19 @@ end;
 
 procedure TVSTStringList.Update(const AItems: TStrVector; const ASelectedIndex: Integer = 0);
 begin
-  SetColumn(0, AItems, taLeftJustify);
-  Draw;
-  if VIsNil(AItems) then
-    Unselect
-  else if IsIndexCorrect(ASelectedIndex) then
-    Select(ASelectedIndex)
-  else
-    Select(0);
+  FTree.Visible:= False;
+  try
+    SetColumn(0, AItems, taLeftJustify);
+    Draw;
+    if VIsNil(AItems) then
+      Unselect
+    else if IsIndexCorrect(ASelectedIndex) then
+      Select(ASelectedIndex)
+    else
+      Select(0);
+  finally
+    FTree.Visible:= True;
+  end;
 end;
 
 { TVSTCheckList }
@@ -146,12 +151,17 @@ procedure TVSTCategoryList.DoUpdate(const ACategories: TStrVector;
                        const AValues: TStrMatrix;
                        const ASelectedIndex1, ASelectedIndex2: Integer);
 begin
-  SetCategories(ACategories);
-  SetColumn(0, AValues, taLeftJustify);
-  Draw;
-  if (ASelectedIndex1<0) and (ASelectedIndex2<0) then Exit;
-  Select(ASelectedIndex1, ASelectedIndex2);
-  Show(ASelectedIndex1, ASelectedIndex2);
+  FTree.Visible:= False;
+  try
+    SetCategories(ACategories);
+    SetColumn(0, AValues, taLeftJustify);
+    Draw;
+    if (ASelectedIndex1<0) and (ASelectedIndex2<0) then Exit;
+    Select(ASelectedIndex1, ASelectedIndex2);
+    Show(ASelectedIndex1, ASelectedIndex2);
+  finally
+    FTree.Visible:= True;
+  end;
 end;
 
 constructor TVSTCategoryList.Create(const ATree: TVirtualStringTree;
