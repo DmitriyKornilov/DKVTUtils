@@ -159,6 +159,7 @@ type
     FAutoHeight: Boolean;
     FMaxAutoHeightRowCount: Integer;
     function GetTotalHeight: Integer;
+    function GetCount: Integer;
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -168,6 +169,7 @@ type
     property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
     property TotalHeight: Integer read GetTotalHeight;
     property MaxAutoHeightRowCount: Integer read FMaxAutoHeightRowCount write FMaxAutoHeightRowCount;
+    property Count: Integer read GetCount;
   end;
 
 implementation
@@ -694,6 +696,11 @@ begin
   if (MaxAutoHeightRowCount>0) and (NodeCount>MaxAutoHeightRowCount) then
     NodeCount:= MaxAutoHeightRowCount;
   Result:= HeaderHeight + NodeCount*NodeHeight;
+end;
+
+function TVSTCustomSimpleTable.GetCount: Integer;
+begin
+  Result:= MMaxLength(FDataValues);
 end;
 
 constructor TVSTCustomSimpleTable.Create(const ATree: TVirtualStringTree;

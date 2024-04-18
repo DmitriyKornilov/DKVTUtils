@@ -20,9 +20,11 @@ type
                               var {%H-}ContentRect: TRect); override;
     function CellBGColor(Node: PVirtualNode; {%H-}Column: TColumnIndex): TColor; override;
     procedure NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
+    function GetColors: TColorVector;
   public
     constructor Create(const ATree: TVirtualStringTree);
     procedure Update(const AItems: TStrVector; const AColors: TColorVector);
+    property Colors: TColorVector read GetColors;
   end;
 
 implementation
@@ -32,6 +34,11 @@ implementation
 procedure TVSTColorList.NodeClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
 begin
   Select(HitInfo.HitNode^.Index, 0);
+end;
+
+function TVSTColorList.GetColors: TColorVector;
+begin
+  ColumnAsColor(Result, 'Цвет');
 end;
 
 procedure TVSTColorList.BeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;

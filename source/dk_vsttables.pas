@@ -1015,17 +1015,17 @@ end;
 
 procedure TVSTCheckTable.SetMaxCheckedCount(AValue: Integer);
 var
-  i, Count, Delta, N: Integer;
+  i, Delta, N: Integer;
 begin
   if FMaxCheckedCount=AValue then Exit;
   FMaxCheckedCount:= AValue;
 
   if FMaxCheckedCount<0 then Exit;
 
-  Count:= CheckedCount;
-  if Count<=FMaxCheckedCount then Exit;
+  i:= CheckedCount;
+  if i<=FMaxCheckedCount then Exit;
 
-  Delta:= Count - FMaxCheckedCount;
+  Delta:= i - FMaxCheckedCount;
   N:= 0;
   for i:= High(FSelected) downto 0 do
   begin
