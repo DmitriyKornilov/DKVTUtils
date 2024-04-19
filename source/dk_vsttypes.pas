@@ -5,7 +5,7 @@ unit DK_VSTTypes;
 interface
 
 uses
-  Classes, SysUtils, Graphics, VirtualTrees, DK_Vector, DK_Matrix;
+  Classes, SysUtils, Graphics, VirtualTrees, DK_Vector, DK_Matrix, DK_BGRADrawer;
 
 const
   COLOR_BG_DEFAULT = clWindow;
@@ -51,6 +51,10 @@ type
                      const VST: TVirtualStringTree;
                      const AVector: TStrVector; const AMatrix: TStrMatrix);
 
+  procedure VSTHeaderArrowDraw(const AArrowColor, ABackgroundColor: TColor;
+                               const ARect: TRect;
+                               const ACanvas: TCanvas;
+                               const ADown: Boolean);
   procedure VSTHeaderDraw(const ABorderColor, ABackgroundColor: TColor;
                          var PaintInfo: THeaderPaintInfo;
                          const Elements: THeaderPaintElements);
@@ -156,6 +160,34 @@ begin
   end;
 end;
 
+procedure VSTHeaderArrowDraw(const AArrowColor, ABackgroundColor: TColor;
+                             const ARect: TRect;
+                             const ACanvas: TCanvas;
+                             const ADown: Boolean);
+var
+  Drawer: TBGRADrawer;
+  H: Integer;
+begin
+  H:= ARect.Height-4;
+
+  Drawer:= TBGRADrawer.Create(8, H, ABackgroundColor);
+  try
+    Drawer.Line(4, 2, 4, H-2, AArrowColor, 2, psSolid);
+    if ADown then
+    begin
+      Drawer.Line(1, H-5, 4, H-2, AArrowColor, 2, psSolid);
+      Drawer.Line(7, H-5, 4, H-2, AArrowColor, 2, psSolid);
+    end
+    else begin
+      Drawer.Line(1, 5, 4, 2, AArrowColor, 2, psSolid);
+      Drawer.Line(7, 5, 4, 2, AArrowColor, 2, psSolid);
+    end;
+    Drawer.Draw(ACanvas, ARect.Right-10, ARect.Top+1, True);
+  finally
+    FreeAndNil(Drawer);
+  end;
+end;
+
 procedure VSTHeaderDraw(const ABorderColor, ABackgroundColor: TColor;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
 var
@@ -178,6 +210,8 @@ begin
     PaintInfo.TargetCanvas.LineTo(R.Right-1, R.Bottom-1);
     PaintInfo.TargetCanvas.LineTo(R.Left-1, R.Bottom-1);
   end;
+
+  //VSTHeaderArrowDraw(clHighlight, ABackgroundColor, R, PaintInfo.TargetCanvas, False);
 end;
 
 procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
