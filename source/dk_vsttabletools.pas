@@ -17,12 +17,16 @@ type
   { TVSTStringList }
 
   TVSTStringList = class(TVSTTable)
+  private
+    function GetItemIndex: Integer;
+    procedure SetItemIndex(const AValue: Integer);
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
                        const AOnSelect: TVSTEvent
                        );
     procedure Update(const AItems: TStrVector; const ASelectedIndex: Integer = 0);
+    property ItemIndex: Integer read GetItemIndex write SetItemIndex;
   end;
 
   { TVSTCheckList }
@@ -76,6 +80,19 @@ type
 implementation
 
 { TVSTStringList }
+
+function TVSTStringList.GetItemIndex: Integer;
+begin
+  Result:= -1;
+  if not IsSelected then Exit;
+  Result:= SelectedIndex;
+end;
+
+procedure TVSTStringList.SetItemIndex(const AValue: Integer);
+begin
+  if IsIndexCorrect(AValue) then
+    Select(AValue);
+end;
 
 constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        const ACaption: String;

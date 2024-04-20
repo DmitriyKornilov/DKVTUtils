@@ -166,23 +166,34 @@ procedure VSTHeaderArrowDraw(const AArrowColor, ABackgroundColor: TColor;
                              const ADown: Boolean);
 var
   Drawer: TBGRADrawer;
-  H: Integer;
+  ArrowRect: TRect;
+  Height, Margin, MiddleX, DeltaY: Word;
+const
+  ARROW_THICKNESS = 2;
+  WIDTH = 8;
 begin
-  H:= ARect.Height-4;
+  Height:= ARect.Height-4;
+  Margin:= Round(0.1 * Height);
+  ArrowRect.Top:= Margin  + 1;
+  ArrowRect.Bottom:= Height - Margin;
+  ArrowRect.Left:= 1;
+  ArrowRect.Right:= WIDTH - 1;
+  MiddleX:= Trunc(0.5 * (ArrowRect.Left + ArrowRect.Right));
+  DeltaY:= Round(0.25 * ArrowRect.Height);
 
-  Drawer:= TBGRADrawer.Create(8, H, ABackgroundColor);
+  Drawer:= TBGRADrawer.Create(WIDTH, Height, ABackgroundColor);
   try
-    Drawer.Line(4, 2, 4, H-2, AArrowColor, 2, psSolid);
+    Drawer.Line(MiddleX, ArrowRect.Top, MiddleX, ArrowRect.Bottom, AArrowColor, ARROW_THICKNESS, psSolid);
     if ADown then
     begin
-      Drawer.Line(1, H-5, 4, H-2, AArrowColor, 2, psSolid);
-      Drawer.Line(7, H-5, 4, H-2, AArrowColor, 2, psSolid);
+      Drawer.Line(ArrowRect.Left, ArrowRect.Bottom-DeltaY, MiddleX, ArrowRect.Bottom, AArrowColor, ARROW_THICKNESS, psSolid);
+      Drawer.Line(ArrowRect.Right, ArrowRect.Bottom-DeltaY, MiddleX, ArrowRect.Bottom, AArrowColor, ARROW_THICKNESS, psSolid);
     end
     else begin
-      Drawer.Line(1, 5, 4, 2, AArrowColor, 2, psSolid);
-      Drawer.Line(7, 5, 4, 2, AArrowColor, 2, psSolid);
+      Drawer.Line(ArrowRect.Left, ArrowRect.Top+DeltaY, MiddleX, ArrowRect.Top, AArrowColor, ARROW_THICKNESS, psSolid);
+      Drawer.Line(ArrowRect.Right, ArrowRect.Top+DeltaY, MiddleX, ArrowRect.Top, AArrowColor, ARROW_THICKNESS, psSolid);
     end;
-    Drawer.Draw(ACanvas, ARect.Right-10, ARect.Top+1, True);
+    Drawer.Draw(ACanvas, ARect.Right-WIDTH-2, ARect.Top+1, True);
   finally
     FreeAndNil(Drawer);
   end;
@@ -211,7 +222,7 @@ begin
     PaintInfo.TargetCanvas.LineTo(R.Left-1, R.Bottom-1);
   end;
 
-  //VSTHeaderArrowDraw(clHighlight, ABackgroundColor, R, PaintInfo.TargetCanvas, False);
+  //VSTHeaderArrowDraw(clHighlight, ABackgroundColor, R, PaintInfo.TargetCanvas, True);
 end;
 
 procedure VSTCellDraw(const ABorderColor, ABackgroundColor: TColor;
