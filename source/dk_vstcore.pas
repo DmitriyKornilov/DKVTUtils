@@ -141,7 +141,7 @@ type
     property HeaderVisible: Boolean read FHeaderVisible write SetHeaderVisible;
     property Visible: Boolean read GetVisible write SetVisible;
 
-    procedure SetSingleFont(const AFont: TFont);
+    procedure SetSingleFont(const AFont: TFont); virtual;
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;

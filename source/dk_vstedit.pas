@@ -36,6 +36,7 @@ type
     FDropDown: TVSTDropDown;
     FOnEdititingDone: TVSTEdititingDoneEvent;
     FOnEdititingBegin: TVSTEvent;
+    FOnDeleteCellText: TVSTEvent;
     FColumnRowTitlesFont: TFont;
     //FColumnRowTitlesBGColor: TColor;
     FColorColumnBorderColor: TColor;
@@ -201,6 +202,8 @@ type
     procedure RowDelete(const ARowIndex: Integer);
     property RowValues[ARowIndex: Integer]: TStrVector read GetRowValues write SetRowValues;
 
+    procedure SetSingleFont(const AFont: TFont); override;
+
     procedure SetColumnRowTitlesHeaderBGColor(const ABGColor: TColor);
     property ColumnRowTitlesFont: TFont read FColumnRowTitlesFont write SetColumnRowTitlesFont;
     property ColumnRowTitlesBGColor: TColor read GetColumnRowTitlesBGColor write SetColumnRowTitlesBGColor;
@@ -224,6 +227,7 @@ type
 
     property OnEdititingDone: TVSTEdititingDoneEvent read FOnEdititingDone write FOnEdititingDone;
     property OnEdititingBegin: TVSTEvent read FOnEdititingBegin write FOnEdititingBegin;
+    property OnDeleteCellText: TVSTEvent read FOnDeleteCellText write FOnDeleteCellText;
   end;
 
 implementation
@@ -275,6 +279,11 @@ begin
       CellText:= FPicks[Column, n]
     else
       CellText:= FDataValues[Column, i];
+  end
+  else if FColumnTypes[Column]=ctDate then
+  begin
+    if (FDataValues[Column, i]=FormatDateTime(FColumnFormatStrings[Column], 0)) and (not IsShowZeros) then Exit;
+    CellText:= FDataValues[Column, i];
   end
   else begin
     if (FDataValues[Column, i]='0') and (not IsShowZeros) then Exit;
@@ -501,6 +510,12 @@ begin
   MRowDel(FDataValues, ARowIndex);
   FTree.DeleteNode(Node);
   FTree.Refresh;
+end;
+
+procedure TVSTEdit.SetSingleFont(const AFont: TFont);
+begin
+  inherited SetSingleFont(AFont);
+  ColumnRowTitlesFont:= AFont;
 end;
 
 function TVSTEdit.GetRowValues(const ARowIndex: Integer): TStrVector;
@@ -776,6 +791,8 @@ end;
 procedure TVSTEdit.DeleteSelectedCellText;
 begin
   FDataValues[FSelectedColIndex, FSelectedRowIndex]:= EmptyStr;
+  if Assigned(FOnDeleteCellText) then
+    FOnDeleteCellText;
   FTree.Refresh;
 end;
 
@@ -834,6 +851,8 @@ var
     TDateTimePicker(FEditor).Kind:= dtkDate;
     TDateTimePicker(FEditor).Alignment:=FTree.Header.Columns[FSelectedColIndex].Alignment;
     TDateTimePicker(FEditor).Date:= StrToDateDef(SelectedText, Date);
+    if TDateTimePicker(FEditor).Date=0 then
+      TDateTimePicker(FEditor).Date:= Date;
   end;
 
   procedure CreateEditorTime;
