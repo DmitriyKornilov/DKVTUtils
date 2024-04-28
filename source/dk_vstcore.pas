@@ -688,8 +688,10 @@ var
 begin
   HeaderHeight:= 0;
   if FHeaderVisible then
-    HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
-  NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
+    HeaderHeight:= FTree.Header.Height;
+    //HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
+  //NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
+  NodeHeight:= FTree.DefaultNodeHeight;
   NodeCount:= MMaxLength(FDataValues);
   if NodeCount=0 then
     NodeCount:= 1;
