@@ -1,4 +1,4 @@
-unit DK_VSTTables;
+ unit DK_VSTTables;
 
 {$mode ObjFPC}{$H+}
 
@@ -204,6 +204,7 @@ type
     procedure Draw;
     procedure ExpandAll(const AExpand: Boolean);
     procedure Show(const AIndex1, AIndex2: Integer);
+    procedure ShowFirst;
 
     property TreeLinesVisible: Boolean write SetTreeLinesVisible;
     property IsSelected: Boolean read GetIsSelected;
@@ -240,7 +241,16 @@ type
   { TVSTCategoryCheckTable }
 
   TVSTCategoryCheckTable = class(TVSTCustomCategoryTable)
+  private
+    function GetSelected: TBoolMatrix;
+    procedure SetSelected(AValue: TBoolMatrix);
   protected
+    FOnCheck: TVSTRowCheckEvent;
+    //FStopSelectEventWhileCheckAll=True - OnSelect вызывается только после заверешения CheckAll
+    //FStopSelectEventWhileCheckAll=False - OnSelect вызывается на изменение каждой позиции (default)
+    FStopSelectEventWhileCheckAll: Boolean;
+    FCanDoSelectEvent: Boolean;
+
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
       Node: PVirtualNode; var {%H-}InitialStates: TVirtualNodeInitStates);
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
@@ -279,6 +289,10 @@ type
     procedure CheckCategory(const AIndex: Integer; const AChecked: Boolean);
 
     property Checked[AIndex1, AIndex2: Integer]: Boolean read GetChecked write SetChecked;
+    property Selected: TBoolMatrix read GetSelected write SetSelected;
+
+    property StopSelectEventWhileCheckAll: Boolean read FStopSelectEventWhileCheckAll write FStopSelectEventWhileCheckAll;
+    property OnCheck: TVSTRowCheckEvent read FOnCheck write FOnCheck;
   end;
 
 implementation
@@ -290,6 +304,27 @@ begin
   Result:= False;
   if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
   Result:= FSelected[AIndex1, AIndex2];
+end;
+
+function TVSTCategoryCheckTable.GetSelected: TBoolMatrix;
+begin
+  Result:= MCut(FSelected);
+end;
+
+procedure TVSTCategoryCheckTable.SetSelected(AValue: TBoolMatrix);
+var
+  i, j: Integer;
+begin
+  for i:= 0 to High(AValue) do
+  begin
+    for j:= 0 to High(AValue[i]) do
+    begin
+      if AValue[i, j] then
+        Check(i, j)
+      else
+        Uncheck(i, j);
+    end;
+  end;
 end;
 
 procedure TVSTCategoryCheckTable.InitNode(Sender: TBaseVirtualTree; ParentNode,
@@ -393,6 +428,12 @@ begin
   else
     Node^.CheckState:= csUnCheckedNormal;
   FSelected[(Node^.Parent)^.Index, Node^.Index]:= AChecked;
+
+  if Assigned(FOnCheck) then
+    FOnCheck(Node^.Index, AChecked);
+  if Assigned(FOnSelect) and FCanDoSelectEvent then
+    FOnSelect;
+
   FTree.Refresh;
 end;
 
@@ -447,6 +488,9 @@ constructor TVSTCategoryCheckTable.Create(const ATree: TVirtualStringTree;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
+
+  FStopSelectEventWhileCheckAll:= False;
+  FCanDoSelectEvent:= True;
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
   FTree.OnChecking:= @Checking;
@@ -504,13 +548,29 @@ procedure TVSTCategoryCheckTable.CheckAll(const AChecked: Boolean);
 var
   Node: PVirtualNode;
 begin
-  Node:= FTree.GetFirst;
-  while Assigned(Node) do
-  begin
-    if FTree.GetNodeLevel(Node)=0 then
-      CheckCategory(Node, AChecked);
-    Node:= FTree.GetNext(Node);
+  if StopSelectEventWhileCheckAll then
+    FCanDoSelectEvent:= False;
+
+  FTree.Visible:= False;
+  try
+    Node:= FTree.GetFirst;
+    while Assigned(Node) do
+    begin
+      if FTree.GetNodeLevel(Node)=0 then
+        CheckCategory(Node, AChecked);
+      Node:= FTree.GetNext(Node);
+    end;
+  finally
+    FTree.Visible:= True;
   end;
+
+  if StopSelectEventWhileCheckAll then
+  begin
+    FCanDoSelectEvent:= True;
+    if Assigned(FOnSelect) then
+      FOnSelect;
+  end;
+
   FTree.Refresh;
 end;
 
@@ -881,6 +941,16 @@ begin
   FTree.FocusedNode:= Node;
 end;
 
+procedure TVSTCustomCategoryTable.ShowFirst;
+var
+  Node: PVirtualNode;
+begin
+  if not IsIndexesCorrect(0, 0) then Exit;
+  Node:= NodeFromIndex(0, 0)^.Parent;
+  if not Assigned(Node) then Exit;
+  FTree.FocusedNode:= Node;
+end;
+
 { TVSTCheckTable }
 
 function TVSTCheckTable.GetIsAllUnchecked: Boolean;
@@ -964,15 +1034,22 @@ begin
 
   if StopSelectEventWhileCheckAll then
     FCanDoSelectEvent:= False;
-  Node:= FTree.GetFirst;
-  while Assigned(Node) do
-  begin
-    if AChecked then
-      Check(Node)
-    else
-      Uncheck(Node);
-    Node:= FTree.GetNext(Node);
+
+  FTree.Visible:= False;
+  try
+    Node:= FTree.GetFirst;
+    while Assigned(Node) do
+    begin
+      if AChecked then
+        Check(Node)
+      else
+        Uncheck(Node);
+      Node:= FTree.GetNext(Node);
+    end;
+  finally
+    FTree.Visible:= True;
   end;
+
   if StopSelectEventWhileCheckAll then
   begin
     FCanDoSelectEvent:= True;
