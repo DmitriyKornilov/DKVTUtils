@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Graphics, Controls, BCButton, BCTypes, BGRABitmap,
-  DK_Vector, DK_VSTDropDownForm, DK_VSTTypes, DK_VSTDropDownConst, DK_PPI;
+  DK_Vector, DK_VSTDropDownForm, DK_VSTTypes, DK_VSTDropDownConst, DK_PPI,
+  DK_StrUtils;
 
 type
 
@@ -47,6 +48,7 @@ type
     procedure Expand;
     procedure Collapse;
     procedure KeyPick(const APicks: TStrVector; const AKeys: TIntVector; const ASelectedKey: Integer = -1);
+    procedure AutoWidth(const ACaption: String); //use in TForm.OnShow
 
     property Items: TStrVector read FItems write SetItems;
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
@@ -134,6 +136,14 @@ begin
   end
   else
     ItemIndex:= 0;
+end;
+
+procedure TVSTDropDown.AutoWidth(const ACaption: String); //use in TForm.OnShow
+var
+  W: Integer;
+begin
+  W:= SWidth(ACaption, Font) + DROPDOWN_WIDTH_DEFAULT;
+  FButton.Width:= SizeFromDefaultToDesignTime(W, FDesignTimePPI);
 end;
 
 procedure TVSTDropDown.SetButtonSettings;
