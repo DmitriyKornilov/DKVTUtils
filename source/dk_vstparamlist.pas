@@ -31,27 +31,28 @@ type
     FHeight: Integer;
     FFont: TFont;
 
-
-
-
     function ItemIndex(const AItemName: String): Integer;
 
+    function GetIsSelectedByIndex(const AItemIndex: Integer): Boolean;
+    function GetIsSelected(const AItemName: String): Boolean;
     function GetSelectedByIndex(const AItemIndex: Integer): Integer;
     function GetSelected(const AItemName: String): Integer;
-    function GetCheckedByIndex(const AItemIndex: Integer): TBoolVector;
-    function GetChecked(const AItemName: String): TBoolVector;
-    function GetCheckedIntByIndex(const AItemIndex: Integer): TIntVector;
-    function GetCheckedInt(const AItemName: String): TIntVector;
+    function GetCheckedByIndex(const AItemIndex, AParamIndex: Integer): Boolean;
+    function GetChecked(const AItemName: String; const AParamIndex: Integer): Boolean;
+    function GetCheckedsByIndex(const AItemIndex: Integer): TBoolVector;
+    function GetCheckeds(const AItemName: String): TBoolVector;
+    function GetCheckedsIntByIndex(const AItemIndex: Integer): TIntVector;
+    function GetCheckedsInt(const AItemName: String): TIntVector;
     function GetParams: TIntVector;
-
-
 
     procedure SetSelectedByIndex(const AItemIndex: Integer; const AValue: Integer);
     procedure SetSelected(const AItemName: String; const AValue: Integer);
-    procedure SetCheckedByIndex(const AItemIndex: Integer; const AValue: TBoolVector);
-    procedure SetChecked(const AItemName: String; const AValue: TBoolVector);
-    procedure SetCheckedIntByIndex(const AItemIndex: Integer; const AValue: TIntVector);
-    procedure SetCheckedInt(const AItemName: String; const AValue: TIntVector);
+    procedure SetCheckedByIndex(const AItemIndex, AParamIndex: Integer; const AValue: Boolean);
+    procedure SetChecked(const AItemName: String; const AParamIndex: Integer; const AValue: Boolean);
+    procedure SetCheckedsByIndex(const AItemIndex: Integer; const AValue: TBoolVector);
+    procedure SetCheckeds(const AItemName: String; const AValue: TBoolVector);
+    procedure SetCheckedsIntByIndex(const AItemIndex: Integer; const AValue: TIntVector);
+    procedure SetCheckedsInt(const AItemName: String; const AValue: TIntVector);
     procedure SetParams(const AValue: TIntVector);
 
     procedure MouseWheel(Sender: TObject; {%H-}Shift: TShiftState; WheelDelta: Integer;
@@ -61,9 +62,11 @@ type
     procedure ResizeControls;
     procedure AddCustomList(const AListType: TVSTListType; const AName: String);
 
+    property IsSelectedByIndex[const AItemIndex: Integer]: Boolean read GetIsSelectedByIndex;
     property SelectedByIndex[const AItemIndex: Integer]: Integer read GetSelectedByIndex write SetSelectedByIndex;
-    property CheckedByIndex[const AItemIndex: Integer]: TBoolVector read GetCheckedByIndex write SetCheckedByIndex;
-    property CheckedIntByIndex[const AItemIndex: Integer]: TIntVector read GetCheckedIntByIndex write SetCheckedIntByIndex;
+    property CheckedByIndex[const AItemIndex, AParamIndex: Integer]: Boolean read GetCheckedByIndex write SetCheckedByIndex;
+    property CheckedsByIndex[const AItemIndex: Integer]: TBoolVector read GetCheckedsByIndex write SetCheckedsByIndex;
+    property CheckedsIntByIndex[const AItemIndex: Integer]: TIntVector read GetCheckedsIntByIndex write SetCheckedsIntByIndex;
 
   public
     constructor Create(const AParent: TPanel; const AFont: TFont = nil);
@@ -80,9 +83,11 @@ type
                             const AOnSelect: TVSTEvent;
                             const ACheckedCount: Integer = -1); //-1 check all, >=0 check [0..ACheckedCount-1]
 
+    property IsSelected[const AItemName: String]: Boolean read GetIsSelected;
     property Selected[const AItemName: String]: Integer read GetSelected write SetSelected;
-    property Checked[const AItemName: String]: TBoolVector read GetChecked write SetChecked;
-    property CheckedInt[const AItemName: String]: TIntVector read GetCheckedInt write SetCheckedInt;
+    property Checked[const AItemName: String; const AParamIndex: Integer]: Boolean read GetChecked write SetChecked;
+    property Checkeds[const AItemName: String]: TBoolVector read GetCheckeds write SetCheckeds;
+    property CheckedsInt[const AItemName: String]: TIntVector read GetCheckedsInt write SetCheckedsInt;
     property Params: TIntVector read GetParams write SetParams;
 
     property Height: Integer read FHeight;
@@ -97,24 +102,34 @@ begin
   Result:= VIndexOf(FNames, AItemName);
 end;
 
-function TVSTParamList.GetCheckedIntByIndex(const AItemIndex: Integer): TIntVector;
+function TVSTParamList.GetIsSelectedByIndex(const AItemIndex: Integer): Boolean;
 begin
-  Result:= VBoolToInt(CheckedByIndex[AItemIndex]);
+  Result:= FItems[AItemIndex].IsSelected;
 end;
 
-function TVSTParamList.GetCheckedInt(const AItemName: String): TIntVector;
+function TVSTParamList.GetIsSelected(const AItemName: String): Boolean;
 begin
-  Result:= VBoolToInt(Checked[AItemName]);
+  Result:= IsSelectedByIndex[ItemIndex(AItemName)];
 end;
 
-procedure TVSTParamList.SetCheckedIntByIndex(const AItemIndex: Integer; const AValue: TIntVector);
+function TVSTParamList.GetCheckedsIntByIndex(const AItemIndex: Integer): TIntVector;
 begin
-  CheckedByIndex[AItemIndex]:= VIntToBool(AValue);
+  Result:= VBoolToInt(CheckedsByIndex[AItemIndex]);
 end;
 
-procedure TVSTParamList.SetCheckedInt(const AItemName: String; const AValue: TIntVector);
+function TVSTParamList.GetCheckedsInt(const AItemName: String): TIntVector;
 begin
-  Checked[AItemName]:= VIntToBool(AValue);
+  Result:= VBoolToInt(Checkeds[AItemName]);
+end;
+
+procedure TVSTParamList.SetCheckedsIntByIndex(const AItemIndex: Integer; const AValue: TIntVector);
+begin
+  CheckedsByIndex[AItemIndex]:= VIntToBool(AValue);
+end;
+
+procedure TVSTParamList.SetCheckedsInt(const AItemName: String; const AValue: TIntVector);
+begin
+  Checkeds[AItemName]:= VIntToBool(AValue);
 end;
 
 function TVSTParamList.GetParams: TIntVector;
@@ -127,7 +142,7 @@ begin
   begin
     case FTypes[i] of
       ltString: VAppend(Result, SelectedByIndex[i]);
-      ltCheck:  Result:= VAdd(Result, CheckedIntByIndex[i]);
+      ltCheck:  Result:= VAdd(Result, CheckedsIntByIndex[i]);
     end;
   end;
 end;
@@ -149,34 +164,57 @@ begin
       ltCheck:
         begin
           n:= (FItems[i] as TVSTCheckList).Count;
-          CheckedIntByIndex[i]:= VCut(AValue, j, j+n-1);
+          CheckedsIntByIndex[i]:= VCut(AValue, j, j+n-1);
         end;
     end;
     j:= j + n;
   end;
 end;
 
-function TVSTParamList.GetCheckedByIndex(const AItemIndex: Integer): TBoolVector;
+function TVSTParamList.GetCheckedByIndex(const AItemIndex, AParamIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if (AItemIndex<0) or (FTypes[AItemIndex]<>ltCheck) then Exit;
+  Result:= (FItems[AItemIndex] as TVSTCheckList).Checked[AParamIndex];
+end;
+
+function TVSTParamList.GetChecked(const AItemName: String; const AParamIndex: Integer): Boolean;
+begin
+  Result:= CheckedByIndex[ItemIndex(AItemName), AParamIndex];
+end;
+
+function TVSTParamList.GetCheckedsByIndex(const AItemIndex: Integer): TBoolVector;
 begin
   Result:= nil;
   if (AItemIndex<0) or (FTypes[AItemIndex]<>ltCheck) then Exit;
   Result:= (FItems[AItemIndex] as TVSTCheckList).Selected;
 end;
 
-function TVSTParamList.GetChecked(const AItemName: String): TBoolVector;
+function TVSTParamList.GetCheckeds(const AItemName: String): TBoolVector;
 begin
-  Result:= CheckedByIndex[ItemIndex(AItemName)];
+  Result:= CheckedsByIndex[ItemIndex(AItemName)];
 end;
 
-procedure TVSTParamList.SetCheckedByIndex(const AItemIndex: Integer; const AValue: TBoolVector);
+procedure TVSTParamList.SetCheckedByIndex(const AItemIndex, AParamIndex: Integer; const AValue: Boolean);
+begin
+  if (AItemIndex<0) or (FTypes[AItemIndex]<>ltCheck) then Exit;
+  (FItems[AItemIndex] as TVSTCheckList).Checked[AParamIndex]:= AValue;
+end;
+
+procedure TVSTParamList.SetChecked(const AItemName: String; const AParamIndex: Integer; const AValue: Boolean);
+begin
+  CheckedByIndex[ItemIndex(AItemName), AParamIndex]:= AValue;
+end;
+
+procedure TVSTParamList.SetCheckedsByIndex(const AItemIndex: Integer; const AValue: TBoolVector);
 begin
   if (AItemIndex<0) or (FTypes[AItemIndex]<>ltCheck) then Exit;
   (FItems[AItemIndex] as TVSTCheckList).Selected:= AValue;
 end;
 
-procedure TVSTParamList.SetChecked(const AItemName: String; const AValue: TBoolVector);
+procedure TVSTParamList.SetCheckeds(const AItemName: String; const AValue: TBoolVector);
 begin
-  CheckedByIndex[ItemIndex(AItemName)]:= AValue;
+  CheckedsByIndex[ItemIndex(AItemName)]:= AValue;
 end;
 
 function TVSTParamList.GetSelectedByIndex(const AItemIndex: Integer): Integer;
