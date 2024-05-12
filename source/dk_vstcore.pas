@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Graphics, Controls, StdCtrls, VirtualTrees, fpstypes,
 
-  DK_Vector, DK_Matrix, DK_PPI, DK_Color, DK_VSTTypes;
+  DK_Vector, DK_Matrix, DK_Color, DK_VSTTypes;
 
 type
 
@@ -18,8 +18,6 @@ type
     FTree: TVirtualStringTree;
 
     FOnSelect: TVSTEvent;
-
-    FDesignTimePPI: Integer;
 
     FAutosizeColumnIndex: Integer; //LAST_COLUMN_INDEX_FOR_AUTOSIZE - last clolumn, -1 - none
     FFixedColumnsCount: Integer;
@@ -93,9 +91,7 @@ type
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
-    procedure SetDesignTimePPI;
     procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
-
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -146,7 +142,8 @@ type
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
     property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
-    property DesignTimePPI: Integer read FDesignTimePPI;
+
+    property Tree: TVirtualStringTree read FTree;
 
     property OnSelect: TVSTEvent read FOnSelect write FOnSelect;
   end;
@@ -438,19 +435,14 @@ begin
   Result:= (AIndex>=0) and (AIndex<=High(FHeaderCaptions));
 end;
 
-procedure TVSTCoreTable.SetDesignTimePPI;
-begin
-  FDesignTimePPI:= ControlDesignTimePPI(FTree.Parent);
-end;
-
 procedure TVSTCoreTable.SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
 var
   H: Integer;
 begin
-  H:= SizeFromDesignTimeToDefault(FTree.DefaultNodeHeight, FDesignTimePPI);
+  H:= Tree.ScaleFormTo96(FTree.DefaultNodeHeight);
   if H<ARowHeight then
     SetRowHeight(ARowHeight);
-  H:= SizeFromDesignTimeToDefault(FTree.Header.DefaultHeight, FDesignTimePPI);
+  H:= Tree.ScaleFormTo96(FTree.Header.DefaultHeight);
   if H<AHeaderHeight then
     SetHeaderHeight(AHeaderHeight);
 end;
@@ -460,8 +452,6 @@ constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
   FTree:= ATree;
-
-  SetDesignTimePPI;
 
   Clear;
   FFixedColumnsCount:= 0;
@@ -566,7 +556,7 @@ var
   C: TVirtualTreeColumn;
   W: Integer;
 begin
-  W:= WidthFromDefaultToScreen(AWidth);
+  W:= Tree.Scale96ToScreen(AWidth);
   VAppend(FHeaderCaptions, ACaption);
   VAppend(FColumnWidths, W);
   VAppend(FColumnValuesBGColors, clNone);
@@ -613,14 +603,14 @@ end;
 
 procedure TVSTCoreTable.SetRowHeight(const AHeight: Integer);
 begin
-  FTree.DefaultNodeHeight:= SizeFromDefaultToDesignTime(AHeight, FDesignTimePPI);
+  FTree.DefaultNodeHeight:= Tree.Scale96ToForm(AHeight);
   VSTNodeHeights(FTree, FTree.DefaultNodeHeight);
   FTree.Refresh;
 end;
 
 procedure TVSTCoreTable.SetHeaderHeight(const AHeight: Integer);
 begin
-  FTree.Header.DefaultHeight:= SizeFromDefaultToDesignTime(AHeight, FDesignTimePPI);
+  FTree.Header.DefaultHeight:= Tree.Scale96ToForm(AHeight);
   FTree.Header.Height:= FTree.Header.DefaultHeight;
   FTree.Refresh;
 end;
@@ -689,8 +679,6 @@ begin
   HeaderHeight:= 0;
   if FHeaderVisible then
     HeaderHeight:= FTree.Header.Height;
-    //HeaderHeight:= HeightFromScreenToDesignTime(FTree.Header.Height, FDesignTimePPI);
-  //NodeHeight:= HeightFromScreenToDesignTime(FTree.DefaultNodeHeight, FDesignTimePPI);
   NodeHeight:= FTree.DefaultNodeHeight;
   NodeCount:= MMaxLength(FDataValues);
   if NodeCount=0 then

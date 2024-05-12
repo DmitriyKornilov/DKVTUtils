@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, VirtualTrees,
 
-  DK_Vector, DK_Matrix, DK_StrUtils, DK_VSTTables, DK_VSTTypes, DK_PPI;
+  DK_Vector, DK_Matrix, DK_StrUtils, DK_VSTTables, DK_VSTTypes;
 
 const
   TOOLS_ROW_HEIGHT_DEFAULT = 18;
@@ -79,6 +79,17 @@ type
 
 implementation
 
+procedure SetSimpleListParams(const AList: TVSTSimpleTable; const ACaption: String);
+begin
+  AList.SetRowHeight(AList.Tree.Scale96ToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
+  AList.Tree.BorderStyle:= bsNone;
+  AList.HeaderFont.Style:= [fsBold];
+  AList.HeaderVisible:= not SEmpty(ACaption);
+  AList.GridLinesVisible:= False;
+  AList.AutoHeight:= True;
+  AList.AddColumn(ACaption, 100, taLeftJustify);
+end;
+
 { TVSTStringList }
 
 function TVSTStringList.GetItemIndex: Integer;
@@ -100,15 +111,9 @@ constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        );
 begin
   inherited Create(ATree);
-  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
-  FTree.BorderStyle:= bsNone;
-  HeaderFont.Style:= [fsBold];
-  HeaderVisible:= not SEmpty(ACaption);
-  AutoHeight:= True;
-  GridLinesVisible:= False;
+  SetSimpleListParams(Self, ACaption);
   CanSelect:= True;
   CanUnselect:= False;
-  AddColumn(ACaption, 100, taLeftJustify);
   Draw;
   OnSelect:= AOnSelect;
 end;
@@ -142,14 +147,8 @@ var
   i: Integer;
 begin
   inherited Create(ATree);
-  SetRowHeight(HeightFromDefaultToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
-  FTree.BorderStyle:= bsNone;
-  HeaderFont.Style:= [fsBold];
-  AutoHeight:= True;
-  GridLinesVisible:= False;
-  HeaderVisible:= not SEmpty(ACaption);
+  SetSimpleListParams(Self, ACaption);
   SelectedBGColor:= FTree.Color;
-  AddColumn(ACaption, 100, taLeftJustify);
   SetColumn(ACaption, AItems, taLeftJustify);
   Draw;
 

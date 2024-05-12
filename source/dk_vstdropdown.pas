@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Graphics, Controls, BCButton, BCTypes, BGRABitmap,
-  DK_Vector, DK_VSTDropDownForm, DK_VSTTypes, DK_VSTDropDownConst, DK_PPI,
+  DK_Vector, DK_VSTDropDownForm, DK_VSTTypes, DK_VSTDropDownConst,
   DK_StrUtils;
 
 type
@@ -20,7 +20,6 @@ type
     FForm: TVSTDropDownForm;
     FDropDownCount: Integer;
     FOnChange: TVSTEvent;
-    FDesignTimePPI: Integer;
     FFont: TFont;
 
     procedure SetButtonSettings;
@@ -31,7 +30,8 @@ type
     procedure SetItems(const AValue: TStrVector);
     procedure SetOnChange(const AValue: TVSTEvent);
 
-    function GetSize(const ASize: Integer): Integer;
+    function Scale96ToForm(const ASize: Integer): Integer;
+    function Scale96ToScreen(const ASize: Integer): Integer;
     function GetEnabled: Boolean;
     function GetItemIndex: Integer;
     function GetText: String;
@@ -66,8 +66,6 @@ implementation
 
 constructor TVSTDropDown.Create(const AButton: TBCButton);
 begin
-  FDesignTimePPI:= ControlDesignTimePPI(AButton.Parent);
-
   FButton:= AButton;
   FButton.OnClick:= @ButtonClick;
   FButton.OnAfterRenderBCButton:= @AfterRenderBCButton;
@@ -139,11 +137,8 @@ begin
 end;
 
 procedure TVSTDropDown.AutoWidth(const ACaption: String); //use in TForm.OnShow
-var
-  W: Integer;
 begin
-  W:= SWidth(ACaption, Font) + DROPDOWN_WIDTH_DEFAULT;
-  FButton.Width:= SizeFromDefaultToDesignTime(W, FDesignTimePPI);
+  FButton.Width:= Scale96ToForm(SWidth(ACaption, Font) + DROPDOWN_WIDTH_DEFAULT);
 end;
 
 procedure TVSTDropDown.SetButtonSettings;
@@ -154,7 +149,7 @@ procedure TVSTDropDown.SetButtonSettings;
     AState.FontEx.Color:= FONT_COLOR_DEFAULT;
     AState.FontEx.Style:= [];
     AState.FontEx.TextAlignment:= bcaLeftCenter;
-    AState.FontEx.PaddingLeft:= GetSize(ITEM_MARGIN_DEFAULT);
+    AState.FontEx.PaddingLeft:= Scale96ToForm(ITEM_MARGIN_DEFAULT);
     AState.Border.Style:= bboSolid;
     AState.Background.Style:= bbsColor;
     AState.Background.Color:= BACKGROUND_COLOR_DEFAULT;
@@ -164,14 +159,14 @@ begin
   FButton.Tag:= -1; //ItemIndex
   FButton.Caption:= EmptyStr;
   FButton.Down:= False;
-  FButton.DropDownArrowSize:= GetSize(DROPDOWN_ARROWSIZE_DEFAULT);
+  FButton.DropDownArrowSize:= Scale96ToForm(DROPDOWN_ARROWSIZE_DEFAULT);
 
-  FButton.Height:= GetSize(ITEM_HEIGHT_DEFAULT);
+  FButton.Height:= Scale96ToForm(ITEM_HEIGHT_DEFAULT);
   FButton.Rounding.RoundX:= 0;
   FButton.Rounding.RoundY:= 0;
   FButton.Style:= bbtDropDown;
   FButton.DropDownStyle:= bdsCommon;
-  FButton.DropDownWidth:= WidthFromDefaultToScreen(DROPDOWN_WIDTH_DEFAULT);//GetSize(DROPDOWN_WIDTH_DEFAULT);
+  FButton.DropDownWidth:= Scale96ToScreen(DROPDOWN_WIDTH_DEFAULT);
 
   SetStateCommonSettings(FButton.StateNormal);
   FButton.StateNormal.Border.Color:= FRAME_COLOR_DEFAULT;
@@ -241,9 +236,14 @@ begin
   FForm.SetOnChange(AValue);
 end;
 
-function TVSTDropDown.GetSize(const ASize: Integer): Integer;
+function TVSTDropDown.Scale96ToForm(const ASize: Integer): Integer;
 begin
-  Result:= SizeFromDefaultToDesignTime(ASize, FDesignTimePPI);
+  Result:= FButton.Parent.Scale96ToForm(ASize);
+end;
+
+function TVSTDropDown.Scale96ToScreen(const ASize: Integer): Integer;
+begin
+  Result:= FButton.Parent.Scale96ToScreen(ASize);
 end;
 
 function TVSTDropDown.GetEnabled: Boolean;

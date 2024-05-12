@@ -55,6 +55,10 @@
         <Filename Value="source\dk_vstdropdownform.lfm"/>
         <Type Value="LFM"/>
       </Item>
+      <Item>
+        <Filename Value="source\dk_vstparamlist.pas"/>
+        <UnitName Value="dk_vstparamlist"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
