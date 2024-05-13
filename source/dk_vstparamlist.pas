@@ -269,7 +269,9 @@ var
 begin
   FScrollBar.Visible:= FParent.ClientHeight<FHeight;
   if FScrollBar.Visible then
-    FScrollBar.Max:= FHeight - FParent.ClientHeight;
+    FScrollBar.Max:= FHeight - FParent.ClientHeight
+  else
+    FScrollBar.Position:= 0;
 
   FPanel.Width:= FParent.ClientWidth - FScrollBar.Width*Ord(FScrollBar.Visible);
   for i:= 0 to High(FTrees) do
@@ -333,8 +335,9 @@ begin
   if Length(FTrees)=0 then Exit;
   for i:= 0 to High(FItems) do
   begin
-    FTrees[i].Top:= FHeight + FSpace*Ord(i>0);
-    FHeight:= FHeight + FItems[i].TotalHeight + FSpace*Ord(i>0);
+    FTrees[i].Top:= FHeight;
+    FTrees[i].Height:= FItems[i].TotalHeight;
+    FHeight:= FHeight + FTrees[i].Height + FSpace;
   end;
   FPanel.Height:= FHeight;
   //ResizeControls;

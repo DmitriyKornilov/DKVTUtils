@@ -1525,7 +1525,7 @@ begin
     Sheet:= Exporter.AddWorksheet(ASheetName);
 
     VisibleColumnWidths:= VCut(FColumnWidths, FColumnVisibles);
-    Writer:= TSheetWriter.Create(VisibleColumnWidths, Sheet, nil, FTree.DefaultNodeHeight);
+    Writer:= TSheetWriter.Create(VisibleColumnWidths, Sheet, nil, RowHeight);
     try
       SheetWrite;
     finally
@@ -1655,7 +1655,7 @@ procedure TVSTTable.MeasureItem(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
 var
   Height, i: Integer;
 begin
-  NodeHeight:= FTree.DefaultNodeHeight;
+  NodeHeight:= RowHeight;
   if not FAutosizeRowHeights then Exit;
 
   FTree.Font.Assign(FValuesFont);

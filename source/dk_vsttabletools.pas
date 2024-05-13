@@ -81,7 +81,7 @@ implementation
 
 procedure SetSimpleListParams(const AList: TVSTSimpleTable; const ACaption: String);
 begin
-  AList.SetRowHeight(AList.Tree.Scale96ToScreen(TOOLS_ROW_HEIGHT_DEFAULT));
+  AList.RowHeight:= AList.Tree.Scale96ToScreen(TOOLS_ROW_HEIGHT_DEFAULT);
   AList.Tree.BorderStyle:= bsNone;
   AList.HeaderFont.Style:= [fsBold];
   AList.HeaderVisible:= not SEmpty(ACaption);

@@ -44,6 +44,9 @@ type
     FSelectedFont: TFont;
     FCellFont: TFont;
 
+    FHeaderHeight: Integer;
+    FRowHeight: Integer;
+
     function NodeFromIndex(const AIndex: Integer): PVirtualNode;
     function NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
 
@@ -91,6 +94,8 @@ type
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
+    procedure SetRowHeight(const AHeight: Integer);
+    procedure SetHeaderHeight(const AHeight: Integer);
     procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
   public
     constructor Create(const ATree: TVirtualStringTree;
@@ -113,9 +118,9 @@ type
     procedure SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
     procedure SetColumnHeaderBGColor(const ACaption: String; const ABGColor: TColor);
 
-    procedure SetRowHeight(const AHeight: Integer);
-    procedure SetHeaderHeight(const AHeight: Integer);
+
     procedure SetAllHeight(const AHeight: Integer);
+
 
     procedure AutosizeColumnEnable(const ACaption: String);
     procedure AutosizeColumnEnable(const AColIndex: Integer);
@@ -124,6 +129,9 @@ type
 
     procedure RenameColumn(const AColIndex: Integer; const ANewName: String);
     procedure RenameColumn(const AOldName, ANewName: String);
+
+    property RowHeight: Integer read FRowHeight write SetRowHeight;
+    property HeaderHeight: Integer read FHeaderHeight write SetHeaderHeight;
 
     property GridLinesColor: TColor read FGridLinesColor write SetGridLinesColor;
     property ValuesBGColor: TColor read FValuesBGColor write SetValuesBGColor;
@@ -440,11 +448,15 @@ var
   H: Integer;
 begin
   H:= Tree.ScaleFormTo96(FTree.DefaultNodeHeight);
-  if H<ARowHeight then
-    SetRowHeight(ARowHeight);
+  if ARowHeight>H then
+    RowHeight:= ARowHeight
+  else
+    RowHeight:=H;
   H:= Tree.ScaleFormTo96(FTree.Header.DefaultHeight);
-  if H<AHeaderHeight then
-    SetHeaderHeight(AHeaderHeight);
+  if AHeaderHeight>H then
+    HeaderHeight:= AHeaderHeight
+  else
+    HeaderHeight:= H;
 end;
 
 constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree;
@@ -536,10 +548,10 @@ begin
     FTree.Header.Font.Height := Round(HeaderFont.Height * ZoomFactor);
     //FTree.Font.Size:= Round(ValuesFont.Size * ZoomFactor);
     //FTree.Header.Font.Size := Round(HeaderFont.Size * ZoomFactor);
-    FTree.Header.Height := Round(FTree.Header.DefaultHeight * ZoomFactor);
+    FTree.Header.Height := Round(FHeaderHeight * ZoomFactor);
     for i := 0 to High(FColumnWidths) do
       FTree.Header.Columns.Items[i].Width:= Round(FColumnWidths[i] * ZoomFactor);
-    VSTNodeHeights(FTree, Round(FTree.DefaultNodeHeight * ZoomFactor));
+    VSTNodeHeights(FTree, Round(FRowHeight * ZoomFactor));
   finally
     FTree.EndUpdate;
   end;
@@ -603,15 +615,17 @@ end;
 
 procedure TVSTCoreTable.SetRowHeight(const AHeight: Integer);
 begin
-  FTree.DefaultNodeHeight:= Tree.Scale96ToForm(AHeight);
-  VSTNodeHeights(FTree, FTree.DefaultNodeHeight);
+  FRowHeight:= Tree.Scale96ToForm(AHeight);
+  FTree.DefaultNodeHeight:= FRowHeight;
+  VSTNodeHeights(FTree, FRowHeight);
   FTree.Refresh;
 end;
 
 procedure TVSTCoreTable.SetHeaderHeight(const AHeight: Integer);
 begin
-  FTree.Header.DefaultHeight:= Tree.Scale96ToForm(AHeight);
-  FTree.Header.Height:= FTree.Header.DefaultHeight;
+  FHeaderHeight:= Tree.Scale96ToForm(AHeight);
+  FTree.Header.DefaultHeight:= FHeaderHeight;
+  FTree.Header.Height:= FHeaderHeight;
   FTree.Refresh;
 end;
 
@@ -674,18 +688,14 @@ end;
 
 function TVSTCustomSimpleTable.GetTotalHeight: Integer;
 var
-  NodeCount, HeaderHeight, NodeHeight: Integer;
+  RowCount: Integer;
 begin
-  HeaderHeight:= 0;
-  if FHeaderVisible then
-    HeaderHeight:= FTree.Header.Height;
-  NodeHeight:= FTree.DefaultNodeHeight;
-  NodeCount:= MMaxLength(FDataValues);
-  if NodeCount=0 then
-    NodeCount:= 1;
-  if (MaxAutoHeightRowCount>0) and (NodeCount>MaxAutoHeightRowCount) then
-    NodeCount:= MaxAutoHeightRowCount;
-  Result:= HeaderHeight + NodeCount*NodeHeight;
+  RowCount:= MMaxLength(FDataValues);
+  if RowCount=0 then
+    RowCount:= 1;
+  if (MaxAutoHeightRowCount>0) and (RowCount>MaxAutoHeightRowCount) then
+    RowCount:= MaxAutoHeightRowCount;
+  Result:= FHeaderHeight*Ord(FHeaderVisible) + RowCount*FRowHeight;
 end;
 
 function TVSTCustomSimpleTable.GetCount: Integer;
