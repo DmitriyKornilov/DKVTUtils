@@ -138,7 +138,9 @@ end;
 
 procedure TVSTDropDown.AutoWidth(const ACaption: String); //use in TForm.OnShow
 begin
-  FButton.Width:= Scale96ToForm(SWidth(ACaption, Font) + DROPDOWN_WIDTH_DEFAULT);
+  FButton.Width:= Scale96ToForm(SWidth(ACaption, Font) +
+                                DROPDOWN_WIDTH_DEFAULT +
+                                3*ITEM_MARGIN_DEFAULT);
 end;
 
 procedure TVSTDropDown.SetButtonSettings;
