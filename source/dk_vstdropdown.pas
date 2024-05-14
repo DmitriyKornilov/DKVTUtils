@@ -48,7 +48,7 @@ type
     procedure Expand;
     procedure Collapse;
     procedure KeyPick(const APicks: TStrVector; const AKeys: TIntVector; const ASelectedKey: Integer = -1);
-    procedure AutoWidth(const ACaption: String); //use in TForm.OnShow
+    procedure AutoWidth(const ACaption: String = ''); //use in TForm.OnShow
 
     property Items: TStrVector read FItems write SetItems;
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
@@ -136,11 +136,15 @@ begin
     ItemIndex:= 0;
 end;
 
-procedure TVSTDropDown.AutoWidth(const ACaption: String); //use in TForm.OnShow
+procedure TVSTDropDown.AutoWidth(const ACaption: String = ''); //use in TForm.OnShow
+var
+  W: Integer;
 begin
-  FButton.Width:= Scale96ToForm(SWidth(ACaption, Font) +
-                                DROPDOWN_WIDTH_DEFAULT +
-                                3*ITEM_MARGIN_DEFAULT);
+  if SEmpty(ACaption) then
+    W:= VMaxWidth(FItems, Font, FButton.Width)
+  else
+    W:= SWidth(ACaption, Font);
+  FButton.Width:= Scale96ToForm(W + DROPDOWN_WIDTH_DEFAULT + 2*ITEM_MARGIN_DEFAULT);
 end;
 
 procedure TVSTDropDown.SetButtonSettings;
