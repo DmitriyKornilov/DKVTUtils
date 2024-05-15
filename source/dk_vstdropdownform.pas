@@ -60,7 +60,7 @@ end;
 
 procedure TVSTDropDownForm.FormShow(Sender: TObject);
 begin
-  Height:= List.TotalHeight + 2 {shape borders};
+  Height:= ScaleDesignToForm(List.TotalHeight + 2 {shape borders});
 end;
 
 procedure TVSTDropDownForm.VTMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
