@@ -117,8 +117,8 @@ end;
 
 procedure TVSTDropDownForm.SetDropDownText;
 var
-  MaxWidth, i: Integer;
-  FullText, CutText, NextSymbol: String;
+  MaxWidth: Integer;
+  FullText: String;
 begin
   FullText:= EmptyStr;
   if Button.Tag>=0 then
@@ -126,21 +126,7 @@ begin
 
   MaxWidth:= Button.Width - Button.DropDownWidth - ITEM_MARGIN_DEFAULT;
 
-  if SWidth(FullText, Font)<=MaxWidth then
-    Button.Caption:= FullText
-  else begin
-    MaxWidth:= MaxWidth - SWidth(ITEM_CUT_SYMBOL, Font);
-    CutText:= SSymbol(FullText, 1);
-    for i:=2 to SLength(FullText) do
-    begin
-      NextSymbol:= SSymbol(FullText, i);
-      if SWidth(CutText+NextSymbol, Font)>MaxWidth then
-        break
-      else
-        CutText:= CutText + NextSymbol;
-    end;
-    Button.Caption:= CutText + ITEM_CUT_SYMBOL;
-  end;
+  Button.Caption:= SFit(FullText, ITEM_CUT_SYMBOL, MaxWidth, Font);
 end;
 
 procedure TVSTDropDownForm.SetDropDownCount(const AValue: Integer);
