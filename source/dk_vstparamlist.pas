@@ -10,8 +10,7 @@ uses
 
 const
   SCROLLBAR_WIDTH_DEFAULT = 16;
-  SCROLLBAR_DELTA_DEFAULT = 20;
-  //ITEM_SPACE_DEFAULT = 0;
+  SCROLLBAR_INCREMENT_DEFAULT = 20;
 
 type
   TVSTListType = (ltString, ltCheck);
@@ -21,13 +20,12 @@ type
   TVSTParamList = class (TObject)
   private
     FParent: TPanel;
-    FPanel: TPanel;
     FTrees: array of TVirtualStringTree;
     FItems: array of TVSTSimpleTable;
     FTypes: array of TVSTListType;
     FVisibles: TBoolVector;
     FNames: TStrVector;
-    FScrollBar: TScrollBar;
+    FScrollBox: TScrollBox;
     FSpace: Integer;
     FHeight: Integer;
     FFont: TFont;
@@ -62,9 +60,7 @@ type
 
     procedure MouseWheel(Sender: TObject; {%H-}Shift: TShiftState; WheelDelta: Integer;
                          {%H-}MousePos: TPoint; var {%H-}Handled: Boolean);
-    procedure ScrollBarChange(Sender: TObject);
-    procedure ChangeBounds(Sender: TObject);
-    procedure ResizeControls;
+    procedure ParentResize(Sender: TObject);
     procedure AddCustomList(const AListType: TVSTListType; const AName: String);
 
     property IsSelectedByIndex[const AItemIndex: Integer]: Boolean read GetIsSelectedByIndex;
@@ -74,12 +70,9 @@ type
     property CheckedsIntByIndex[const AItemIndex: Integer]: TIntVector read GetCheckedsIntByIndex write SetCheckedsIntByIndex;
     property VisiblesByIndex[const AItemIndex: Integer]: Boolean read GetVisiblesByIndex write SetVisiblesByIndex;
 
-
   public
     constructor Create(const AParent: TPanel; const AFont: TFont = nil);
     destructor Destroy; override;
-
-    procedure Show; //use in TForm.OnShow
 
     procedure AddStringList(const AName, ACaption: String;
                             const AItems: TStrVector;
@@ -175,7 +168,6 @@ begin
   if FVisibles[AItemIndex]=AValue then Exit;
   FVisibles[AItemIndex]:= AValue;
   FTrees[AItemIndex].Visible:= AValue;
-  Show;
 end;
 
 function TVSTParamList.GetCheckedByIndex(const AItemIndex, AParamIndex: Integer): Boolean;
@@ -276,37 +268,16 @@ procedure TVSTParamList.MouseWheel(Sender: TObject; Shift: TShiftState;
 var
   H: Integer;
 begin
-  if not FScrollBar.Visible then Exit;
-  H:= FParent.Scale96ToForm(SCROLLBAR_DELTA_DEFAULT);
+  H:= FParent.Scale96ToForm(SCROLLBAR_INCREMENT_DEFAULT);
   if WheelDelta<0 then
-    FScrollBar.Position:= FScrollBar.Position + H
+    FScrollBox.VertScrollBar.Position:= FScrollBox.VertScrollBar.Position + H
   else
-    FScrollBar.Position:= FScrollBar.Position - H;
+    FScrollBox.VertScrollBar.Position:= FScrollBox.VertScrollBar.Position - H;
 end;
 
-procedure TVSTParamList.ScrollBarChange(Sender: TObject);
+procedure TVSTParamList.ParentResize(Sender: TObject);
 begin
-  FPanel.Top:= -FScrollBar.Position;
-end;
-
-procedure TVSTParamList.ChangeBounds(Sender: TObject);
-begin
-  ResizeControls;
-end;
-
-procedure TVSTParamList.ResizeControls;
-var
-  i: Integer;
-begin
-  FScrollBar.Visible:= FParent.ClientHeight<FHeight;
-  if FScrollBar.Visible then
-    FScrollBar.Max:= FHeight - FParent.ClientHeight
-  else
-    FScrollBar.Position:= 0;
-
-  FPanel.Width:= FParent.ClientWidth - FScrollBar.Width*Ord(FScrollBar.Visible);
-  for i:= 0 to High(FTrees) do
-    FTrees[i].Width:= FPanel.ClientWidth;
+  FScrollBox.HorzScrollBar.Visible:= False;
 end;
 
 constructor TVSTParamList.Create(const AParent: TPanel; const AFont: TFont = nil);
@@ -314,7 +285,7 @@ begin
   inherited Create;
 
   FParent:= AParent;
-  FParent.OnChangeBounds:= @ChangeBounds;
+  FParent.OnResize:= @ParentResize;
   FHeight:= 0;
   case Screen.PixelsPerInch of
     96 : FSpace:= 0;
@@ -329,25 +300,12 @@ begin
   else
     FFont.Assign(FParent.Font);
 
-  FScrollBar:= TScrollBar.Create(nil);
-  FScrollBar.OnChange:= @ScrollBarChange;
-  FScrollBar.Parent:= FParent;
-  FScrollBar.Kind:= sbVertical;
-  FScrollBar.Align:= alRight;
-  FScrollBar.Width:= FParent.Scale96ToForm(SCROLLBAR_WIDTH_DEFAULT);
-  FScrollBar.Visible:= False;
-
-  FPanel:= TPanel.Create(nil);
-  FPanel.OnMouseWheel:= @MouseWheel;
-  FPanel.Parent:= FParent;
-  FPanel.Color:= clWindow;
-  FPanel.BevelOuter:= bvNone;
-  FPanel.BevelInner:= bvNone;
-  FPanel.BorderStyle:= bsNone;
-  FPanel.Left:= 0;
-  FPanel.Top:= 0;
-  FPanel.Width:= FParent.ClientWidth;
-  FPanel.Height:= FParent.ClientHeight;
+  FScrollBox:= TScrollBox.Create(nil);
+  FScrollBox.Parent:= FParent;
+  FScrollBox.Align:= alClient;
+  FScrollBox.Color:= clWindow;
+  FScrollBox.BorderStyle:= bsNone;
+  FScrollBox.VertScrollBar.Increment:= FParent.Scale96ToForm(SCROLLBAR_INCREMENT_DEFAULT);
 end;
 
 destructor TVSTParamList.Destroy;
@@ -356,28 +314,10 @@ var
 begin
   for i:= 0 to High(FItems) do
     FreeAndNil(FItems[i]);
-  FreeAndNil(FPanel);
-  FreeAndNil(FScrollBar);
+  FreeAndNil(FScrollBox);
   FreeAndNil(FFont);
 
   inherited Destroy;
-end;
-
-procedure TVSTParamList.Show;
-var
-  i: Integer;
-begin
-  FHeight:= 0;
-  if Length(FTrees)=0 then Exit;
-  for i:= 0 to High(FItems) do
-  begin
-    if not VisiblesByIndex[i] then continue;
-    FTrees[i].Top:= FHeight;
-    FTrees[i].Height:= FItems[i].TotalHeight + 6*Ord(Screen.PixelsPerInch>96);
-    FHeight:= FHeight + FTrees[i].Height + FSpace;
-  end;
-  FPanel.Height:= FHeight;
-  //ResizeControls;
 end;
 
 procedure TVSTParamList.AddCustomList(const AListType: TVSTListType; const AName: String);
@@ -387,9 +327,25 @@ var
 begin
   N:= Length(FTrees);
   SetLength(FTrees, N+1);
-  VT:= TVirtualStringTree.Create(FPanel);
-  VT.Parent:= FPanel;
-  VT.Left:= 0;
+
+  VT:= TVirtualStringTree.Create(FScrollBox);
+  VT.Parent:= FScrollBox;
+  if N=0 then
+  begin
+    VT.AnchorSide[akTop].Side:= asrTop;
+    VT.AnchorSide[akTop].Control:= FScrollBox;
+  end
+  else begin
+    VT.AnchorSide[akTop].Side:= asrBottom;
+    VT.AnchorSide[akTop].Control:= FTrees[N-1];
+  end;
+  VT.BorderSpacing.Bottom:= FSpace;
+  VT.AnchorSide[akLeft].Side:= asrLeft;
+  VT.AnchorSide[akLeft].Control:= FScrollBox;
+  VT.AnchorSide[akRight].Side:= asrRight;
+  VT.AnchorSide[akRight].Control:= FScrollBox;
+  VT.Anchors:= [akLeft, akTop, akRight];
+
   VT.OnMouseWheel:= @MouseWheel;
   FTrees[N]:= VT;
 
