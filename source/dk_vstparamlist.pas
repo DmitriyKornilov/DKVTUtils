@@ -5,7 +5,7 @@ unit DK_VSTParamList;
 interface
 
 uses
-  Classes, SysUtils, Controls, ExtCtrls, StdCtrls, Forms, VirtualTrees,
+  Classes, SysUtils, Controls, ExtCtrls, Forms, VirtualTrees,
   Graphics, DK_VSTTypes, DK_VSTTables, DK_VSTTableTools, DK_Vector;
 
 const
