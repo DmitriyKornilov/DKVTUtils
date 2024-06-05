@@ -11,7 +11,7 @@ uses
 const
   SCROLLBAR_WIDTH_DEFAULT = 16;
   SCROLLBAR_DELTA_DEFAULT = 20;
-  ITEM_SPACE_DEFAULT = 6;
+  //ITEM_SPACE_DEFAULT = 0;
 
 type
   TVSTListType = (ltString, ltCheck);
@@ -285,7 +285,12 @@ begin
   FParent:= AParent;
   FParent.OnChangeBounds:= @ChangeBounds;
   FHeight:= 0;
-  FSpace:= FParent.Scale96ToForm(ITEM_SPACE_DEFAULT);
+  case Screen.PixelsPerInch of
+    96 : FSpace:= 0;
+    120: FSpace:= 4;
+    144: FSpace:= 8;
+    168: FSpace:= 12;
+  end;
 
   FFont:= TFont.Create;
   if Assigned(AFont) then
@@ -336,7 +341,7 @@ begin
   for i:= 0 to High(FItems) do
   begin
     FTrees[i].Top:= FHeight;
-    FTrees[i].Height:= FItems[i].TotalHeight;
+    FTrees[i].Height:= FItems[i].TotalHeight + 6*Ord(Screen.PixelsPerInch>96);
     FHeight:= FHeight + FTrees[i].Height + FSpace;
   end;
   FPanel.Height:= FHeight;
