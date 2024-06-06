@@ -276,7 +276,11 @@ begin
 end;
 
 procedure TVSTParamList.ParentResize(Sender: TObject);
+var
+  i: Integer;
 begin
+  for i:= 0 to High(FItems) do
+    FTrees[i].Height:= FItems[i].TotalHeight;
   FScrollBox.HorzScrollBar.Visible:= False;
 end;
 
