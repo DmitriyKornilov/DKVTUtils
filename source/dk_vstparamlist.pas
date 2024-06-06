@@ -280,7 +280,11 @@ var
   i: Integer;
 begin
   for i:= 0 to High(FItems) do
+  begin
     FTrees[i].Height:= FItems[i].TotalHeight;
+    if Screen.PixelsPerInch>96 then
+      FTrees[i].Height:= FTrees[i].Height + 6;
+  end;
   FScrollBox.HorzScrollBar.Visible:= False;
 end;
 
