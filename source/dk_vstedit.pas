@@ -1437,32 +1437,9 @@ begin
 end;
 
 procedure TVSTEdit.SetColumnString(const AColIndex: Integer; const AValues: TStrVector);
-var
-  i: Integer;
-  V: TStrVector;
-  M: String;
 begin
   if not IsColIndexCorrect(AColIndex) then Exit;
-  if SEmpty(FColumnMinValues[AColIndex]) and SEmpty(FColumnMaxValues[AColIndex]) then
-    FDataValues[AColIndex]:= VCut(AValues)
-  else begin
-    V:= VCut(AValues);
-    if not SEmpty(FColumnMinValues[AColIndex]) then
-    begin
-      M:= FColumnMinValues[AColIndex];
-      for i:= 0 to High(V) do
-        if SCompare(V[i], M)<0 then
-          V[i]:= M;
-    end;
-    if not SEmpty(FColumnMaxValues[AColIndex]) then
-    begin
-      M:= FColumnMaxValues[AColIndex];
-      for i:= 0 to High(V) do
-        if SCompare(V[i], M)>0 then
-          V[i]:= M;
-    end;
-    FDataValues[AColIndex]:= VCut(V);
-  end;
+  FDataValues[AColIndex]:= VCut(AValues);
 end;
 
 procedure TVSTEdit.SetColumnDate(const AColIndex: Integer; const AValues: TDateVector);
@@ -1481,14 +1458,14 @@ begin
     begin
       M:= StrToDate(FColumnMinValues[AColIndex]);
       for i:= 0 to High(V) do
-        if CompareDate(V[i], M)<0 then
+        if (V[i]<>0) and (CompareDate(V[i], M)<0) then
           V[i]:= M;
     end;
     if not SEmpty(FColumnMaxValues[AColIndex]) then
     begin
       M:= StrToDate(FColumnMaxValues[AColIndex]);
       for i:= 0 to High(V) do
-        if CompareDate(V[i], M)>0 then
+        if (V[i]<>0) and (CompareDate(V[i], M)>0) then
           V[i]:= M;
     end;
     FDataValues[AColIndex]:= VFormatDateTime(FColumnFormatStrings[AColIndex], V)
@@ -1526,33 +1503,9 @@ begin
 end;
 
 procedure TVSTEdit.SetColumnColor(const AColIndex: Integer; const AValues: TColorVector);
-var
-  i: Integer;
-  V: TColorVector;
-  M: Integer;
 begin
   if not IsColIndexCorrect(AColIndex) then Exit;
-
-  if SEmpty(FColumnMinValues[AColIndex]) and SEmpty(FColumnMaxValues[AColIndex]) then
-    FDataValues[AColIndex]:= VIntToStr(AValues)
-  else begin
-    V:= VCut(AValues);
-    if not SEmpty(FColumnMinValues[AColIndex]) then
-    begin
-      M:= StrToInt(FColumnMinValues[AColIndex]);
-      for i:= 0 to High(V) do
-        if V[i]<M then
-          V[i]:= M;
-    end;
-    if not SEmpty(FColumnMaxValues[AColIndex]) then
-    begin
-      M:= StrToInt(FColumnMaxValues[AColIndex]);
-      for i:= 0 to High(V) do
-        if V[i]>M then
-          V[i]:= M;
-    end;
-    FDataValues[AColIndex]:= VIntToStr(V);
-  end;
+  FDataValues[AColIndex]:= VIntToStr(AValues);
 end;
 
 procedure TVSTEdit.SetColumnMinMaxInteger(const ACaption: String;
