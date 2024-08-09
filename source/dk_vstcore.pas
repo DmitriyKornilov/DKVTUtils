@@ -120,7 +120,7 @@ type
 
 
     procedure SetAllHeight(const AHeight: Integer);
-
+    function LastColumnIndex: Integer;
 
     procedure AutosizeColumnEnable(const ACaption: String);
     procedure AutosizeColumnEnable(const AColIndex: Integer);
@@ -633,6 +633,11 @@ procedure TVSTCoreTable.SetAllHeight(const AHeight: Integer);
 begin
   SetRowHeight(AHeight);
   SetHeaderHeight(AHeight);
+end;
+
+function TVSTCoreTable.LastColumnIndex: Integer;
+begin
+  Result:= High(FHeaderCaptions);
 end;
 
 procedure TVSTCoreTable.AutosizeColumnEnable(const ACaption: String);

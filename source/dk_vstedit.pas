@@ -67,10 +67,10 @@ type
     procedure SetColumnRowTitlesVisible(AValue: Boolean);
 
     procedure SetNewColumnSettings(const AColumnType: TVSTColumnType;
-                                   const AFormatString, AMinValue, AMaxValue: String;
+                                   const AFormatString: String;
                                    const ADecimalPlaces: Integer = 0);
     procedure AddValuesColumn(const AColumnType: TVSTColumnType;
-                        const ACaption, AFormatString, AMinValue, AMaxValue: String;
+                        const ACaption, AFormatString: String;
                         const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter;
@@ -192,6 +192,16 @@ type
     procedure SetColumnDate(const AColIndex: Integer; const AValues: TDateVector);
     procedure SetColumnTime(const AColIndex: Integer; const AValues: TTimeVector);
     procedure SetColumnColor(const AColIndex: Integer; const AValues: TColorVector);
+
+    procedure SetColumnMinMaxInteger(const ACaption: String; const AMinValue, AMaxValue: Integer);
+    procedure SetColumnMinMaxDouble(const ACaption: String; const AMinValue, AMaxValue: Double);
+    procedure SetColumnMinMaxDate(const ACaption: String; const AMinValue, AMaxValue: TDate);
+    procedure SetColumnMinMaxTime(const ACaption: String; const AMinValue, AMaxValue: TTime);
+
+    procedure SetColumnMinMaxInteger(const AColIndex: Integer; const AMinValue, AMaxValue: Integer);
+    procedure SetColumnMinMaxDouble(const AColIndex: Integer; const AMinValue, AMaxValue: Double);
+    procedure SetColumnMinMaxDate(const AColIndex: Integer; const AMinValue, AMaxValue: TDate);
+    procedure SetColumnMinMaxTime(const AColIndex: Integer; const AMinValue, AMaxValue: TTime);
 
     procedure UnSelect(const ASaveChanges: Boolean = True);
     procedure Select(const ARowIndex, AColIndex: Integer);
@@ -1184,7 +1194,7 @@ begin
   if IsColumnRowTitlesExists then Exit;
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTitleColumnIndex:= High(FHeaderCaptions);
-  SetNewColumnSettings(ctUndefined, EmptyStr, EmptyStr, EmptyStr);
+  SetNewColumnSettings(ctUndefined, EmptyStr);
   MAppend(FKeys, nil);
   MAppend(FPicks, nil);
 end;
@@ -1199,13 +1209,13 @@ begin
 end;
 
 procedure TVSTEdit.SetNewColumnSettings(const AColumnType: TVSTColumnType;
-  const AFormatString, AMinValue, AMaxValue: String;
-  const ADecimalPlaces: Integer = 0);
+                                        const AFormatString: String;
+                                        const ADecimalPlaces: Integer = 0);
 begin
   MAppend(FDataValues, nil);
   VAppend(FColumnFormatStrings, AFormatString);
-  VAppend(FColumnMinValues, AMinValue);
-  VAppend(FColumnMaxValues, AMaxValue);
+  VAppend(FColumnMinValues, EmptyStr);
+  VAppend(FColumnMaxValues, EmptyStr);
   VAppend(FDecimalPlaces, ADecimalPlaces);
   SetLength(FColumnTypes, Length(FHeaderCaptions));
   FColumnTypes[High(FColumnTypes)]:= AColumnType;
@@ -1225,13 +1235,10 @@ procedure TVSTEdit.AddColumnInteger(const ACaption: String;
                         const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-var
-  MinValue, MaxValue: String;
 begin
-  MinValue:= IntToStr(AMinValue);
-  MaxValue:= IntToStr(AMaxValue);
-  AddValuesColumn(ctInteger, ACaption, EmptyStr, MinValue, MaxValue,
+  AddValuesColumn(ctInteger, ACaption, EmptyStr,
                   AWidth, ACaptionAlignment, AValuesAlignment);
+  SetColumnMinMaxInteger(LastColumnIndex, AMinValue, AMaxValue);
 end;
 
 procedure TVSTEdit.AddColumnDouble(const ACaption: String;
@@ -1250,13 +1257,10 @@ procedure TVSTEdit.AddColumnDouble(const ACaption: String;
                         const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-var
-  MinValue, MaxValue: String;
 begin
-  MinValue:= FloatToStr(AMinValue);
-  MaxValue:= FloatToStr(AMaxValue);
-  AddValuesColumn(ctDouble, ACaption, EmptyStr, MinValue, MaxValue,
-                  AWidth, ACaptionAlignment, AValuesAlignment, nil, nil, ADecimalPlaces);
+  AddValuesColumn(ctDouble, ACaption, EmptyStr, AWidth,
+                  ACaptionAlignment, AValuesAlignment, nil, nil, ADecimalPlaces);
+  SetColumnMinMaxDouble(LastColumnIndex, AMinValue, AMaxValue);
 end;
 
 procedure TVSTEdit.AddColumnString(const ACaption: String;
@@ -1264,7 +1268,7 @@ procedure TVSTEdit.AddColumnString(const ACaption: String;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
 begin
-  AddValuesColumn(ctString, ACaption, EmptyStr, EmptyStr, EmptyStr,
+  AddValuesColumn(ctString, ACaption, EmptyStr,
                   AWidth, ACaptionAlignment, AValuesAlignment);
 end;
 
@@ -1282,13 +1286,10 @@ procedure TVSTEdit.AddColumnDate(const ACaption, AFormatString: String;
                         const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-var
-  MinValue, MaxValue: String;
 begin
-  MinValue:= DateToStr(AMinValue);
-  MaxValue:= DateToStr(AMaxValue);
-  AddValuesColumn(ctDate, ACaption, AFormatString, MinValue, MaxValue,
+  AddValuesColumn(ctDate, ACaption, AFormatString,
                   AWidth, ACaptionAlignment, AValuesAlignment);
+  SetColumnMinMaxDate(LastColumnIndex, AMinValue, AMaxValue);
 end;
 
 procedure TVSTEdit.AddColumnTime(const ACaption, AFormatString: String;
@@ -1305,13 +1306,10 @@ procedure TVSTEdit.AddColumnTime(const ACaption, AFormatString: String;
                         const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
-var
-  MinValue, MaxValue: String;
 begin
-  MinValue:= TimeToStr(AMinValue);
-  MaxValue:= TimeToStr(AMaxValue);
-  AddValuesColumn(ctTime, ACaption, AFormatString, MinValue, MaxValue,
+  AddValuesColumn(ctTime, ACaption, AFormatString,
                   AWidth, ACaptionAlignment, AValuesAlignment);
+  SetColumnMinMaxTime(LastColumnIndex, AMinValue, AMaxValue);
 end;
 
 procedure TVSTEdit.AddColumnKeyPick(const ACaption: String;
@@ -1320,7 +1318,7 @@ procedure TVSTEdit.AddColumnKeyPick(const ACaption: String;
                         const ACaptionAlignment: TAlignment = taCenter;
                         const AValuesAlignment: TAlignment = taCenter);
 begin
-  AddValuesColumn(ctKeyPick, ACaption, EmptyStr, EmptyStr, EmptyStr,
+  AddValuesColumn(ctKeyPick, ACaption, EmptyStr,
                   AWidth, ACaptionAlignment, AValuesAlignment, AKeys, APicks);
 end;
 
@@ -1328,8 +1326,7 @@ procedure TVSTEdit.AddColumnColor(const ACaption: String;
                              const AWidth: Integer = 100;
                              const ACaptionAlignment: TAlignment = taCenter);
 begin
-  AddValuesColumn(ctColor, ACaption, EmptyStr, EmptyStr, EmptyStr,
-                  AWidth, ACaptionAlignment);
+  AddValuesColumn(ctColor, ACaption, EmptyStr, AWidth, ACaptionAlignment);
 end;
 
 procedure TVSTEdit.SetColumnInteger(const ACaption: String; const AValues: TIntVector);
@@ -1558,8 +1555,76 @@ begin
   end;
 end;
 
+procedure TVSTEdit.SetColumnMinMaxInteger(const ACaption: String;
+                                          const AMinValue, AMaxValue: Integer);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  SetColumnMinMaxInteger(ColIndex, AMinValue, AMaxValue);
+end;
+
+procedure TVSTEdit.SetColumnMinMaxInteger(const AColIndex: Integer;
+                                          const AMinValue, AMaxValue: Integer);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FColumnMinValues[AColIndex]:= IntToStr(AMinValue);
+  FColumnMaxValues[AColIndex]:= IntToStr(AMaxValue);
+end;
+
+procedure TVSTEdit.SetColumnMinMaxDouble(const ACaption: String;
+                                         const AMinValue, AMaxValue: Double);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  SetColumnMinMaxDouble(ColIndex, AMinValue, AMaxValue);
+end;
+
+procedure TVSTEdit.SetColumnMinMaxDouble(const AColIndex: Integer;
+                                         const AMinValue, AMaxValue: Double);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FColumnMinValues[AColIndex]:= FloatToStr(AMinValue);
+  FColumnMaxValues[AColIndex]:= FloatToStr(AMaxValue);
+end;
+
+procedure TVSTEdit.SetColumnMinMaxDate(const ACaption: String;
+                                       const AMinValue, AMaxValue: TDate);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  SetColumnMinMaxDate(ColIndex, AMinValue, AMaxValue);
+end;
+
+procedure TVSTEdit.SetColumnMinMaxDate(const AColIndex: Integer;
+                                       const AMinValue, AMaxValue: TDate);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FColumnMinValues[AColIndex]:= DateToStr(AMinValue);
+  FColumnMaxValues[AColIndex]:= DateToStr(AMaxValue);
+end;
+
+procedure TVSTEdit.SetColumnMinMaxTime(const ACaption: String;
+                                       const AMinValue, AMaxValue: TTime);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  SetColumnMinMaxTime(ColIndex, AMinValue, AMaxValue);
+end;
+
+procedure TVSTEdit.SetColumnMinMaxTime(const AColIndex: Integer;
+                                       const AMinValue, AMaxValue: TTime);
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  FColumnMinValues[AColIndex]:= TimeToStr(AMinValue);
+  FColumnMaxValues[AColIndex]:= TimeToStr(AMaxValue);
+end;
+
 procedure TVSTEdit.AddValuesColumn(const AColumnType: TVSTColumnType;
-                             const ACaption, AFormatString, AMinValue, AMaxValue: String;
+                             const ACaption, AFormatString: String;
                              const AWidth: Integer;
                              const ACaptionAlignment: TAlignment;
                              const AValuesAlignment: TAlignment;
@@ -1569,7 +1634,7 @@ procedure TVSTEdit.AddValuesColumn(const AColumnType: TVSTColumnType;
 begin
   AddColumn(ACaption, AWidth, ACaptionAlignment);
   FTree.Header.Columns[High(FHeaderCaptions)].Alignment:= AValuesAlignment;
-  SetNewColumnSettings(AColumnType, AFormatString, AMinValue, AMaxValue, ADecimalPlaces);
+  SetNewColumnSettings(AColumnType, AFormatString, ADecimalPlaces);
   MAppend(FKeys, AKeys);
   MAppend(FPicks, APicks);
 end;
