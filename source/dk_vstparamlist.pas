@@ -289,18 +289,24 @@ begin
 end;
 
 constructor TVSTParamList.Create(const AParent: TPanel; const AFont: TFont = nil);
+var
+  PPI: Integer;
 begin
   inherited Create;
 
   FParent:= AParent;
   FParent.OnResize:= @ParentResize;
   FHeight:= 0;
-  case Screen.PixelsPerInch of
-    96 : FSpace:= 0;
-    120: FSpace:= 4;
-    144: FSpace:= 8;
-    168: FSpace:= 12;
-  end;
+
+  PPI:= Screen.PixelsPerInch;
+  if PPI<108 then
+    FSpace:= 0
+  else if PPI<132 then
+    FSpace:= 4
+  else if PPI<156 then
+    FSpace:= 8
+  else
+    FSpace:= 12;
 
   FFont:= TFont.Create;
   if Assigned(AFont) then
