@@ -1694,7 +1694,7 @@ end;
 
 procedure TVSTTable.ValuesClear;
 begin
-  UnselectNode;
+  UnSelect;
   inherited ValuesClear;
 end;
 
@@ -1706,7 +1706,8 @@ end;
 
 procedure TVSTTable.UnSelect;
 begin
-  UnselectNode;
+  if IsSelected then
+    UnselectNode;
 end;
 
 end.
