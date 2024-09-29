@@ -86,6 +86,7 @@ type
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     procedure ValuesClear; override;
+    procedure Draw; override;
 
     procedure UnSelect;
     procedure Select(const AIndex: Integer);
@@ -1695,6 +1696,12 @@ procedure TVSTTable.ValuesClear;
 begin
   UnselectNode;
   inherited ValuesClear;
+end;
+
+procedure TVSTTable.Draw;
+begin
+  UnSelect;
+  inherited Draw;
 end;
 
 procedure TVSTTable.UnSelect;
