@@ -695,7 +695,7 @@ function TVSTCustomSimpleTable.GetTotalHeight: Integer;
 var
   RowCount: Integer;
 begin
-  RowCount:= MMaxLength(FDataValues);
+  RowCount:= Count;
   if RowCount=0 then
     RowCount:= 1;
   if (MaxAutoHeightRowCount>0) and (RowCount>MaxAutoHeightRowCount) then
