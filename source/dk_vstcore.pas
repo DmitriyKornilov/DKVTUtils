@@ -127,6 +127,11 @@ type
     procedure AutosizeColumnEnableLast;
     procedure AutosizeColumnDisable;
 
+    procedure SetColumnWidth(const AColIndex, AWidth{Scale96}: Integer);
+    procedure SetColumnWidth(const ACaption: String; const AWidth{Scale96}: Integer);
+    function GetColumnWidth(const AColIndex: Integer): Integer; {Scale96}
+    function GetColumnWidth(const ACaption: String): Integer; {Scale96}
+
     procedure RenameColumn(const AColIndex: Integer; const ANewName: String);
     procedure RenameColumn(const AOldName, ANewName: String);
 
@@ -665,6 +670,40 @@ begin
   FAutosizeColumnIndex:= -1;
   FTree.Header.Options:= FTree.Header.Options - [hoAutoResize];
   SetColumnWidths;
+end;
+
+procedure TVSTCoreTable.SetColumnWidth(const AColIndex, AWidth: Integer);
+var
+  W: Integer;
+begin
+  if not IsColIndexCorrect(AColIndex) then Exit;
+
+  W:= Tree.Scale96ToScreen(AWidth);
+  FColumnWidths[AColIndex]:= W;
+  Tree.Header.Columns[AColIndex].Width:= W;
+end;
+
+procedure TVSTCoreTable.SetColumnWidth(const ACaption: String; const AWidth: Integer);
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  SetColumnWidth(ColIndex, AWidth);
+end;
+
+function TVSTCoreTable.GetColumnWidth(const AColIndex: Integer): Integer;
+begin
+  Result:= 0;
+  if not IsColIndexCorrect(AColIndex) then Exit;
+  Result:= Tree.ScaleScreenTo96(Tree.Header.Columns[AColIndex].Width);
+end;
+
+function TVSTCoreTable.GetColumnWidth(const ACaption: String): Integer;
+var
+  ColIndex: Integer;
+begin
+  ColIndex:= VIndexOf(FHeaderCaptions, ACaption);
+  Result:= GetColumnWidth(ColIndex);
 end;
 
 procedure TVSTCoreTable.RenameColumn(const AColIndex: Integer; const ANewName: String);
