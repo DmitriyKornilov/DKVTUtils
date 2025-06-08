@@ -37,7 +37,6 @@ type
     function GetText: String;
 
     procedure ButtonClick(Sender: TObject);
-    procedure MouseLeave(Sender: TObject);
     procedure DropDownFormDeactivate(Sender: TObject);
     procedure AfterRenderBCButton(Sender: TObject; const {%H-}ABGRA: TBGRABitmap;
                                   {%H-}AState: TBCButtonState; {%H-}ARect: TRect);
@@ -79,7 +78,6 @@ begin
   FForm:= TVSTDropDownForm.Create(nil);
   FForm.SetButton(FButton);
   FForm.OnDeactivate:= @DropDownFormDeactivate;
-  FForm.VT.OnMouseLeave:= @MouseLeave;
   DropDownCount:= DROPDOWN_COUNT_DEFAULT;
 end;
 
@@ -108,10 +106,6 @@ begin
   FForm.Left:= P.X;
   FForm.Top:= P.Y;
   FForm.Show;
-
-  P.X:= Mouse.CursorPos.X;
-  P.Y:= P.Y + (FForm.List.RowHeight div 2);
-  Mouse.CursorPos:= P;
 end;
 
 procedure TVSTDropDown.Collapse;
@@ -280,11 +274,6 @@ begin
   FButton.Down:= not FButton.Down;
   if not FButton.Down then Exit;
   Expand;
-end;
-
-procedure TVSTDropDown.MouseLeave(Sender: TObject);
-begin
-  Collapse;
 end;
 
 procedure TVSTDropDown.DropDownFormDeactivate(Sender: TObject);

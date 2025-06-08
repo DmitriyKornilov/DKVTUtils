@@ -24,11 +24,10 @@ type
   private
     Button: TBCButton;
     Items: TStrVector;
-
+    List: TVSTStringList;
     OnChange: TVSTEvent;
     procedure ItemChoose;
   public
-    List: TVSTStringList;
     procedure SetFormHide;
     procedure SetItems(const AItems: TStrVector);
     procedure SetButton(const AButton: TBCButton);
