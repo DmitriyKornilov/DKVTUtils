@@ -494,6 +494,7 @@ begin
   FHeaderBGColor:= FValuesBGColor;
   FSelectedBGColor:= DefaultSelectionBGColor;
 
+  FCanSelect:= False;
   FCanUnselect:= True;
 
   FTree.HintMode:= hmTooltip;
