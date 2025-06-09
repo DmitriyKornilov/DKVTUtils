@@ -37,7 +37,7 @@ type
     function GetText: String;
 
     procedure ButtonClick(Sender: TObject);
-    procedure DropDownFormDeactivate(Sender: TObject);
+    procedure DoCollapse(Sender: TObject);
     procedure AfterRenderBCButton(Sender: TObject; const {%H-}ABGRA: TBGRABitmap;
                                   {%H-}AState: TBCButtonState; {%H-}ARect: TRect);
   public
@@ -77,7 +77,7 @@ begin
 
   FForm:= TVSTDropDownForm.Create(nil);
   FForm.SetButton(FButton);
-  FForm.OnDeactivate:= @DropDownFormDeactivate;
+  FForm.OnDeactivate:= @DoCollapse;
   DropDownCount:= DROPDOWN_COUNT_DEFAULT;
 end;
 
@@ -276,7 +276,7 @@ begin
   Expand;
 end;
 
-procedure TVSTDropDown.DropDownFormDeactivate(Sender: TObject);
+procedure TVSTDropDown.DoCollapse(Sender: TObject);
 begin
   Collapse;
 end;
