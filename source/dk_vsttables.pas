@@ -172,8 +172,6 @@ type
   { TVSTCoreCategoryTable }
 
   TVSTCoreCategoryTable = class(TVSTCoreTable)
-  private
-    procedure SetCategoryFont(AValue: TFont);
   protected
     FDataValues: TStrMatrix3D;
     FSelected: TBoolMatrix;
@@ -185,7 +183,7 @@ type
 
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
     function GetIsSelected: Boolean;
-
+    procedure SetCategoryFont(AValue: TFont);
     procedure CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex); override;
   public
     constructor Create(const ATree: TVirtualStringTree;
@@ -217,26 +215,9 @@ type
 
   TVSTCustomCategoryTable = class(TVSTCoreCategoryTable)
   protected
-    FCategoryValues: TStrMatrix;
-
-    procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
-                      Column: TColumnIndex; {%H-}TextType: TVSTTextType;
-                      var CellText: String);
-  public
-    constructor Create(const ATree: TVirtualStringTree;
-                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
-                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-
-    procedure SetCategories(const AValues: TStrMatrix);
-    procedure ValuesClear; override;
-    procedure Draw;
-  end;
-
-  { TVSTCustomSpanCategoryTable }
-
-  TVSTCustomSpanCategoryTable = class(TVSTCoreCategoryTable)
-  protected
-    FCategoryValues: TStrVector;
+    FVCategoryValues: TStrVector;
+    FMCategoryValues: TStrMatrix;
+    FOneCategoryColumn: Boolean;
 
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; {%H-}TextType: TVSTTextType;
@@ -247,13 +228,15 @@ type
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 
     procedure SetCategories(const AValues: TStrVector);
+    procedure SetCategories(const AValues: TStrMatrix);
+
     procedure ValuesClear; override;
     procedure Draw;
   end;
 
   { TVSTCategoryRadioButtonTable }
 
-  TVSTCategoryRadioButtonTable = class(TVSTCustomSpanCategoryTable)
+  TVSTCategoryRadioButtonTable = class(TVSTCustomCategoryTable)
   protected
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
       Node: PVirtualNode; var {%H-}InitialStates: TVirtualNodeInitStates);
@@ -281,7 +264,7 @@ type
 
   { TVSTCategoryCheckTable }
 
-  TVSTCategoryCheckTable = class(TVSTCustomSpanCategoryTable)
+  TVSTCategoryCheckTable = class(TVSTCustomCategoryTable)
   private
     function GetSelected: TBoolMatrix;
     procedure SetSelected(AValue: TBoolMatrix);
@@ -782,94 +765,6 @@ begin
   MIndexOf(FSelected, True, AIndex1, AIndex2);
 end;
 
-{ TVSTCustomSpanCategoryTable }
-
-procedure TVSTCustomSpanCategoryTable.GetText(Sender: TBaseVirtualTree;
-  Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
-  var CellText: String);
-var
-  i, j, k: Integer;
-begin
-  CellText:= EmptyStr;
-  if FTree.GetNodeLevel(Node)=0 then
-  begin
-    if Column=0 then
-    begin
-      i:= Node^.Index;
-      CellText:= FCategoryValues[i];
-    end;
-  end
-  else begin
-    if Column>=0 then
-    begin
-      i:= Column;
-      j:= (Node^.Parent)^.Index;
-      k:= Node^.Index;
-      CellText:= FDataValues[i,j,k];
-    end;
-  end;
-end;
-
-constructor TVSTCustomSpanCategoryTable.Create(const ATree: TVirtualStringTree;
-                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
-                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-begin
-  inherited Create(ATree, AHeaderHeight, ARowHeight);
-  FTree.TreeOptions.AutoOptions:= FTree.TreeOptions.AutoOptions + [toAutoSpanColumns];
-  FTree.OnGetText:= @GetText;
-end;
-
-procedure TVSTCustomSpanCategoryTable.SetCategories(const AValues: TStrVector);
-begin
-  FCategoryValues:= VCut(AValues);
-end;
-
-procedure TVSTCustomSpanCategoryTable.ValuesClear;
-begin
-  FCategoryValues:= nil;
-  inherited ValuesClear;
-end;
-
-procedure TVSTCustomSpanCategoryTable.Draw;
-var
-  ColIndex, CategoryIndex, MaxLength: Integer;
-begin
-  FTree.Clear;
-  if VIsNil(FHeaderCaptions) then Exit;
-  if MIsNil(FDataValues) then Exit;
-
-  MaxLength:= 0;
-  for ColIndex:= 0 to High(FHeaderCaptions) do
-  begin
-    if Length(FDataValues[ColIndex])>MaxLength then
-      MaxLength:= Length(FDataValues[ColIndex]);
-  end;
-  for ColIndex:= 0 to High(FHeaderCaptions) do
-    MReDim(FDataValues[ColIndex], MaxLength);
-
-  VReDim(FCategoryValues, MaxLength, EmptyStr);
-
-  for CategoryIndex:= 0 to High(FCategoryValues) do
-  begin
-    MaxLength:= 0;
-    for ColIndex:= 0 to High(FHeaderCaptions) do
-    begin
-      if Length(FDataValues[ColIndex, CategoryIndex])>MaxLength then
-        MaxLength:= Length(FDataValues[ColIndex, CategoryIndex]);
-    end;
-    for ColIndex:= 0 to High(FHeaderCaptions) do
-      VReDim(FDataValues[ColIndex, CategoryIndex], MaxLength);
-  end;
-
-  MReDim(FSelected, Length(FCategoryValues));
-  for CategoryIndex:= 0 to High(FCategoryValues) do
-    VReDim(FSelected[CategoryIndex], Length(FDataValues[0,CategoryIndex]));
-
-  VSTLoad(FTree, FDataValues[0], False);
-
-  SetColumnWidths;
-end;
-
 { TVSTCheckTable }
 
 function TVSTCheckTable.GetIsAllUnchecked: Boolean;
@@ -1194,7 +1089,6 @@ begin
   FCanSelect:= True;
   FSelectedBGColor:= FTree.Color;
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
-  //FTree.TreeOptions.AutoOptions:= FTree.TreeOptions.AutoOptions + [toAutoSpanColumns];
   FTree.LineStyle:= lsSolid;
 end;
 
@@ -1290,10 +1184,15 @@ begin
   CellText:= EmptyStr;
   if FTree.GetNodeLevel(Node)=0 then
   begin
-    if Column>=0 then
+    i:= Node^.Index;
+    if FOneCategoryColumn then
     begin
-      i:= Node^.Index;
-      CellText:= FCategoryValues[i, Column];
+      if Column=0 then
+        CellText:= FVCategoryValues[i];
+    end
+    else begin
+      if Column>=0 then
+        CellText:= FMCategoryValues[i, Column];
     end;
   end
   else begin
@@ -1311,41 +1210,53 @@ constructor TVSTCustomCategoryTable.Create(const ATree: TVirtualStringTree;
   const AHeaderHeight: Integer; const ARowHeight: Integer);
 begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
+  FOneCategoryColumn:= True;
   FTree.OnGetText:= @GetText;
+end;
+
+procedure TVSTCustomCategoryTable.SetCategories(const AValues: TStrVector);
+begin
+  FVCategoryValues:= VCut(AValues);
+  FOneCategoryColumn:= True;
 end;
 
 procedure TVSTCustomCategoryTable.SetCategories(const AValues: TStrMatrix);
 begin
-  FCategoryValues:= MCut(AValues);
+  FMCategoryValues:= MCut(AValues);
+  FOneCategoryColumn:= False;
 end;
 
 procedure TVSTCustomCategoryTable.ValuesClear;
 begin
-  FCategoryValues:= nil;
+  FVCategoryValues:= nil;
+  FMCategoryValues:= nil;
   inherited ValuesClear;
 end;
 
 procedure TVSTCustomCategoryTable.Draw;
 var
-  ColIndex, CategoryIndex, MaxLength: Integer;
+  ColIndex, CategoryIndex, CategoryCount, MaxLength: Integer;
 begin
   FTree.Clear;
   if VIsNil(FHeaderCaptions) then Exit;
   if MIsNil(FDataValues) then Exit;
 
-  MaxLength:= 0;
+  CategoryCount:= 0;
   for ColIndex:= 0 to High(FHeaderCaptions) do
   begin
-    if Length(FDataValues[ColIndex])>MaxLength then
-      MaxLength:= Length(FDataValues[ColIndex]);
+    if Length(FDataValues[ColIndex])>CategoryCount then
+      CategoryCount:= Length(FDataValues[ColIndex]);
   end;
 
   for ColIndex:= 0 to High(FHeaderCaptions) do
-    MReDim(FDataValues[ColIndex], MaxLength);
+    MReDim(FDataValues[ColIndex], CategoryCount);
 
-  MReDim(FCategoryValues, MaxLength, Length(FHeaderCaptions), EmptyStr);
+  if FOneCategoryColumn then
+    VReDim(FVCategoryValues, CategoryCount, EmptyStr)
+  else
+    MReDim(FMCategoryValues, CategoryCount, Length(FHeaderCaptions), EmptyStr);
 
-  for CategoryIndex:= 0 to High(FCategoryValues) do
+  for CategoryIndex:= 0 to CategoryCount-1 do
   begin
     MaxLength:= 0;
     for ColIndex:= 0 to High(FHeaderCaptions) do
@@ -1357,8 +1268,8 @@ begin
       VReDim(FDataValues[ColIndex, CategoryIndex], MaxLength);
   end;
 
-  MReDim(FSelected, Length(FCategoryValues));
-  for CategoryIndex:= 0 to High(FCategoryValues) do
+  MReDim(FSelected, CategoryCount);
+  for CategoryIndex:= 0 to CategoryCount-1 do
     VReDim(FSelected[CategoryIndex], Length(FDataValues[0,CategoryIndex]));
 
   VSTLoad(FTree, FDataValues[0], False);

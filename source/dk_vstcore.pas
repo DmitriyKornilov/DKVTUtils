@@ -29,6 +29,7 @@ type
 
     FCanSelect: Boolean;
     FCanUnselect: Boolean;
+    FSpan: Boolean;
 
     FValuesBGColor: TColor;
     FHeaderBGColor: TColor;
@@ -64,7 +65,7 @@ type
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
     procedure SetFixedColumnsCount(AValue: Integer);
-
+    procedure SetSpan(AValue: Boolean);
     procedure SetRowHeight(const AHeight: Integer);
     procedure SetHeaderHeight(const AHeight: Integer);
     procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
@@ -99,8 +100,6 @@ type
     function CellRectangle({%H-}Column: TColumnIndex; ACellRect: TRect): TRect; virtual;
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
-
-
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -160,6 +159,7 @@ type
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
     property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
 
+    property Span: Boolean read FSpan write SetSpan;
     property Tree: TVirtualStringTree read FTree;
 
     property OnSelect: TVSTEvent read FOnSelect write FOnSelect;
@@ -226,6 +226,17 @@ begin
     FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options + [coFixed];
   for i:= FFixedColumnsCount to High(FHeaderCaptions) do
     FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options - [coFixed];
+  FTree.Refresh;
+end;
+
+procedure TVSTCoreTable.SetSpan(AValue: Boolean);
+begin
+  if FSpan=AValue then Exit;
+  FSpan:=AValue;
+  if FSpan then
+    FTree.TreeOptions.AutoOptions:= FTree.TreeOptions.AutoOptions + [toAutoSpanColumns]
+  else
+    FTree.TreeOptions.AutoOptions:= FTree.TreeOptions.AutoOptions - [toAutoSpanColumns];
   FTree.Refresh;
 end;
 
@@ -500,6 +511,7 @@ begin
 
   FCanSelect:= False;
   FCanUnselect:= True;
+  Span:= False;
 
   FTree.HintMode:= hmTooltip;
   FTree.ShowHint:= True;
