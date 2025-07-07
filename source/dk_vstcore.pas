@@ -50,8 +50,9 @@ type
     function NodeFromIndex(const AIndex: Integer): PVirtualNode;
     function NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
 
-    procedure SetCanSelect(AValue: Boolean); virtual;
     procedure HeaderClear; virtual;
+
+    procedure SetCanSelect(AValue: Boolean); virtual;
     procedure SetHeaderVisible(AValue: Boolean);
     procedure SetColumnWidths;
     procedure SetGridLinesVisible(AValue: Boolean);
@@ -63,8 +64,13 @@ type
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
     procedure SetFixedColumnsCount(AValue: Integer);
-    function GetVisible: Boolean;
+
+    procedure SetRowHeight(const AHeight: Integer);
+    procedure SetHeaderHeight(const AHeight: Integer);
+    procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
+
     procedure SetVisible(AValue: Boolean);
+    function GetVisible: Boolean;
 
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var {%H-}PaintInfo: THeaderPaintInfo;
@@ -94,9 +100,7 @@ type
 
     function IsColIndexCorrect(const AIndex: Integer): Boolean;
 
-    procedure SetRowHeight(const AHeight: Integer);
-    procedure SetHeaderHeight(const AHeight: Integer);
-    procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
+
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
