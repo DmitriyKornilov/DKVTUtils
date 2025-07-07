@@ -43,7 +43,7 @@ type
 
   { TVSTCategoryList }
 
-  TVSTCategoryList = class(TVSTCategoryRadioButtonTable)
+  TVSTCategoryList = class(TVSTCategoryRadioTable)
   protected
     procedure DoUpdate(const ACategories: TStrVector;
                        const AValues: TStrMatrix;

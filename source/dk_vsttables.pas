@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, fpstypes,
 
-  DK_VSTCore, DK_VSTTypes, DK_Vector, DK_Matrix, DK_Const,
+  DK_VSTCore, DK_VSTTypes, DK_Vector, DK_Matrix, DK_Const, DK_Color,
   DK_SheetExporter, DK_SheetWriter;
 
 type
@@ -234,10 +234,11 @@ type
     procedure Draw;
   end;
 
-  { TVSTCategoryRadioButtonTable }
+  { TVSTCategoryRadioTable }
 
-  TVSTCategoryRadioButtonTable = class(TVSTCustomCategoryTable)
+  TVSTCategoryRadioTable = class(TVSTCustomCategoryTable)
   protected
+    FRadioEnable: Boolean;
     FRadioVisible: Boolean;
 
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
@@ -246,6 +247,7 @@ type
                         {%H-}Shift: TShiftState; X, Y: Integer);
 
     procedure SetCanSelect(AValue: Boolean); override;
+    procedure SetRadioEnable(AValue: Boolean);
     procedure SetRadioVisible(AValue: Boolean);
 
     procedure SelectNode(Node: PVirtualNode);
@@ -266,6 +268,7 @@ type
     property SelectedIndex1: Integer read GetSelectedIndex1;
     property SelectedIndex2: Integer read GetSelectedIndex2;
 
+    property RadioEnable: Boolean read FRadioEnable write SetRadioEnable;
     property RadioVisible: Boolean read FRadioVisible write SetRadioVisible;
   end;
 
@@ -278,6 +281,7 @@ type
     //FStopSelectEventWhileCheckAll=False - OnSelect вызывается на изменение каждой позиции (default)
     FStopSelectEventWhileCheckAll: Boolean;
     FCanDoSelectEvent: Boolean;
+    FCheckEnable: Boolean;
     FCheckVisible: Boolean;
 
     procedure InitNode(Sender: TBaseVirtualTree; {%H-}ParentNode,
@@ -288,6 +292,7 @@ type
       var NewState: TCheckState; var {%H-}Allowed: Boolean);
 
     procedure SetCanSelect(AValue: Boolean); override;
+    procedure SetCheckEnable(AValue: Boolean);
     procedure SetCheckVisible(AValue: Boolean);
 
     procedure SetSelected(AValue: TBoolMatrix);
@@ -324,6 +329,7 @@ type
     property Checked[AIndex1, AIndex2: Integer]: Boolean read GetChecked write SetChecked;
     property Selected: TBoolMatrix read GetSelected write SetSelected;
 
+    property CheckEnable: Boolean read FCheckEnable write SetCheckEnable;
     property CheckVisible: Boolean read FCheckVisible write SetCheckVisible;
 
     property StopSelectEventWhileCheckAll: Boolean read FStopSelectEventWhileCheckAll write FStopSelectEventWhileCheckAll;
@@ -346,11 +352,23 @@ begin
   Result:= MCut(FSelected);
 end;
 
+procedure TVSTCategoryCheckTable.SetCheckEnable(AValue: Boolean);
+begin
+  if FCheckEnable=AValue then Exit;
+  FCheckEnable:= AValue;
+  CanSelect:= CheckEnable;
+  FTree.ReinitNode(FTree.RootNode, True);
+  FTree.Refresh;
+end;
+
 procedure TVSTCategoryCheckTable.SetCheckVisible(AValue: Boolean);
 begin
   if FCheckVisible=AValue then Exit;
   FCheckVisible:= AValue;
-  CanSelect:= CheckVisible;
+  if FCheckVisible then
+    SelectedBGColor:= FTree.Color
+  else
+    SelectedBGColor:= DefaultSelectionBGColor;
   FTree.ReinitNode(FTree.RootNode, True);
   FTree.Refresh;
 end;
@@ -374,7 +392,7 @@ end;
 procedure TVSTCategoryCheckTable.InitNode(Sender: TBaseVirtualTree; ParentNode,
   Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
 begin
-  if CheckVisible then
+  if CheckEnable and CheckVisible then
   begin
     if FTree.GetNodeLevel(Node)=0 then
     begin
@@ -539,6 +557,7 @@ begin
 
   FStopSelectEventWhileCheckAll:= False;
   FCanDoSelectEvent:= True;
+  FCheckEnable:= True;
   FCheckVisible:= True;
   FTree.OnMouseDown:= @MouseDown;
   FTree.OnInitNode:= @InitNode;
@@ -666,9 +685,9 @@ begin
   CheckCategory(Node, AChecked);
 end;
 
-{ TVSTCategoryRadioButtonTable }
+{ TVSTCategoryRadioTable }
 
-function TVSTCategoryRadioButtonTable.GetSelectedIndex1: Integer;
+function TVSTCategoryRadioTable.GetSelectedIndex1: Integer;
 var
   Ind1, Ind2: Integer;
 begin
@@ -676,7 +695,7 @@ begin
   Result:= Ind1;
 end;
 
-function TVSTCategoryRadioButtonTable.GetSelectedIndex2: Integer;
+function TVSTCategoryRadioTable.GetSelectedIndex2: Integer;
 var
   Ind1, Ind2: Integer;
 begin
@@ -684,10 +703,10 @@ begin
   Result:= Ind2;
 end;
 
-procedure TVSTCategoryRadioButtonTable.InitNode(Sender: TBaseVirtualTree;
+procedure TVSTCategoryRadioTable.InitNode(Sender: TBaseVirtualTree;
   ParentNode, Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
 begin
-  if RadioVisible then
+  if RadioEnable and RadioVisible then
   begin
     if FTree.GetNodeLevel(Node)=1 then
     begin
@@ -698,7 +717,7 @@ begin
   else Node^.CheckType:= ctNone;
 end;
 
-procedure TVSTCategoryRadioButtonTable.MouseDown(Sender: TObject;
+procedure TVSTCategoryRadioTable.MouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
   Node: PVirtualNode;
@@ -720,22 +739,34 @@ begin
   end;
 end;
 
-procedure TVSTCategoryRadioButtonTable.SetCanSelect(AValue: Boolean);
+procedure TVSTCategoryRadioTable.SetCanSelect(AValue: Boolean);
 begin
   if not AValue then UnselectNode;
   inherited SetCanSelect(AValue);
 end;
 
-procedure TVSTCategoryRadioButtonTable.SetRadioVisible(AValue: Boolean);
+procedure TVSTCategoryRadioTable.SetRadioEnable(AValue: Boolean);
 begin
-  if FRadioVisible=AValue then Exit;
-  FRadioVisible:= AValue;
-  CanSelect:= RadioVisible;
+  if FRadioEnable=AValue then Exit;
+  FRadioEnable:= AValue;
+  CanSelect:= RadioEnable;
   FTree.ReinitNode(FTree.RootNode, True);
   FTree.Refresh;
 end;
 
-procedure TVSTCategoryRadioButtonTable.SelectNode(Node: PVirtualNode);
+procedure TVSTCategoryRadioTable.SetRadioVisible(AValue: Boolean);
+begin
+  if FRadioVisible=AValue then Exit;
+  FRadioVisible:= AValue;
+  if FRadioVisible then
+    SelectedBGColor:= FTree.Color
+  else
+    SelectedBGColor:= DefaultSelectionBGColor;
+  FTree.ReinitNode(FTree.RootNode, True);
+  FTree.Refresh;
+end;
+
+procedure TVSTCategoryRadioTable.SelectNode(Node: PVirtualNode);
 var
   SelectedNode: PVirtualNode;
   i, j: Integer;
@@ -763,35 +794,36 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCategoryRadioButtonTable.UnselectNode;
+procedure TVSTCategoryRadioTable.UnselectNode;
 begin
   SelectNode(nil);
 end;
 
-constructor TVSTCategoryRadioButtonTable.Create(const ATree: TVirtualStringTree;
+constructor TVSTCategoryRadioTable.Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
+  FRadioEnable:= True;
   FRadioVisible:= True;
   FTree.OnInitNode:= @InitNode;
   FTree.OnMouseDown:= @MouseDown;
 end;
 
-procedure TVSTCategoryRadioButtonTable.Draw;
+procedure TVSTCategoryRadioTable.Draw;
 begin
   UnselectNode;
   inherited Draw;
   FTree.Refresh;
 end;
 
-procedure TVSTCategoryRadioButtonTable.ValuesClear;
+procedure TVSTCategoryRadioTable.ValuesClear;
 begin
   UnselectNode;
   inherited ValuesClear;
 end;
 
-procedure TVSTCategoryRadioButtonTable.Select(const AIndex1, AIndex2: Integer);
+procedure TVSTCategoryRadioTable.Select(const AIndex1, AIndex2: Integer);
 var
   Node: PVirtualNode;
 begin
@@ -799,7 +831,7 @@ begin
   if Assigned(Node) then SelectNode(Node);
 end;
 
-procedure TVSTCategoryRadioButtonTable.SelectedIndexes(out AIndex1, AIndex2: Integer);
+procedure TVSTCategoryRadioTable.SelectedIndexes(out AIndex1, AIndex2: Integer);
 begin
   MIndexOf(FSelected, True, AIndex1, AIndex2);
 end;
