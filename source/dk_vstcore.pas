@@ -73,6 +73,7 @@ type
     procedure SetVisible(AValue: Boolean);
     function GetVisible: Boolean;
 
+    procedure AfterColumnWidthTracking(Sender: TVTHeader; Column: TColumnIndex);
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
                             var {%H-}PaintInfo: THeaderPaintInfo;
                             var Elements: THeaderPaintElements);
@@ -243,6 +244,11 @@ end;
 function TVSTCoreTable.GetVisible: Boolean;
 begin
   Result:= FTree.Visible;
+end;
+
+procedure TVSTCoreTable.AfterColumnWidthTracking(Sender: TVTHeader; Column: TColumnIndex);
+begin
+  FColumnWidths[Column]:= Sender.Columns[Column].Width;
 end;
 
 procedure TVSTCoreTable.SetVisible(AValue: Boolean);
@@ -531,6 +537,7 @@ begin
   FTree.OnAdvancedHeaderDraw:= @AdvancedHeaderDraw;
   FTree.OnBeforeCellPaint:= @BeforeCellPaint;
   FTree.OnDrawText:= @DrawText;
+  FTree.OnAfterColumnWidthTracking:= @AfterColumnWidthTracking;
 end;
 
 destructor TVSTCoreTable.Destroy;
