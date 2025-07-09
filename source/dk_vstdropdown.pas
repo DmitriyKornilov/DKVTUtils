@@ -232,6 +232,7 @@ end;
 
 procedure TVSTDropDown.SetItems(const AValue: TStrVector);
 begin
+  FButton.Tag:= -1;
   FItems:= VCut(AValue);
   FForm.SetItems(FItems);
 end;
