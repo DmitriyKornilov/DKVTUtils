@@ -156,7 +156,7 @@ begin
     CheckAll(True)
   else if (ACheckedCount>=0) and (ACheckedCount<=Length(AItems)) then
     for i:=0 to ACheckedCount-1 do
-      Check(i);
+      Check(i, True);
 
   OnSelect:= AOnSelect;
 end;
