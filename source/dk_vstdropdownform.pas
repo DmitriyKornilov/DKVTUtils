@@ -79,7 +79,7 @@ end;
 
 procedure TVSTDropDownForm.ItemChoose;
 begin
-  if List.IsSelected then
+  if List.IsSelected and (Button.Tag<>List.SelectedIndex) then
   begin
     Button.Tag:= List.SelectedIndex;
     SetDropDownText;
