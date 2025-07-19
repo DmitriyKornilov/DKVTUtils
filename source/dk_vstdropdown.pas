@@ -224,6 +224,7 @@ end;
 procedure TVSTDropDown.SetItemIndex(const AValue: Integer);
 begin
   if AValue=FButton.Tag then Exit;
+  if VIsNil(FItems) and (AValue<>-1) then Exit;
   FButton.Tag:= AValue;
   FForm.SetDropDownText;
   if Assigned(FOnChange) then
