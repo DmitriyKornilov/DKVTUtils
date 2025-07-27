@@ -80,7 +80,7 @@ type
 
 implementation
 
-procedure SetSimpleListParams(const AList: TVSTCustomTable; const ACaption: String);
+procedure SetSimpleListParams(const AList: TVSTCoreTable; const ACaption: String);
 begin
   AList.RowHeight:= AList.Tree.Scale96ToScreen(TOOLS_ROW_HEIGHT_DEFAULT);
   AList.Tree.BorderStyle:= bsNone;

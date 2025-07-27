@@ -17,43 +17,29 @@ type
   TVSTCoreTable = class (TVSTCore)
   protected
     FDataValues: TStrMatrix;
-    FAutoHeight: Boolean;
-    FMaxAutoHeightRowCount: Integer;
-    function GetTotalHeight: Integer;
-    function GetRowCount: Integer;
-  public
-    constructor Create(const ATree: TVirtualStringTree;
-                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
-                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    procedure Draw; virtual;
-    procedure ValuesClear; override;
-    property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
-    property TotalHeight: Integer read GetTotalHeight;
-    property MaxAutoHeightRowCount: Integer read FMaxAutoHeightRowCount write FMaxAutoHeightRowCount;
-    property RowCount: Integer read GetRowCount;
-  end;
-
-  { TVSTCustomTable }
-
-  TVSTCustomTable = class(TVSTCoreTable)
-  protected
     FSelected: TBoolVector;
 
+    FAutoHeight: Boolean;
+    FMaxAutoHeightRowCount: Integer;
+
+    function GetTotalHeight: Integer;
+    function GetRowCount: Integer;
     function GetIsSelected: Boolean;
-    function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
 
     procedure HeaderClear; override;
+    function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
+    function IsIndexCorrect(const AIndex: Integer): Boolean;
 
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; {%H-}TextType: TVSTTextType;
                       var CellText: String);
-    function IsIndexCorrect(const AIndex: Integer): Boolean;
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
+
+    procedure Draw; virtual;
     procedure ValuesClear; override;
-    procedure Draw; override;
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); override;
@@ -64,12 +50,16 @@ type
 
     procedure Show(const AIndex: Integer);
 
+    property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
+    property TotalHeight: Integer read GetTotalHeight;
+    property MaxAutoHeightRowCount: Integer read FMaxAutoHeightRowCount write FMaxAutoHeightRowCount;
+    property RowCount: Integer read GetRowCount;
     property IsSelected: Boolean read GetIsSelected;
   end;
 
   { TVSTTable }
 
-  TVSTTable = class(TVSTCustomTable)
+  TVSTTable = class(TVSTCoreTable)
   protected
     FAutosizeRowHeights: Boolean;
     FOnDelKeyDown: TVSTEvent;
@@ -121,7 +111,7 @@ type
 
   { TVSTCheckTable }
 
-  TVSTCheckTable = class(TVSTCustomTable)
+  TVSTCheckTable = class(TVSTCoreTable)
   protected
     FOnCheck: TVSTRowCheckEvent;
     FMaxCheckedCount: Integer;
@@ -203,316 +193,11 @@ begin
   FAutoHeight:= False;
   FMaxAutoHeightRowCount:= 0;
   FTree.Indent:= 0;
-end;
-
-procedure TVSTCoreTable.Draw;
-begin
-  SetColumnWidths;
-
-  if AutoHeight and
-    (FTree.Align<>alLeft)   and
-    (FTree.Align<>alRight)  and
-    (FTree.Align<>alClient) then
-      FTree.Height:= TotalHeight;
-end;
-
-procedure TVSTCoreTable.ValuesClear;
-var
-  i: Integer;
-begin
-  for i:=0 to High(FDataValues) do
-    FDataValues[i]:= nil;
-  inherited ValuesClear;
-end;
-
-{ TVSTCheckTable }
-
-function TVSTCheckTable.GetIsAllUnchecked: Boolean;
-begin
-  Result:= VIsAllFalse(FSelected);
-end;
-
-procedure TVSTCheckTable.SetCanSelect(AValue: Boolean);
-begin
-  if not AValue then CheckAll(False);
-  inherited SetCanSelect(AValue);
-end;
-
-function TVSTCheckTable.GetIsAllChecked: Boolean;
-begin
-  Result:= VIsAllTrue(FSelected);
-end;
-
-function TVSTCheckTable.GetChecked(AIndex: Integer): Boolean;
-begin
-  Result:= False;
-  if not IsIndexCorrect(AIndex) then Exit;
-  Result:= FSelected[AIndex];
-end;
-
-procedure TVSTCheckTable.SetChecked(AIndex: Integer; AValue: Boolean);
-begin
-  if not IsIndexCorrect(AIndex) then Exit;
-  Check(AIndex, AValue);
-end;
-
-procedure TVSTCheckTable.CheckNode(Node: PVirtualNode; const AChecked: Boolean);
-begin
-  if (not Assigned(Node)) or VIsNil(FSelected) then Exit;
-
-  if FMaxCheckedCount>=0 then
-    if AChecked and (CheckedCount=FMaxCheckedCount) then
-      Exit;
-
-  if AChecked then
-    Node^.CheckState:= csCheckedNormal
-  else
-    Node^.CheckState:= csUnCheckedNormal;
-  FSelected[Node^.Index]:= AChecked;
-
-  if Assigned(FOnCheck) then
-    FOnCheck(Node^.Index, AChecked);
-  if Assigned(FOnSelect) and FCanDoSelectEvent then
-    FOnSelect;
-
-  FTree.Refresh;
-end;
-
-//procedure TVSTCheckTable.Check(Node: PVirtualNode);
-//begin
-//  CheckNode(Node, True);
-//end;
-//
-//procedure TVSTCheckTable.Uncheck(Node: PVirtualNode);
-//begin
-//  CheckNode(Node, False);
-//end;
-
-procedure TVSTCheckTable.CheckAll(const AChecked: Boolean);
-var
-  Node: PVirtualNode;
-begin
-  if MIsNil(FDataValues) then Exit;
-  if VIsNil(FDataValues[0]) then Exit;
-
-  if StopSelectEventWhileCheckAll then
-    FCanDoSelectEvent:= False;
-
-  FTree.Visible:= False;
-  try
-    Node:= FTree.GetFirst;
-    while Assigned(Node) do
-    begin
-      CheckNode(Node, AChecked);
-      Node:= FTree.GetNext(Node);
-    end;
-  finally
-    FTree.Visible:= True;
-  end;
-
-  if StopSelectEventWhileCheckAll then
-  begin
-    FCanDoSelectEvent:= True;
-    if Assigned(FOnSelect) then
-      FOnSelect;
-  end;
-
-  FTree.Refresh;
-end;
-
-procedure TVSTCheckTable.Check(const AIndex: Integer; const AChecked: Boolean);
-begin
-  CheckNode(NodeFromIndex(AIndex), AChecked);
-end;
-
-function TVSTCheckTable.GetSelected: TBoolVector;
-begin
-  Result:= VCut(FSelected);
-end;
-
-function TVSTCheckTable.GetCheckedCount: Integer;
-begin
-  Result:= VCountIf(FSelected, True);
-end;
-
-function TVSTCheckTable.GetUncheckedCount: Integer;
-begin
-  Result:= VCountIf(FSelected, False);
-end;
-
-procedure TVSTCheckTable.MaxCheckedCountClear;
-begin
-  FMaxCheckedCount:= -1;
-end;
-
-procedure TVSTCheckTable.SetMaxCheckedCount(AValue: Integer);
-var
-  i, Delta, N: Integer;
-begin
-  if FMaxCheckedCount=AValue then Exit;
-  FMaxCheckedCount:= AValue;
-
-  if FMaxCheckedCount<0 then Exit;
-
-  i:= CheckedCount;
-  if i<=FMaxCheckedCount then Exit;
-
-  Delta:= i - FMaxCheckedCount;
-  N:= 0;
-  for i:= High(FSelected) downto 0 do
-  begin
-    if FSelected[i] then
-    begin
-      Check(i, False);
-      N:= N + 1;
-    end;
-    if N=Delta then break;
-  end;
-end;
-
-procedure TVSTCheckTable.SetSelected(AValue: TBoolVector);
-var
-  i: Integer;
-begin
-  if StopSelectEventWhileCheckAll then
-    FCanDoSelectEvent:= False;
-
-  for i:= 0 to High(AValue) do
-    Check(i, AValue[i]);
-
-  if StopSelectEventWhileCheckAll then
-  begin
-    FCanDoSelectEvent:= True;
-    if Assigned(FOnSelect) then
-      FOnSelect;
-  end;
-
-  FTree.Refresh;
-end;
-
-procedure TVSTCheckTable.MouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-var
-  Ind: Integer;
-  Node: PVirtualNode;
-begin
-  Node:= FTree.GetNodeAt(X, Y);
-  if not Assigned(Node) then Exit;
-  Ind:= Node^.Index;
-  if not IsIndexCorrect(Ind) then Exit;
-
-  if Button=mbRight then
-  begin
-    if FCanUnselect then
-      CheckAll(False)
-  end
-  else if Button=mbLeft then
-    CheckNode(Node, Node^.CheckState=csUncheckedNormal);
-  FTree.Refresh;
-end;
-
-procedure TVSTCheckTable.InitNode(Sender: TBaseVirtualTree; ParentNode,
-  Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
-begin
-  Node^.CheckType:= ctCheckBox;
-  Node^.CheckState:= csUncheckedNormal;
-end;
-
-procedure TVSTCheckTable.Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
-  var NewState: TCheckState; var Allowed: Boolean);
-begin
-  Allowed:= False;
-end;
-
-constructor TVSTCheckTable.Create(const ATree: TVirtualStringTree;
-                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
-                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-begin
-  inherited Create(ATree, AHeaderHeight, ARowHeight);
-  FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
-
-  FMaxCheckedCount:= -1;
-  FStopSelectEventWhileCheckAll:= True;
-  FCanDoSelectEvent:= True;
-  FTree.OnMouseDown:= @MouseDown;
-  FTree.OnInitNode:= @InitNode;
-  FTree.OnChecking:= @Checking;
-end;
-
-procedure TVSTCheckTable.ValuesClear;
-begin
-  FSelected:= nil;
-  inherited ValuesClear;
-end;
-
-procedure TVSTCheckTable.Draw;
-begin
-  inherited Draw;
-  if not VIsNil(FHeaderCaptions) then
-    FTree.Header.Columns[0].CheckType:= ctCheckBox;
-  CheckAll(False);
-  FTree.Refresh;
-end;
-
-{ TVSTCustomTable }
-
-function TVSTCustomTable.GetIsSelected: Boolean;
-begin
-  Result:= False;
-  if not Assigned(Self) then Exit;
-  Result:= VIsTrue(FSelected);
-end;
-
-function TVSTCustomTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
-begin
-  Result:= inherited IsCellSelected(Node, Column);
-  if not Result then Exit;
-  Result:= FSelected[Node^.Index];
-end;
-
-procedure TVSTCustomTable.HeaderClear;
-begin
-  inherited HeaderClear;
-  FDataValues:= nil;
-  FColumnVisibles:= nil;
-end;
-
-procedure TVSTCustomTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
-  Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
-var
-  i: Integer;
-begin
-  if High(FDataValues)<Column then Exit;
-  i:= Node^.Index;
-  CellText:= EmptyStr;
-  if not VIsNil(FDataValues[Column]) then
-    CellText:= FDataValues[Column, i];
-end;
-
-function TVSTCustomTable.IsIndexCorrect(const AIndex: Integer): Boolean;
-begin
-  Result:= False;
-  if MIsNil(FDataValues) then Exit;
-  if VIsNil(FDataValues[0]) then Exit;
-  Result:= (AIndex>=0) and (AIndex<=High(FDataValues[0]));
-end;
-
-constructor TVSTCustomTable.Create(const ATree: TVirtualStringTree;
-                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
-                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-begin
-  inherited Create(ATree, AHeaderHeight, ARowHeight);
   FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
   FTree.OnGetText:= @GetText;
 end;
 
-procedure TVSTCustomTable.ValuesClear;
-begin
-  FSelected:= nil;
-  inherited ValuesClear;
-end;
-
-procedure TVSTCustomTable.Draw;
+procedure TVSTCoreTable.Draw;
 var
   i, MaxLength: Integer;
 begin
@@ -527,10 +212,67 @@ begin
 
   VSTLoad(FTree, FDataValues[0]);
 
-  inherited Draw;
+  SetColumnWidths;
+
+  if AutoHeight and
+    (FTree.Align<>alLeft)   and
+    (FTree.Align<>alRight)  and
+    (FTree.Align<>alClient) then
+      FTree.Height:= TotalHeight;
 end;
 
-procedure TVSTCustomTable.AddColumn(const ACaption: String;
+procedure TVSTCoreTable.ValuesClear;
+var
+  i: Integer;
+begin
+  FSelected:= nil;
+  for i:=0 to High(FDataValues) do
+    FDataValues[i]:= nil;
+  inherited ValuesClear;
+end;
+
+function TVSTCoreTable.GetIsSelected: Boolean;
+begin
+  Result:= False;
+  if not Assigned(Self) then Exit;
+  Result:= VIsTrue(FSelected);
+end;
+
+function TVSTCoreTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
+begin
+  Result:= inherited IsCellSelected(Node, Column);
+  if not Result then Exit;
+  Result:= FSelected[Node^.Index];
+end;
+
+procedure TVSTCoreTable.HeaderClear;
+begin
+  inherited HeaderClear;
+  FDataValues:= nil;
+  FColumnVisibles:= nil;
+end;
+
+procedure TVSTCoreTable.GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
+var
+  i: Integer;
+begin
+  if High(FDataValues)<Column then Exit;
+  i:= Node^.Index;
+  CellText:= EmptyStr;
+  if not VIsNil(FDataValues[Column]) then
+    CellText:= FDataValues[Column, i];
+end;
+
+function TVSTCoreTable.IsIndexCorrect(const AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if MIsNil(FDataValues) then Exit;
+  if VIsNil(FDataValues[0]) then Exit;
+  Result:= (AIndex>=0) and (AIndex<=High(FDataValues[0]));
+end;
+
+procedure TVSTCoreTable.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 begin
   inherited AddColumn(ACaption, AWidth, ACaptionAlignment);
@@ -538,14 +280,14 @@ begin
   VAppend(FColumnVisibles, True);
 end;
 
-procedure TVSTCustomTable.SetColumn(const AColIndex: Integer;
+procedure TVSTCoreTable.SetColumn(const AColIndex: Integer;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 begin
   FDataValues[AColIndex]:= VCut(AValues);
   FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
 end;
 
-procedure TVSTCustomTable.SetColumn(const ACaption: String;
+procedure TVSTCoreTable.SetColumn(const ACaption: String;
   const AValues: TStrVector; const AValuesAlignment: TAlignment);
 var
   ColIndex: Integer;
@@ -555,7 +297,7 @@ begin
     SetColumn(ColIndex, AValues, AValuesAlignment);
 end;
 
-procedure TVSTCustomTable.Show(const AIndex: Integer);
+procedure TVSTCoreTable.Show(const AIndex: Integer);
 var
   Node: PVirtualNode;
 begin
@@ -932,6 +674,225 @@ procedure TVSTTable.UnSelect;
 begin
   if IsSelected then
     UnselectNode;
+end;
+
+{ TVSTCheckTable }
+
+function TVSTCheckTable.GetIsAllUnchecked: Boolean;
+begin
+  Result:= VIsAllFalse(FSelected);
+end;
+
+procedure TVSTCheckTable.SetCanSelect(AValue: Boolean);
+begin
+  if not AValue then CheckAll(False);
+  inherited SetCanSelect(AValue);
+end;
+
+function TVSTCheckTable.GetIsAllChecked: Boolean;
+begin
+  Result:= VIsAllTrue(FSelected);
+end;
+
+function TVSTCheckTable.GetChecked(AIndex: Integer): Boolean;
+begin
+  Result:= False;
+  if not IsIndexCorrect(AIndex) then Exit;
+  Result:= FSelected[AIndex];
+end;
+
+procedure TVSTCheckTable.SetChecked(AIndex: Integer; AValue: Boolean);
+begin
+  if not IsIndexCorrect(AIndex) then Exit;
+  Check(AIndex, AValue);
+end;
+
+procedure TVSTCheckTable.CheckNode(Node: PVirtualNode; const AChecked: Boolean);
+begin
+  if (not Assigned(Node)) or VIsNil(FSelected) then Exit;
+
+  if FMaxCheckedCount>=0 then
+    if AChecked and (CheckedCount=FMaxCheckedCount) then
+      Exit;
+
+  if AChecked then
+    Node^.CheckState:= csCheckedNormal
+  else
+    Node^.CheckState:= csUnCheckedNormal;
+  FSelected[Node^.Index]:= AChecked;
+
+  if Assigned(FOnCheck) then
+    FOnCheck(Node^.Index, AChecked);
+  if Assigned(FOnSelect) and FCanDoSelectEvent then
+    FOnSelect;
+
+  FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.CheckAll(const AChecked: Boolean);
+var
+  Node: PVirtualNode;
+begin
+  if MIsNil(FDataValues) then Exit;
+  if VIsNil(FDataValues[0]) then Exit;
+
+  if StopSelectEventWhileCheckAll then
+    FCanDoSelectEvent:= False;
+
+  FTree.Visible:= False;
+  try
+    Node:= FTree.GetFirst;
+    while Assigned(Node) do
+    begin
+      CheckNode(Node, AChecked);
+      Node:= FTree.GetNext(Node);
+    end;
+  finally
+    FTree.Visible:= True;
+  end;
+
+  if StopSelectEventWhileCheckAll then
+  begin
+    FCanDoSelectEvent:= True;
+    if Assigned(FOnSelect) then
+      FOnSelect;
+  end;
+
+  FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.Check(const AIndex: Integer; const AChecked: Boolean);
+begin
+  CheckNode(NodeFromIndex(AIndex), AChecked);
+end;
+
+function TVSTCheckTable.GetSelected: TBoolVector;
+begin
+  Result:= VCut(FSelected);
+end;
+
+function TVSTCheckTable.GetCheckedCount: Integer;
+begin
+  Result:= VCountIf(FSelected, True);
+end;
+
+function TVSTCheckTable.GetUncheckedCount: Integer;
+begin
+  Result:= VCountIf(FSelected, False);
+end;
+
+procedure TVSTCheckTable.MaxCheckedCountClear;
+begin
+  FMaxCheckedCount:= -1;
+end;
+
+procedure TVSTCheckTable.SetMaxCheckedCount(AValue: Integer);
+var
+  i, Delta, N: Integer;
+begin
+  if FMaxCheckedCount=AValue then Exit;
+  FMaxCheckedCount:= AValue;
+
+  if FMaxCheckedCount<0 then Exit;
+
+  i:= CheckedCount;
+  if i<=FMaxCheckedCount then Exit;
+
+  Delta:= i - FMaxCheckedCount;
+  N:= 0;
+  for i:= High(FSelected) downto 0 do
+  begin
+    if FSelected[i] then
+    begin
+      Check(i, False);
+      N:= N + 1;
+    end;
+    if N=Delta then break;
+  end;
+end;
+
+procedure TVSTCheckTable.SetSelected(AValue: TBoolVector);
+var
+  i: Integer;
+begin
+  if StopSelectEventWhileCheckAll then
+    FCanDoSelectEvent:= False;
+
+  for i:= 0 to High(AValue) do
+    Check(i, AValue[i]);
+
+  if StopSelectEventWhileCheckAll then
+  begin
+    FCanDoSelectEvent:= True;
+    if Assigned(FOnSelect) then
+      FOnSelect;
+  end;
+
+  FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.MouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  Ind: Integer;
+  Node: PVirtualNode;
+begin
+  Node:= FTree.GetNodeAt(X, Y);
+  if not Assigned(Node) then Exit;
+  Ind:= Node^.Index;
+  if not IsIndexCorrect(Ind) then Exit;
+
+  if Button=mbRight then
+  begin
+    if FCanUnselect then
+      CheckAll(False)
+  end
+  else if Button=mbLeft then
+    CheckNode(Node, Node^.CheckState=csUncheckedNormal);
+  FTree.Refresh;
+end;
+
+procedure TVSTCheckTable.InitNode(Sender: TBaseVirtualTree; ParentNode,
+  Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+begin
+  Node^.CheckType:= ctCheckBox;
+  Node^.CheckState:= csUncheckedNormal;
+end;
+
+procedure TVSTCheckTable.Checking(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  var NewState: TCheckState; var Allowed: Boolean);
+begin
+  Allowed:= False;
+end;
+
+constructor TVSTCheckTable.Create(const ATree: TVirtualStringTree;
+                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
+begin
+  inherited Create(ATree, AHeaderHeight, ARowHeight);
+  FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
+
+  FMaxCheckedCount:= -1;
+  FStopSelectEventWhileCheckAll:= True;
+  FCanDoSelectEvent:= True;
+  FTree.OnMouseDown:= @MouseDown;
+  FTree.OnInitNode:= @InitNode;
+  FTree.OnChecking:= @Checking;
+end;
+
+procedure TVSTCheckTable.ValuesClear;
+begin
+  FSelected:= nil;
+  inherited ValuesClear;
+end;
+
+procedure TVSTCheckTable.Draw;
+begin
+  inherited Draw;
+  if not VIsNil(FHeaderCaptions) then
+    FTree.Header.Columns[0].CheckType:= ctCheckBox;
+  CheckAll(False);
+  FTree.Refresh;
 end;
 
 end.

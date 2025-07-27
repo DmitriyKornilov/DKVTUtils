@@ -12,11 +12,14 @@ uses
 type
   TVSTCategoryCheckKind = (chkNone, chkCategory, chkValues, chkAll);
 
-  { TVSTCoreCategoryTable }
+  { TVSTCategoryCoreTable }
 
-  TVSTCoreCategoryTable = class(TVSTCore)
+  TVSTCategoryCoreTable = class(TVSTCore)
   protected
     FDataValues: TStrMatrix3D;
+    FVCategoryValues: TStrVector;
+    FMCategoryValues: TStrMatrix;
+    FOneCategoryColumn: Boolean;
     FSelected: TBoolMatrix;
     FCategoryFont: TFont;
 
@@ -28,11 +31,17 @@ type
     function GetIsSelected: Boolean;
     procedure SetCategoryFont(AValue: TFont);
     procedure CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex); override;
+
+    procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+                      Column: TColumnIndex; {%H-}TextType: TVSTTextType;
+                      var CellText: String);
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor Destroy; override;
+
+    procedure Draw;
 
     procedure AddColumn(const ACaption: String; const AWidth: Integer = 100;
                         const ACaptionAlignment: TAlignment = taCenter); override;
@@ -40,6 +49,9 @@ type
                         const AValuesAlignment: TAlignment = taCenter);
     procedure SetColumn(const ACaption: String; const AValues: TStrMatrix;
                         const AValuesAlignment: TAlignment = taCenter);
+
+    procedure SetCategories(const AValues: TStrVector);
+    procedure SetCategories(const AValues: TStrMatrix);
 
     procedure ValuesClear; override;
 
@@ -54,32 +66,9 @@ type
     property IsSelected: Boolean read GetIsSelected;
   end;
 
-  { TVSTCustomCategoryTable }
-
-  TVSTCustomCategoryTable = class(TVSTCoreCategoryTable)
-  protected
-    FVCategoryValues: TStrVector;
-    FMCategoryValues: TStrMatrix;
-    FOneCategoryColumn: Boolean;
-
-    procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
-                      Column: TColumnIndex; {%H-}TextType: TVSTTextType;
-                      var CellText: String);
-  public
-    constructor Create(const ATree: TVirtualStringTree;
-                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
-                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-
-    procedure SetCategories(const AValues: TStrVector);
-    procedure SetCategories(const AValues: TStrMatrix);
-
-    procedure ValuesClear; override;
-    procedure Draw;
-  end;
-
   { TVSTCategoryRadioTable }
 
-  TVSTCategoryRadioTable = class(TVSTCustomCategoryTable)
+  TVSTCategoryRadioTable = class(TVSTCategoryCoreTable)
   protected
     FRadioEnable: Boolean;
     FRadioVisible: Boolean;
@@ -117,7 +106,7 @@ type
 
   { TVSTCategoryCheckTable }
 
-  TVSTCategoryCheckTable = class(TVSTCustomCategoryTable)
+  TVSTCategoryCheckTable = class(TVSTCategoryCoreTable)
   protected
     FOnCheck: TVSTRowCheckEvent;
     //FStopSelectEventWhileCheckAll=True - OnSelect вызывается только после заверешения CheckAll
@@ -182,15 +171,15 @@ type
 
 implementation
 
-{ TVSTCoreCategoryTable }
+{ TVSTCategoryCoreTable }
 
-procedure TVSTCoreCategoryTable.SetCategoryFont(AValue: TFont);
+procedure TVSTCategoryCoreTable.SetCategoryFont(AValue: TFont);
 begin
   FCategoryFont.Assign(AValue);
   FTree.Refresh;
 end;
 
-procedure TVSTCoreCategoryTable.SetTreeLinesVisible(AValue: Boolean);
+procedure TVSTCategoryCoreTable.SetTreeLinesVisible(AValue: Boolean);
 begin
   if Avalue then
     FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions + [toShowTreeLines]
@@ -198,13 +187,13 @@ begin
     FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions - [toShowTreeLines];
 end;
 
-procedure TVSTCoreCategoryTable.HeaderClear;
+procedure TVSTCategoryCoreTable.HeaderClear;
 begin
   inherited HeaderClear;
   FDataValues:= nil;
 end;
 
-function TVSTCoreCategoryTable.IsIndexesCorrect(const AIndex1, AIndex2: Integer): Boolean;
+function TVSTCategoryCoreTable.IsIndexesCorrect(const AIndex1, AIndex2: Integer): Boolean;
 begin
   Result:= False;
   if MIsNil(FDataValues) then Exit;
@@ -216,7 +205,7 @@ begin
   end;
 end;
 
-function TVSTCoreCategoryTable.IsCellSelected(Node: PVirtualNode;
+function TVSTCategoryCoreTable.IsCellSelected(Node: PVirtualNode;
   Column: TColumnIndex): Boolean;
 begin
   Result:= inherited IsCellSelected(Node, Column);
@@ -226,7 +215,7 @@ begin
   Result:= FSelected[(Node^.Parent)^.Index, Node^.Index];
 end;
 
-function TVSTCoreCategoryTable.GetIsSelected: Boolean;
+function TVSTCategoryCoreTable.GetIsSelected: Boolean;
 var
   Ind1, Ind2: Integer;
 begin
@@ -236,7 +225,7 @@ begin
   Result:= (Ind1>=0) and (Ind2>=0);
 end;
 
-procedure TVSTCoreCategoryTable.CellFont(Node: PVirtualNode; Column: TColumnIndex);
+procedure TVSTCategoryCoreTable.CellFont(Node: PVirtualNode; Column: TColumnIndex);
 begin
   if FTree.GetNodeLevel(Node)=0 then
     FCellFont.Assign(FCategoryFont)
@@ -244,7 +233,7 @@ begin
     inherited CellFont(Node, Column);
 end;
 
-constructor TVSTCoreCategoryTable.Create(const ATree: TVirtualStringTree;
+constructor TVSTCategoryCoreTable.Create(const ATree: TVirtualStringTree;
   const AHeaderHeight: Integer; const ARowHeight: Integer);
 begin
   inherited Create(ATree, AHeaderHeight, ARowHeight);
@@ -252,34 +241,37 @@ begin
   FCategoryFont:= TFont.Create;
   FCategoryFont.Assign(FTree.Font);
 
-  FTree.Margin:= 0;
   FCanSelect:= True;
+  FOneCategoryColumn:= True;
   FSelectedBGColor:= FTree.Color;
+
+  FTree.Margin:= 0;
   FTree.TreeOptions.MiscOptions:= FTree.TreeOptions.MiscOptions + [toCheckSupport];
   FTree.LineStyle:= lsSolid;
+  FTree.OnGetText:= @GetText;
 end;
 
-destructor TVSTCoreCategoryTable.Destroy;
+destructor TVSTCategoryCoreTable.Destroy;
 begin
   FreeAndNil(FCategoryFont);
   inherited Destroy;
 end;
 
-procedure TVSTCoreCategoryTable.AddColumn(const ACaption: String;
+procedure TVSTCategoryCoreTable.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 begin
   inherited AddColumn(ACaption, AWidth, ACaptionAlignment);
   MAppend(FDataValues, nil);
 end;
 
-procedure TVSTCoreCategoryTable.SetColumn(const AColIndex: Integer;
+procedure TVSTCategoryCoreTable.SetColumn(const AColIndex: Integer;
   const AValues: TStrMatrix; const AValuesAlignment: TAlignment);
 begin
   FDataValues[AColIndex]:= MCut(AValues);
   FTree.Header.Columns[AColIndex].Alignment:= AValuesAlignment;
 end;
 
-procedure TVSTCoreCategoryTable.SetColumn(const ACaption: String;
+procedure TVSTCategoryCoreTable.SetColumn(const ACaption: String;
   const AValues: TStrMatrix; const AValuesAlignment: TAlignment);
 var
   ColIndex: Integer;
@@ -289,17 +281,19 @@ begin
     SetColumn(ColIndex, AValues, AValuesAlignment);
 end;
 
-procedure TVSTCoreCategoryTable.ValuesClear;
+procedure TVSTCategoryCoreTable.ValuesClear;
 var
   i: Integer;
 begin
   FSelected:= nil;
   for i:=0 to High(FDataValues) do
     FDataValues[i]:= nil;
+  FVCategoryValues:= nil;
+  FMCategoryValues:= nil;
   inherited ValuesClear;
 end;
 
-procedure TVSTCoreCategoryTable.ExpandAll(const AExpand: Boolean);
+procedure TVSTCategoryCoreTable.ExpandAll(const AExpand: Boolean);
 var
   Node: PVirtualNode;
 begin
@@ -313,7 +307,7 @@ begin
   end;
 end;
 
-procedure TVSTCoreCategoryTable.Show(const AIndex1, AIndex2: Integer);
+procedure TVSTCategoryCoreTable.Show(const AIndex1, AIndex2: Integer);
 var
   Node: PVirtualNode;
 begin
@@ -324,7 +318,7 @@ begin
   FTree.FocusedNode:= Node;
 end;
 
-procedure TVSTCoreCategoryTable.ShowFirst;
+procedure TVSTCategoryCoreTable.ShowFirst;
 var
   Node: PVirtualNode;
 begin
@@ -334,15 +328,13 @@ begin
   FTree.FocusedNode:= Node;
 end;
 
-procedure TVSTCoreCategoryTable.SetSingleFont(const AFont: TFont);
+procedure TVSTCategoryCoreTable.SetSingleFont(const AFont: TFont);
 begin
   inherited SetSingleFont(AFont);
   CategoryFont:= AFont;
 end;
 
-{ TVSTCustomCategoryTable }
-
-procedure TVSTCustomCategoryTable.GetText(Sender: TBaseVirtualTree;
+procedure TVSTCategoryCoreTable.GetText(Sender: TBaseVirtualTree;
   Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
   var CellText: String);
 var
@@ -373,34 +365,19 @@ begin
   end;
 end;
 
-constructor TVSTCustomCategoryTable.Create(const ATree: TVirtualStringTree;
-  const AHeaderHeight: Integer; const ARowHeight: Integer);
-begin
-  inherited Create(ATree, AHeaderHeight, ARowHeight);
-  FOneCategoryColumn:= True;
-  FTree.OnGetText:= @GetText;
-end;
-
-procedure TVSTCustomCategoryTable.SetCategories(const AValues: TStrVector);
+procedure TVSTCategoryCoreTable.SetCategories(const AValues: TStrVector);
 begin
   FVCategoryValues:= VCut(AValues);
   FOneCategoryColumn:= True;
 end;
 
-procedure TVSTCustomCategoryTable.SetCategories(const AValues: TStrMatrix);
+procedure TVSTCategoryCoreTable.SetCategories(const AValues: TStrMatrix);
 begin
   FMCategoryValues:= MCut(AValues);
   FOneCategoryColumn:= False;
 end;
 
-procedure TVSTCustomCategoryTable.ValuesClear;
-begin
-  FVCategoryValues:= nil;
-  FMCategoryValues:= nil;
-  inherited ValuesClear;
-end;
-
-procedure TVSTCustomCategoryTable.Draw;
+procedure TVSTCategoryCoreTable.Draw;
 var
   ColIndex, CategoryIndex, CategoryCount, MaxLength: Integer;
 begin

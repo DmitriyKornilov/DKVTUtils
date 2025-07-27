@@ -21,7 +21,7 @@ type
   private
     FParent: TPanel;
     FTrees: array of TVirtualStringTree;
-    FItems: array of TVSTCustomTable;
+    FItems: array of TVSTCoreTable;
     FTypes: array of TVSTListType;
     FVisibles: TBoolVector;
     FNames: TStrVector;
