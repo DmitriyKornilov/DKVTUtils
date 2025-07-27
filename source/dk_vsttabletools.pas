@@ -7,7 +7,8 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, VirtualTrees,
 
-  DK_Vector, DK_Matrix, DK_StrUtils, DK_VSTTables, DK_VSTTypes;
+  DK_Vector, DK_Matrix, DK_StrUtils, DK_VSTTables, DK_VSTCategoryTables,
+  DK_VSTTypes;
 
 const
   TOOLS_ROW_HEIGHT_DEFAULT = 18;
@@ -79,7 +80,7 @@ type
 
 implementation
 
-procedure SetSimpleListParams(const AList: TVSTSimpleTable; const ACaption: String);
+procedure SetSimpleListParams(const AList: TVSTCustomTable; const ACaption: String);
 begin
   AList.RowHeight:= AList.Tree.Scale96ToScreen(TOOLS_ROW_HEIGHT_DEFAULT);
   AList.Tree.BorderStyle:= bsNone;

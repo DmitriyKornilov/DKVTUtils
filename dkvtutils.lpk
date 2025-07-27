@@ -57,7 +57,11 @@
       </Item>
       <Item>
         <Filename Value="source\dk_vstparamlist.pas"/>
-        <UnitName Value="dk_vstparamlist"/>
+        <UnitName Value="DK_VSTParamList"/>
+      </Item>
+      <Item>
+        <Filename Value="source\dk_vstcategorytables.pas"/>
+        <UnitName Value="dk_vstcategorytables"/>
       </Item>
     </Files>
     <RequiredPkgs>

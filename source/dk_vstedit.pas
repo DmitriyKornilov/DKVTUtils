@@ -8,14 +8,14 @@ uses
   Classes, SysUtils, Controls, StdCtrls, Graphics, VirtualTrees, LCLType, Spin,
   LMessages, LCLIntf, DateTimePicker, BCButton, Dialogs, DateUtils,
 
-  DK_VSTTypes, DK_VSTCore, DK_Const, DK_Vector, DK_Matrix, DK_StrUtils,
+  DK_VSTTypes, DK_VSTTables, DK_Const, DK_Vector, DK_Matrix, DK_StrUtils,
   DK_VSTDropDown;
 
 type
 
   { TVSTEdit }
 
-  TVSTEdit = class (TVSTCustomSimpleTable)
+  TVSTEdit = class (TVSTCoreTable)
   protected
     FPicks: TStrMatrix;
     FKeys: TIntMatrix;

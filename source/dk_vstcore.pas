@@ -11,16 +11,16 @@ uses
 
 type
 
-  { TVSTCoreTable }
+  { TVSTCore }
 
-  TVSTCoreTable = class(TObject)
+  TVSTCore = class(TObject)
   protected
     FTree: TVirtualStringTree;
 
     FOnSelect: TVSTEvent;
 
     FAutosizeColumnIndex: Integer; //LAST_COLUMN_INDEX_FOR_AUTOSIZE - last clolumn, -1 - none
-    FFixedColumnsCount: Integer;
+    FFixedColCount: Integer;
 
     FGridLinesColor: TColor;
     FGridLinesVisible: Boolean;
@@ -39,6 +39,7 @@ type
 
     FHeaderCaptions: TStrVector;
     FColumnWidths: TIntVector;
+    FColumnVisibles: TBoolVector;
 
     FHeaderFont: TFont;
     FValuesFont: TFont;
@@ -56,6 +57,7 @@ type
     procedure SetCanSelect(AValue: Boolean); virtual;
     procedure SetHeaderVisible(AValue: Boolean);
     procedure SetColumnWidths;
+    procedure SetColumnVisibles(AValue: TBoolVector);
     procedure SetGridLinesVisible(AValue: Boolean);
     procedure SetGridLinesColor(AValue: TColor);
     procedure SetHeaderBGColor(AValue: TColor);
@@ -64,7 +66,7 @@ type
     procedure SetSelectedFont(AValue: TFont);
     procedure SetValuesBGColor(AValue: TColor);
     procedure SetValuesFont(AValue: TFont);
-    procedure SetFixedColumnsCount(AValue: Integer);
+    procedure SetFixedColCount(AValue: Integer);
     procedure SetSpan(AValue: Boolean);
     procedure SetRowHeight(const AHeight: Integer);
     procedure SetHeaderHeight(const AHeight: Integer);
@@ -72,6 +74,7 @@ type
 
     procedure SetVisible(AValue: Boolean);
     function GetVisible: Boolean;
+    function GetColCount: Integer;
 
     procedure AfterColumnWidthTracking(Sender: TVTHeader; Column: TColumnIndex);
     procedure HeaderDrawQueryElements(Sender: TVTHeader;
@@ -122,7 +125,6 @@ type
     procedure SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
     procedure SetColumnHeaderBGColor(const ACaption: String; const ABGColor: TColor);
 
-
     procedure SetAllHeight(const AHeight: Integer);
     function LastColumnIndex: Integer;
 
@@ -153,12 +155,14 @@ type
     property GridLinesVisible: Boolean read FGridLinesVisible write SetGridLinesVisible;
     property HeaderVisible: Boolean read FHeaderVisible write SetHeaderVisible;
     property Visible: Boolean read GetVisible write SetVisible;
+    property ColumnVisibles: TBoolVector read FColumnVisibles write SetColumnVisibles;
 
     procedure SetSingleFont(const AFont: TFont); virtual;
     property HeaderFont: TFont read FHeaderFont write SetHeaderFont;
     property ValuesFont: TFont read FValuesFont write SetValuesFont;
     property SelectedFont: TFont read FSelectedFont write SetSelectedFont;
-    property FixedColumnsCount: Integer read FFixedColumnsCount write SetFixedColumnsCount;
+    property FixedColCount: Integer read FFixedColCount write SetFixedColCount;
+    property ColCount: Integer read GetColCount;
 
     property Span: Boolean read FSpan write SetSpan;
     property Tree: TVirtualStringTree read FTree;
@@ -166,32 +170,11 @@ type
     property OnSelect: TVSTEvent read FOnSelect write FOnSelect;
   end;
 
-  { TVSTCustomSimpleTable }
-
-  TVSTCustomSimpleTable = class (TVSTCoreTable)
-  protected
-    FDataValues: TStrMatrix;
-    FAutoHeight: Boolean;
-    FMaxAutoHeightRowCount: Integer;
-    function GetTotalHeight: Integer;
-    function GetCount: Integer;
-  public
-    constructor Create(const ATree: TVirtualStringTree;
-                       const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
-                       const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
-    procedure Draw; virtual;
-    procedure ValuesClear; override;
-    property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
-    property TotalHeight: Integer read GetTotalHeight;
-    property MaxAutoHeightRowCount: Integer read FMaxAutoHeightRowCount write FMaxAutoHeightRowCount;
-    property Count: Integer read GetCount;
-  end;
-
 implementation
 
-{ TVSTCoreTable }
+{ TVSTCore }
 
-procedure TVSTCoreTable.SetHeaderVisible(AValue: Boolean);
+procedure TVSTCore.SetHeaderVisible(AValue: Boolean);
 begin
   if FHeaderVisible=AValue then Exit;
   FHeaderVisible:= AValue;
@@ -201,7 +184,7 @@ begin
     FTree.Header.Options:= FTree.Header.Options - [hoVisible];
 end;
 
-procedure TVSTCoreTable.SetGridLinesColor(AValue: TColor);
+procedure TVSTCore.SetGridLinesColor(AValue: TColor);
 begin
   if FGridLinesColor=AValue then Exit;
   FGridLinesColor:= AValue;
@@ -209,28 +192,28 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetGridLinesVisible(AValue: Boolean);
+procedure TVSTCore.SetGridLinesVisible(AValue: Boolean);
 begin
   if FGridLinesVisible=AValue then Exit;
   FGridLinesVisible:= AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetFixedColumnsCount(AValue: Integer);
+procedure TVSTCore.SetFixedColCount(AValue: Integer);
 var
   i: Integer;
 begin
-  if FFixedColumnsCount=AValue then Exit;
-  if (FFixedColumnsCount<0) or (FFixedColumnsCount>High(FHeaderCaptions)) then Exit;
-  FFixedColumnsCount:= AValue;
-  for i:= 0 to FFixedColumnsCount-1 do
+  if FFixedColCount=AValue then Exit;
+  if (FFixedColCount<0) or (FFixedColCount>High(FHeaderCaptions)) then Exit;
+  FFixedColCount:= AValue;
+  for i:= 0 to FFixedColCount-1 do
     FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options + [coFixed];
-  for i:= FFixedColumnsCount to High(FHeaderCaptions) do
+  for i:= FFixedColCount to High(FHeaderCaptions) do
     FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options - [coFixed];
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetSpan(AValue: Boolean);
+procedure TVSTCore.SetSpan(AValue: Boolean);
 begin
   if FSpan=AValue then Exit;
   FSpan:=AValue;
@@ -241,27 +224,32 @@ begin
   FTree.Refresh;
 end;
 
-function TVSTCoreTable.GetVisible: Boolean;
+function TVSTCore.GetVisible: Boolean;
 begin
   Result:= FTree.Visible;
 end;
 
-procedure TVSTCoreTable.AfterColumnWidthTracking(Sender: TVTHeader; Column: TColumnIndex);
+function TVSTCore.GetColCount: Integer;
+begin
+  Result:= Length(FHeaderCaptions);
+end;
+
+procedure TVSTCore.AfterColumnWidthTracking(Sender: TVTHeader; Column: TColumnIndex);
 begin
   FColumnWidths[Column]:= Sender.Columns[Column].Width;
 end;
 
-procedure TVSTCoreTable.SetVisible(AValue: Boolean);
+procedure TVSTCore.SetVisible(AValue: Boolean);
 begin
   FTree.Visible:= AValue;
 end;
 
-function TVSTCoreTable.CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect;
+function TVSTCore.CellRectangle(Column: TColumnIndex; ACellRect: TRect): TRect;
 begin
   Result:= ACellRect;
 end;
 
-function TVSTCoreTable.NodeFromIndex(const AIndex: Integer): PVirtualNode;
+function TVSTCore.NodeFromIndex(const AIndex: Integer): PVirtualNode;
 var
   Node: PVirtualNode;
 begin
@@ -281,7 +269,7 @@ begin
   end;
 end;
 
-function TVSTCoreTable.NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
+function TVSTCore.NodeFromIndex(const AIndex1, AIndex2: Integer): PVirtualNode;
 var
   Node: PVirtualNode;
 begin
@@ -301,13 +289,13 @@ begin
   end;
 end;
 
-procedure TVSTCoreTable.SetCanSelect(AValue: Boolean);
+procedure TVSTCore.SetCanSelect(AValue: Boolean);
 begin
   if FCanSelect=AValue then Exit;
   FCanSelect:=AValue;
 end;
 
-procedure TVSTCoreTable.HeaderClear;
+procedure TVSTCore.HeaderClear;
 begin
   FHeaderCaptions:= nil;
   FColumnWidths:= nil;
@@ -316,7 +304,7 @@ begin
   FTree.Header.Columns.Clear;
 end;
 
-procedure TVSTCoreTable.SetColumnWidths;
+procedure TVSTCore.SetColumnWidths;
 var
   i: Integer;
 begin
@@ -332,54 +320,70 @@ begin
     FTree.Header.Columns[i].Width:= FColumnWidths[i];
 end;
 
-procedure TVSTCoreTable.SetHeaderBGColor(AValue: TColor);
+procedure TVSTCore.SetColumnVisibles(AValue: TBoolVector);
+var
+  i: Integer;
+begin
+  if Length(AValue)<>Length(FHeaderCaptions) then Exit;
+  FColumnVisibles:= VCut(AValue);
+  for i:= 0 to High(FColumnVisibles) do
+  begin
+    if FColumnVisibles[i] then
+      FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options + [coVisible]
+    else
+      FTree.Header.Columns[i].Options:= FTree.Header.Columns[i].Options - [coVisible];
+  end;
+  FTree.Refresh;
+end;
+
+procedure TVSTCore.SetHeaderBGColor(AValue: TColor);
 begin
   if FHeaderBGColor=AValue then Exit;
   FHeaderBGColor:=AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetHeaderFont(AValue: TFont);
+procedure TVSTCore.SetHeaderFont(AValue: TFont);
 begin
   FHeaderFont.Assign(AValue);
   FTree.Header.Font.Assign(FHeaderFont);
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetSelectedBGColor(AValue: TColor);
+procedure TVSTCore.SetSelectedBGColor(AValue: TColor);
 begin
   if FSelectedBGColor=AValue then Exit;
   FSelectedBGColor:=AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetSelectedFont(AValue: TFont);
+procedure TVSTCore.SetSelectedFont(AValue: TFont);
 begin
   FSelectedFont.Assign(AValue);
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetValuesBGColor(AValue: TColor);
+procedure TVSTCore.SetValuesBGColor(AValue: TColor);
 begin
   if FValuesBGColor=AValue then Exit;
   FValuesBGColor:=AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetValuesFont(AValue: TFont);
+procedure TVSTCore.SetValuesFont(AValue: TFont);
 begin
   FValuesFont.Assign(AValue);
   FTree.Font.Assign(FValuesFont);
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.HeaderDrawQueryElements(Sender: TVTHeader;
+procedure TVSTCore.HeaderDrawQueryElements(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; var Elements: THeaderPaintElements);
 begin
   Elements:= [hpeBackground];
 end;
 
-procedure TVSTCoreTable.AdvancedHeaderDraw(Sender: TVTHeader;
+procedure TVSTCore.AdvancedHeaderDraw(Sender: TVTHeader;
   var PaintInfo: THeaderPaintInfo; const Elements: THeaderPaintElements);
 var
   LineColor, BGColor: TColor;
@@ -389,7 +393,7 @@ begin
   VSTHeaderDraw(LineColor, BGColor, PaintInfo, Elements);
 end;
 
-procedure TVSTCoreTable.BeforeCellPaint(Sender: TBaseVirtualTree;
+procedure TVSTCore.BeforeCellPaint(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
 var
@@ -405,7 +409,7 @@ begin
   VSTCellDraw(GridColor, BGColor, TargetCanvas, Column, CellRect, NeedTopLine);
 end;
 
-procedure TVSTCoreTable.DrawText(Sender: TBaseVirtualTree;
+procedure TVSTCore.DrawText(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   const CellText: String; const CellRect: TRect; var DefaultDraw: Boolean);
 begin
@@ -413,12 +417,12 @@ begin
   TargetCanvas.Font.Assign(FCellFont);
 end;
 
-function TVSTCoreTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
+function TVSTCore.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
 begin
   Result:= Assigned(Node) and (Column>=0) and (Column<=High(FHeaderCaptions));
 end;
 
-procedure TVSTCoreTable.HeaderCellColors(const PaintInfo: THeaderPaintInfo;
+procedure TVSTCore.HeaderCellColors(const PaintInfo: THeaderPaintInfo;
                                      out ALineColor, ABGColor: TColor);
 begin
   ALineColor:= FTree.Color;
@@ -438,7 +442,7 @@ begin
     ALineColor:= ABGColor;
 end;
 
-function TVSTCoreTable.CellGridColor(Node: PVirtualNode; Column: TColumnIndex; ABGColor: TColor): TColor;
+function TVSTCore.CellGridColor(Node: PVirtualNode; Column: TColumnIndex; ABGColor: TColor): TColor;
 begin
   if FGridLinesVisible then
     Result:= FGridLinesColor
@@ -446,7 +450,7 @@ begin
     Result:= ABGColor;
 end;
 
-function TVSTCoreTable.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
+function TVSTCore.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
 begin
   if IsCellSelected(Node, Column) then
     Result:= FSelectedBGColor
@@ -456,7 +460,7 @@ begin
     Result:= FValuesBGColor;
 end;
 
-procedure TVSTCoreTable.CellFont(Node: PVirtualNode; Column: TColumnIndex);
+procedure TVSTCore.CellFont(Node: PVirtualNode; Column: TColumnIndex);
 begin
   if IsCellSelected(Node, Column) then
     FCellFont.Assign(FSelectedFont)
@@ -464,12 +468,12 @@ begin
     FCellFont.Assign(FValuesFont);
 end;
 
-function TVSTCoreTable.IsColIndexCorrect(const AIndex: Integer): Boolean;
+function TVSTCore.IsColIndexCorrect(const AIndex: Integer): Boolean;
 begin
   Result:= (AIndex>=0) and (AIndex<=High(FHeaderCaptions));
 end;
 
-procedure TVSTCoreTable.SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
+procedure TVSTCore.SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
 var
   H: Integer;
 begin
@@ -485,14 +489,14 @@ begin
     HeaderHeight:= H;
 end;
 
-constructor TVSTCoreTable.Create(const ATree: TVirtualStringTree;
+constructor TVSTCore.Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
   FTree:= ATree;
 
   Clear;
-  FFixedColumnsCount:= 0;
+  FFixedColCount:= 0;
 
   FTree.Header.Font.Color:= COLOR_FONT_DEFAULT;
   FTree.Font.Color:= COLOR_FONT_DEFAULT;
@@ -540,7 +544,7 @@ begin
   FTree.OnAfterColumnWidthTracking:= @AfterColumnWidthTracking;
 end;
 
-destructor TVSTCoreTable.Destroy;
+destructor TVSTCore.Destroy;
 begin
   FreeAndNil(FHeaderFont);
   FreeAndNil(FValuesFont);
@@ -549,23 +553,23 @@ begin
   inherited Destroy;
 end;
 
-procedure TVSTCoreTable.ValuesClear;
+procedure TVSTCore.ValuesClear;
 begin
   FTree.Clear;
 end;
 
-procedure TVSTCoreTable.Clear;
+procedure TVSTCore.Clear;
 begin
   ValuesClear;
   HeaderClear;
 end;
 
-procedure TVSTCoreTable.Refresh;
+procedure TVSTCore.Refresh;
 begin
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetZoom(const APercents: Integer);
+procedure TVSTCore.SetZoom(const APercents: Integer);
 var
   ZoomFactor: Double;
   i: Integer;
@@ -586,12 +590,12 @@ begin
   end;
 end;
 
-procedure TVSTCoreTable.SetFocus;
+procedure TVSTCore.SetFocus;
 begin
   if Assigned(FTree) then FTree.SetFocus;
 end;
 
-procedure TVSTCoreTable.AddColumn(const ACaption: String;
+procedure TVSTCore.AddColumn(const ACaption: String;
   const AWidth: Integer; const ACaptionAlignment: TAlignment);
 var
   C: TVirtualTreeColumn;
@@ -610,14 +614,14 @@ begin
   C.Width:= W;
 end;
 
-procedure TVSTCoreTable.SetColumnValuesBGColor(const AColIndex: Integer; const ABGColor: TColor);
+procedure TVSTCore.SetColumnValuesBGColor(const AColIndex: Integer; const ABGColor: TColor);
 begin
   if not IsColIndexCorrect(AColIndex) then Exit;
   FColumnValuesBGColors[AColIndex]:= ABGColor;
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetColumnValuesBGColor(const ACaption: String; const ABGColor: TColor);
+procedure TVSTCore.SetColumnValuesBGColor(const ACaption: String; const ABGColor: TColor);
 var
   ColIndex: Integer;
 begin
@@ -626,14 +630,14 @@ begin
     SetColumnValuesBGColor(ColIndex, ABGColor);
 end;
 
-procedure TVSTCoreTable.SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
+procedure TVSTCore.SetColumnHeaderBGColor(const AColIndex: Integer; const ABGColor: TColor);
 begin
   if not IsColIndexCorrect(AColIndex) then Exit;
   FColumnHeaderBGColors[AColIndex]:= ABGColor;
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetColumnHeaderBGColor(const ACaption: String;  const ABGColor: TColor);
+procedure TVSTCore.SetColumnHeaderBGColor(const ACaption: String;  const ABGColor: TColor);
 var
   ColIndex: Integer;
 begin
@@ -642,7 +646,7 @@ begin
     SetColumnHeaderBGColor(ColIndex, ABGColor);
 end;
 
-procedure TVSTCoreTable.SetRowHeight(const AHeight: Integer);
+procedure TVSTCore.SetRowHeight(const AHeight: Integer);
 begin
   FRowHeight:= Tree.Scale96ToForm(AHeight);
   FTree.DefaultNodeHeight:= FRowHeight;
@@ -650,7 +654,7 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetHeaderHeight(const AHeight: Integer);
+procedure TVSTCore.SetHeaderHeight(const AHeight: Integer);
 begin
   FHeaderHeight:= Tree.Scale96ToForm(AHeight);
   FTree.Header.DefaultHeight:= FHeaderHeight;
@@ -658,23 +662,23 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCoreTable.SetAllHeight(const AHeight: Integer);
+procedure TVSTCore.SetAllHeight(const AHeight: Integer);
 begin
   SetRowHeight(AHeight);
   SetHeaderHeight(AHeight);
 end;
 
-function TVSTCoreTable.LastColumnIndex: Integer;
+function TVSTCore.LastColumnIndex: Integer;
 begin
   Result:= High(FHeaderCaptions);
 end;
 
-procedure TVSTCoreTable.AutosizeColumnEnable(const ACaption: String);
+procedure TVSTCore.AutosizeColumnEnable(const ACaption: String);
 begin
   AutosizeColumnEnable(VIndexOf(FHeaderCaptions, ACaption));
 end;
 
-procedure TVSTCoreTable.AutosizeColumnEnable(const AColIndex: Integer);
+procedure TVSTCore.AutosizeColumnEnable(const AColIndex: Integer);
 begin
   if AColIndex<0 then
     if AColIndex<>LAST_COLUMN_INDEX_FOR_AUTOSIZE then
@@ -684,19 +688,19 @@ begin
   SetColumnWidths;
 end;
 
-procedure TVSTCoreTable.AutosizeColumnEnableLast;
+procedure TVSTCore.AutosizeColumnEnableLast;
 begin
   AutosizeColumnEnable(LAST_COLUMN_INDEX_FOR_AUTOSIZE);
 end;
 
-procedure TVSTCoreTable.AutosizeColumnDisable;
+procedure TVSTCore.AutosizeColumnDisable;
 begin
   FAutosizeColumnIndex:= -1;
   FTree.Header.Options:= FTree.Header.Options - [hoAutoResize];
   SetColumnWidths;
 end;
 
-procedure TVSTCoreTable.SetColumnWidth(const AColIndex, AWidth: Integer);
+procedure TVSTCore.SetColumnWidth(const AColIndex, AWidth: Integer);
 var
   W: Integer;
 begin
@@ -707,7 +711,7 @@ begin
   Tree.Header.Columns[AColIndex].Width:= W;
 end;
 
-procedure TVSTCoreTable.SetColumnWidth(const ACaption: String; const AWidth: Integer);
+procedure TVSTCore.SetColumnWidth(const ACaption: String; const AWidth: Integer);
 var
   ColIndex: Integer;
 begin
@@ -715,14 +719,14 @@ begin
   SetColumnWidth(ColIndex, AWidth);
 end;
 
-function TVSTCoreTable.GetColumnWidth(const AColIndex: Integer): Integer;
+function TVSTCore.GetColumnWidth(const AColIndex: Integer): Integer;
 begin
   Result:= 0;
   if not IsColIndexCorrect(AColIndex) then Exit;
   Result:= Tree.ScaleScreenTo96(Tree.Header.Columns[AColIndex].Width);
 end;
 
-function TVSTCoreTable.GetColumnWidth(const ACaption: String): Integer;
+function TVSTCore.GetColumnWidth(const ACaption: String): Integer;
 var
   ColIndex: Integer;
 begin
@@ -730,14 +734,14 @@ begin
   Result:= GetColumnWidth(ColIndex);
 end;
 
-procedure TVSTCoreTable.RenameColumn(const AColIndex: Integer; const ANewName: String);
+procedure TVSTCore.RenameColumn(const AColIndex: Integer; const ANewName: String);
 begin
   if not IsColIndexCorrect(AColIndex) then Exit;
   FHeaderCaptions[AColIndex]:= ANewName;
   FTree.Header.Columns[AColIndex].Text:= FHeaderCaptions[AColIndex];
 end;
 
-procedure TVSTCoreTable.RenameColumn(const AOldName, ANewName: String);
+procedure TVSTCore.RenameColumn(const AOldName, ANewName: String);
 var
   ColIndex: Integer;
 begin
@@ -745,59 +749,11 @@ begin
   RenameColumn(ColIndex, ANewName);
 end;
 
-procedure TVSTCoreTable.SetSingleFont(const AFont: TFont);
+procedure TVSTCore.SetSingleFont(const AFont: TFont);
 begin
   HeaderFont:= AFont;
   ValuesFont:= AFont;
   SelectedFont:= AFont;
-end;
-
-{ TVSTCustomSimpleTable }
-
-function TVSTCustomSimpleTable.GetTotalHeight: Integer;
-var
-  RowCount: Integer;
-begin
-  RowCount:= Count;
-  if RowCount=0 then
-    RowCount:= 1;
-  if (MaxAutoHeightRowCount>0) and (RowCount>MaxAutoHeightRowCount) then
-    RowCount:= MaxAutoHeightRowCount;
-  Result:= FHeaderHeight*Ord(FHeaderVisible) + RowCount*FRowHeight;
-end;
-
-function TVSTCustomSimpleTable.GetCount: Integer;
-begin
-  Result:= MMaxLength(FDataValues);
-end;
-
-constructor TVSTCustomSimpleTable.Create(const ATree: TVirtualStringTree;
-  const AHeaderHeight: Integer; const ARowHeight: Integer);
-begin
-  inherited Create(ATree, AHeaderHeight, ARowHeight);
-  FAutoHeight:= False;
-  FMaxAutoHeightRowCount:= 0;
-  FTree.Indent:= 0;
-end;
-
-procedure TVSTCustomSimpleTable.Draw;
-begin
-  SetColumnWidths;
-
-  if AutoHeight and
-    (FTree.Align<>alLeft)   and
-    (FTree.Align<>alRight)  and
-    (FTree.Align<>alClient) then
-      FTree.Height:= TotalHeight;
-end;
-
-procedure TVSTCustomSimpleTable.ValuesClear;
-var
-  i: Integer;
-begin
-  for i:=0 to High(FDataValues) do
-    FDataValues[i]:= nil;
-  inherited ValuesClear;
 end;
 
 end.

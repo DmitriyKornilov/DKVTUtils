@@ -21,7 +21,7 @@ type
   private
     FParent: TPanel;
     FTrees: array of TVirtualStringTree;
-    FItems: array of TVSTSimpleTable;
+    FItems: array of TVSTCustomTable;
     FTypes: array of TVSTListType;
     FVisibles: TBoolVector;
     FNames: TStrVector;
@@ -255,7 +255,7 @@ begin
         end;
       ltCheck:
         begin
-          n:= (FItems[i] as TVSTCheckList).Count;
+          n:= (FItems[i] as TVSTCheckList).RowCount;
           CheckedsIntByIndex[i]:= VCut(AValue, j, j+n-1);
         end;
     end;

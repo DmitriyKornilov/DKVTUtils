@@ -10,7 +10,7 @@ interface
 uses
   DK_VSTTypes, DK_VSTTables, DK_VSTTableTools, DK_VSTDropDown, 
   DK_VSTDropDownConst, DK_VSTDropDownForm, DK_VSTCore, DK_VSTEdit, 
-  DK_VSTEditTools, DK_VSTParamList, LazarusPackageIntf;
+  DK_VSTEditTools, DK_VSTParamList, DK_VSTCategoryTables, LazarusPackageIntf;
 
 implementation
 
