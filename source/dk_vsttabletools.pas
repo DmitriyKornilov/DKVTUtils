@@ -36,10 +36,10 @@ type
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AItems: TStrVector;
-                       const AOnSelect: TVSTEvent;
-                       const ACheckedCount: Integer = -1 //-1 check all, >=0 check [0..ACheckedCount-1]
-                       );
+                       const AOnSelect: TVSTEvent);
+    procedure Update(const AItems: TStrVector;
+                     const ACheckedCount: Integer = -1); //-1 check all, >=0 check [0..ACheckedCount-1]
+
   end;
 
   { TVSTCategoryList }
@@ -123,14 +123,16 @@ procedure TVSTStringList.Update(const AItems: TStrVector; const ASelectedIndex: 
 begin
   FTree.Visible:= False;
   try
+    ValuesClear;
     SetColumn(0, AItems, taLeftJustify);
     Draw;
-    if VIsNil(AItems) then
-      Unselect
-    else if IsIndexCorrect(ASelectedIndex) then
-      Select(ASelectedIndex)
-    else
-      Select(0);
+    if not VIsNil(AItems) then
+    begin
+      if IsIndexCorrect(ASelectedIndex) then
+        Select(ASelectedIndex)
+      else
+        Select(0);
+    end;
   finally
     FTree.Visible:= True;
   end;
@@ -139,27 +141,37 @@ end;
 { TVSTCheckList }
 
 constructor TVSTCheckList.Create(const ATree: TVirtualStringTree;
-     const ACaption: String;
-     const AItems: TStrVector;
-     const AOnSelect: TVSTEvent;
-     const ACheckedCount: Integer = -1 //-1 check all, >=0 check [0..ACheckedCount-1]
-     );
-var
-  i: Integer;
+                                 const ACaption: String;
+                                 const AOnSelect: TVSTEvent);
 begin
   inherited Create(ATree);
   SetSimpleListParams(Self, ACaption);
   SelectedBGColor:= FTree.Color;
-  SetColumn(ACaption, AItems, taLeftJustify);
   Draw;
-
-  if ACheckedCount=-1 then
-    CheckAll(True)
-  else if (ACheckedCount>=0) and (ACheckedCount<=Length(AItems)) then
-    for i:=0 to ACheckedCount-1 do
-      Check(i, True);
-
   OnSelect:= AOnSelect;
+end;
+
+procedure TVSTCheckList.Update(const AItems: TStrVector;
+                     const ACheckedCount: Integer = -1);
+var
+  i: Integer;
+begin
+  FTree.Visible:= False;
+  try
+    ValuesClear;
+    SetColumn(0, AItems, taLeftJustify);
+    Draw;
+    if not VIsNil(AItems) then
+    begin
+      if ACheckedCount=-1 then
+        CheckAll(True)
+      else if (ACheckedCount>=0) and (ACheckedCount<=Length(AItems)) then
+        for i:=0 to ACheckedCount-1 do
+          Check(i, True);
+    end;
+  finally
+    FTree.Visible:= True;
+  end;
 end;
 
 { TVSTCategoryList }

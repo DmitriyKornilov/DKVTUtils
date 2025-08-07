@@ -31,7 +31,9 @@ type
     procedure SetOnChange(const AValue: TVSTEvent);
 
     function Scale96ToForm(const ASize: Integer): Integer;
+    function ScaleFormTo96(const ASize: Integer): Integer;
     function Scale96ToScreen(const ASize: Integer): Integer;
+    function ScaleScreenTo96(const ASize: Integer): Integer;
     function GetEnabled: Boolean;
     function GetItemIndex: Integer;
     function GetText: String;
@@ -141,10 +143,11 @@ var
   W: Integer;
 begin
   if SEmpty(ACaption) then
-    W:= VMaxWidth(FItems, Font, FButton.Width)
+    W:= VMaxWidth(FItems, Font, ScaleScreenTo96(FButton.Width))
   else
     W:= SWidth(ACaption, Font);
-  FButton.Width:= Scale96ToForm(W + DROPDOWN_WIDTH_DEFAULT + 2*ITEM_MARGIN_DEFAULT);
+  W:= W + DROPDOWN_WIDTH_DEFAULT + 2*ITEM_MARGIN_DEFAULT;
+  FButton.Width:= Scale96ToScreen(W);
 end;
 
 procedure TVSTDropDown.SetButtonSettings;
@@ -249,9 +252,19 @@ begin
   Result:= FButton.Parent.Scale96ToForm(ASize);
 end;
 
+function TVSTDropDown.ScaleFormTo96(const ASize: Integer): Integer;
+begin
+  Result:= FButton.Parent.ScaleFormTo96(ASize);
+end;
+
 function TVSTDropDown.Scale96ToScreen(const ASize: Integer): Integer;
 begin
   Result:= FButton.Parent.Scale96ToScreen(ASize);
+end;
+
+function TVSTDropDown.ScaleScreenTo96(const ASize: Integer): Integer;
+begin
+  Result:= FButton.Parent.ScaleScreenTo96(ASize);
 end;
 
 function TVSTDropDown.GetEnabled: Boolean;

@@ -398,7 +398,8 @@ begin
 
   N:= Length(FItems);
   SetLength(FItems, N+1);
-  List:= TVSTCheckList.Create(FTrees[N], ACaption, AItems, AOnSelect, ACheckedCount);
+  List:= TVSTCheckList.Create(FTrees[N], ACaption, AOnSelect);
+  List.Update(AItems, ACheckedCount);
   FItems[N]:= List;
 end;
 
