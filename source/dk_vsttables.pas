@@ -132,11 +132,11 @@ type
 
     procedure SetCanSelect(AValue: Boolean); override;
 
-    procedure SetChecked(AIndex: Integer; AValue: Boolean);
-    function GetChecked(AIndex: Integer): Boolean;
+    procedure SetChecked(const AIndex: Integer; const AValue: Boolean);
+    function GetChecked(const AIndex: Integer): Boolean;
 
-    function GetSelected: TBoolVector;
-    procedure SetSelected(AValue: TBoolVector);
+    function GetCheckeds: TBoolVector;
+    procedure SetCheckeds(const AValue: TBoolVector);
 
     function GetCheckedCount: Integer;
     function GetUncheckedCount: Integer;
@@ -153,9 +153,9 @@ type
     procedure CheckAll(const AChecked: Boolean);
 
     property Checked[AIndex: Integer]: Boolean read GetChecked write SetChecked;
+    property Checkeds: TBoolVector read GetCheckeds write SetCheckeds;
     property IsAllChecked: Boolean read GetIsAllChecked;
     property IsAllUnchecked: Boolean read GetIsAllUnchecked;
-    property Selected: TBoolVector read GetSelected write SetSelected;
 
     property CheckedCount: Integer read GetCheckedCount;
     property UncheckedCount: Integer read GetUncheckedCount;
@@ -694,14 +694,14 @@ begin
   Result:= VIsAllTrue(FSelected);
 end;
 
-function TVSTCheckTable.GetChecked(AIndex: Integer): Boolean;
+function TVSTCheckTable.GetChecked(const AIndex: Integer): Boolean;
 begin
   Result:= False;
   if not IsIndexCorrect(AIndex) then Exit;
   Result:= FSelected[AIndex];
 end;
 
-procedure TVSTCheckTable.SetChecked(AIndex: Integer; AValue: Boolean);
+procedure TVSTCheckTable.SetChecked(const AIndex: Integer; const AValue: Boolean);
 begin
   if not IsIndexCorrect(AIndex) then Exit;
   Check(AIndex, AValue);
@@ -766,7 +766,7 @@ begin
   CheckNode(NodeFromIndex(AIndex), AChecked);
 end;
 
-function TVSTCheckTable.GetSelected: TBoolVector;
+function TVSTCheckTable.GetCheckeds: TBoolVector;
 begin
   Result:= VCut(FSelected);
 end;
@@ -811,7 +811,7 @@ begin
   end;
 end;
 
-procedure TVSTCheckTable.SetSelected(AValue: TBoolVector);
+procedure TVSTCheckTable.SetCheckeds(const AValue: TBoolVector);
 var
   i: Integer;
 begin

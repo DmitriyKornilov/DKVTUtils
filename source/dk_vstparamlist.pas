@@ -81,7 +81,7 @@ type
     procedure AddCheckList(const AName, ACaption: String;
                             const AItems: TStrVector;
                             const AOnSelect: TVSTEvent;
-                            const ACheckedCount: Integer = -1); //-1 check all, >=0 check [0..ACheckedCount-1]
+                            const ACheckeds: TBoolVector = nil);
 
     property IsSelected[const AItemName: String]: Boolean read GetIsSelected;
     property Selected[const AItemName: String]: Integer read GetSelected write SetSelected;
@@ -186,7 +186,7 @@ function TVSTParamList.GetCheckedsByIndex(const AItemIndex: Integer): TBoolVecto
 begin
   Result:= nil;
   if (AItemIndex<0) or (FTypes[AItemIndex]<>ltCheck) then Exit;
-  Result:= (FItems[AItemIndex] as TVSTCheckList).Selected;
+  Result:= (FItems[AItemIndex] as TVSTCheckList).Checkeds;
 end;
 
 function TVSTParamList.GetCheckeds(const AItemName: String): TBoolVector;
@@ -208,7 +208,7 @@ end;
 procedure TVSTParamList.SetCheckedsByIndex(const AItemIndex: Integer; const AValue: TBoolVector);
 begin
   if (AItemIndex<0) or (FTypes[AItemIndex]<>ltCheck) then Exit;
-  (FItems[AItemIndex] as TVSTCheckList).Selected:= AValue;
+  (FItems[AItemIndex] as TVSTCheckList).Checkeds:= AValue;
 end;
 
 procedure TVSTParamList.SetCheckeds(const AItemName: String; const AValue: TBoolVector);
@@ -389,7 +389,7 @@ end;
 procedure TVSTParamList.AddCheckList(const AName, ACaption: String;
                             const AItems: TStrVector;
                             const AOnSelect: TVSTEvent;
-                            const ACheckedCount: Integer = -1);
+                            const ACheckeds: TBoolVector = nil);
 var
   N: Integer;
   List: TVSTCheckList;
@@ -399,7 +399,8 @@ begin
   N:= Length(FItems);
   SetLength(FItems, N+1);
   List:= TVSTCheckList.Create(FTrees[N], ACaption, AOnSelect);
-  List.Update(AItems, ACheckedCount);
+  List.StopSelectEventWhileCheckAll:= True;
+  List.Update(AItems, ACheckeds);
   FItems[N]:= List;
 end;
 

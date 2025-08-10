@@ -38,8 +38,7 @@ type
                        const ACaption: String;
                        const AOnSelect: TVSTEvent);
     procedure Update(const AItems: TStrVector;
-                     const ACheckedCount: Integer = -1); //-1 check all, >=0 check [0..ACheckedCount-1]
-
+                     const ACheckeds: TBoolVector = nil);
   end;
 
   { TVSTCategoryList }
@@ -152,23 +151,15 @@ begin
 end;
 
 procedure TVSTCheckList.Update(const AItems: TStrVector;
-                     const ACheckedCount: Integer = -1);
-var
-  i: Integer;
+                     const ACheckeds: TBoolVector = nil);
 begin
   FTree.Visible:= False;
   try
     ValuesClear;
     SetColumn(0, AItems, taLeftJustify);
     Draw;
-    if not VIsNil(AItems) then
-    begin
-      if ACheckedCount=-1 then
-        CheckAll(True)
-      else if (ACheckedCount>=0) and (ACheckedCount<=Length(AItems)) then
-        for i:=0 to ACheckedCount-1 do
-          Check(i, True);
-    end;
+    if (not VIsNil(AItems)) and (not VIsNil(ACheckeds)) then
+      Checkeds:= ACheckeds;
   finally
     FTree.Visible:= True;
   end;
