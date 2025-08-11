@@ -5,7 +5,7 @@
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, LCLType, VirtualTrees, fpstypes,
+  Classes, SysUtils, Controls, StdCtrls, Graphics, LCLType, VirtualTrees, fpstypes,
 
   DK_VSTCore, DK_VSTTypes, DK_Vector, DK_Matrix, DK_Const, DK_Color,
   DK_SheetExporter, DK_SheetWriter;
@@ -18,13 +18,17 @@ type
   protected
     FDataValues: TStrMatrix;
     FSelected: TBoolVector;
+    FVisibles: TBoolVector;
 
     FAutoHeight: Boolean;
     FMaxAutoHeightRowCount: Integer;
 
-    function GetTotalHeight: Integer;
+    function GetAutoHeightValue: Integer;
     function GetRowCount: Integer;
     function GetIsSelected: Boolean;
+
+    procedure SetVisibles(const AValues: TBoolVector);
+    function GetVisibles: TBoolVector;
 
     procedure HeaderClear; override;
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
@@ -50,11 +54,14 @@ type
 
     procedure Show(const AIndex: Integer);
 
+    procedure AutoHeightUpdate;
     property AutoHeight: Boolean read FAutoHeight write FAutoHeight;
-    property TotalHeight: Integer read GetTotalHeight;
+    property AutoHeightValue: Integer read GetAutoHeightValue;
     property MaxAutoHeightRowCount: Integer read FMaxAutoHeightRowCount write FMaxAutoHeightRowCount;
     property RowCount: Integer read GetRowCount;
     property IsSelected: Boolean read GetIsSelected;
+
+    property Visibles: TBoolVector read GetVisibles write SetVisibles;
   end;
 
   { TVSTTable }
@@ -76,12 +83,12 @@ type
     procedure MeasureItem(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
                           Node: PVirtualNode; var NodeHeight: Integer);
 
-    procedure SetCanSelect(AValue: Boolean); override;
+    procedure SetCanSelect(const AValue: Boolean); override;
     function GetSelectedIndex: Integer;
 
     procedure MoveSelection(const ADeltaIndex: Integer);
 
-    procedure SetAutosizeRowHeights(AValue: Boolean);
+    procedure SetAutosizeRowHeights(const AValue: Boolean);
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const AHeaderHeight: Integer = ROW_HEIGHT_DEFAULT;
@@ -128,9 +135,9 @@ type
 
     function GetIsAllChecked: Boolean;
     function GetIsAllUnchecked: Boolean;
-    procedure SetMaxCheckedCount(AValue: Integer);
+    procedure SetMaxCheckedCount(const AValue: Integer);
 
-    procedure SetCanSelect(AValue: Boolean); override;
+    procedure SetCanSelect(const AValue: Boolean); override;
 
     procedure SetChecked(const AIndex: Integer; const AValue: Boolean);
     function GetChecked(const AIndex: Integer): Boolean;
@@ -170,11 +177,51 @@ implementation
 
 { TVSTCoreTable }
 
-function TVSTCoreTable.GetTotalHeight: Integer;
+procedure TVSTCoreTable.SetVisibles(const AValues: TBoolVector);
+var
+  i: Integer;
+  Node: PVirtualNode;
+begin
+  if VIsNil(AValues) then Exit;
+  FVisibles:= VCut(AValues);
+  for i:= 0 to High(AValues) do
+  begin
+    Node:= NodeFromIndex(i);
+    if not Assigned(Node) then continue;
+    if AValues[i] then
+      Node^.NodeHeight:= FRowHeight
+    else
+      Node^.NodeHeight:= 0;
+  end;
+  AutoHeightUpdate;
+end;
+
+function TVSTCoreTable.GetVisibles: TBoolVector;
+begin
+  Result:= VCut(FVisibles);
+end;
+
+procedure TVSTCoreTable.AutoHeightUpdate;
+var
+  H: Integer;
+begin
+  if AutoHeight and
+    (FTree.Align<>alLeft)   and
+    (FTree.Align<>alRight)  and
+    (FTree.Align<>alClient) then
+  begin
+    FTree.ScrollBarOptions.ScrollBars:= ssNone;
+    H:= AutoHeightValue;
+    while FTree.Height<>H do
+      FTree.Height:= H;
+  end;
+end;
+
+function TVSTCoreTable.GetAutoHeightValue: Integer;
 var
   N: Integer;
 begin
-  N:= RowCount;
+  N:= VCountIf(FVisibles, True);
   if N=0 then N:= 1;
   if (MaxAutoHeightRowCount>0) and (N>MaxAutoHeightRowCount) then
     N:= MaxAutoHeightRowCount;
@@ -206,6 +253,7 @@ begin
 
   MaxLength:= MMaxLength(FDataValues);
   VDim(FSelected, MaxLength, False);
+  VReDim(FVisibles, MaxLength, True);
   for i:= 0 to High(FDataValues) do
     if Length(FDataValues[i])<MaxLength then
       VReDim(FDataValues[i], MaxLength, EmptyStr);
@@ -213,12 +261,7 @@ begin
   VSTLoad(FTree, FDataValues[0]);
 
   SetColumnWidths;
-
-  if AutoHeight and
-    (FTree.Align<>alLeft)   and
-    (FTree.Align<>alRight)  and
-    (FTree.Align<>alClient) then
-      FTree.Height:= TotalHeight;
+  AutoHeightUpdate;
 end;
 
 procedure TVSTCoreTable.ValuesClear;
@@ -506,7 +549,7 @@ begin
   end;
 end;
 
-procedure TVSTTable.SetAutosizeRowHeights(AValue: Boolean);
+procedure TVSTTable.SetAutosizeRowHeights(const AValue: Boolean);
 begin
   if FAutosizeRowHeights=AValue then Exit;
   FAutosizeRowHeights:= AValue;
@@ -634,7 +677,7 @@ begin
   end;
 end;
 
-procedure TVSTTable.SetCanSelect(AValue: Boolean);
+procedure TVSTTable.SetCanSelect(const AValue: Boolean);
 begin
   if not AValue then UnselectNode;
   inherited SetCanSelect(AValue);
@@ -683,7 +726,7 @@ begin
   Result:= VIsAllFalse(FSelected);
 end;
 
-procedure TVSTCheckTable.SetCanSelect(AValue: Boolean);
+procedure TVSTCheckTable.SetCanSelect(const AValue: Boolean);
 begin
   if not AValue then CheckAll(False);
   inherited SetCanSelect(AValue);
@@ -786,7 +829,7 @@ begin
   FMaxCheckedCount:= -1;
 end;
 
-procedure TVSTCheckTable.SetMaxCheckedCount(AValue: Integer);
+procedure TVSTCheckTable.SetMaxCheckedCount(const AValue: Integer);
 var
   i, Delta, N: Integer;
 begin

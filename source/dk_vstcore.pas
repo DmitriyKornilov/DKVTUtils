@@ -54,25 +54,25 @@ type
 
     procedure HeaderClear; virtual;
 
-    procedure SetCanSelect(AValue: Boolean); virtual;
-    procedure SetHeaderVisible(AValue: Boolean);
+    procedure SetCanSelect(const AValue: Boolean); virtual;
+    procedure SetHeaderVisible(const AValue: Boolean);
     procedure SetColumnWidths;
-    procedure SetColumnVisibles(AValue: TBoolVector);
-    procedure SetGridLinesVisible(AValue: Boolean);
-    procedure SetGridLinesColor(AValue: TColor);
-    procedure SetHeaderBGColor(AValue: TColor);
-    procedure SetHeaderFont(AValue: TFont);
-    procedure SetSelectedBGColor(AValue: TColor);
-    procedure SetSelectedFont(AValue: TFont);
-    procedure SetValuesBGColor(AValue: TColor);
-    procedure SetValuesFont(AValue: TFont);
-    procedure SetFixedColCount(AValue: Integer);
-    procedure SetSpan(AValue: Boolean);
+    procedure SetColumnVisibles(const AValue: TBoolVector);
+    procedure SetGridLinesVisible(const AValue: Boolean);
+    procedure SetGridLinesColor(const AValue: TColor);
+    procedure SetHeaderBGColor(const AValue: TColor);
+    procedure SetHeaderFont(const AValue: TFont);
+    procedure SetSelectedBGColor(const AValue: TColor);
+    procedure SetSelectedFont(const AValue: TFont);
+    procedure SetValuesBGColor(const AValue: TColor);
+    procedure SetValuesFont(const AValue: TFont);
+    procedure SetFixedColCount(const AValue: Integer);
+    procedure SetSpan(const AValue: Boolean);
     procedure SetRowHeight(const AHeight: Integer);
     procedure SetHeaderHeight(const AHeight: Integer);
     procedure SetDefaultHeights(const AHeaderHeight, ARowHeight: Integer);
 
-    procedure SetVisible(AValue: Boolean);
+    procedure SetVisible(const AValue: Boolean);
     function GetVisible: Boolean;
     function GetColCount: Integer;
 
@@ -174,7 +174,7 @@ implementation
 
 { TVSTCore }
 
-procedure TVSTCore.SetHeaderVisible(AValue: Boolean);
+procedure TVSTCore.SetHeaderVisible(const AValue: Boolean);
 begin
   if FHeaderVisible=AValue then Exit;
   FHeaderVisible:= AValue;
@@ -184,7 +184,7 @@ begin
     FTree.Header.Options:= FTree.Header.Options - [hoVisible];
 end;
 
-procedure TVSTCore.SetGridLinesColor(AValue: TColor);
+procedure TVSTCore.SetGridLinesColor(const AValue: TColor);
 begin
   if FGridLinesColor=AValue then Exit;
   FGridLinesColor:= AValue;
@@ -192,14 +192,14 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetGridLinesVisible(AValue: Boolean);
+procedure TVSTCore.SetGridLinesVisible(const AValue: Boolean);
 begin
   if FGridLinesVisible=AValue then Exit;
   FGridLinesVisible:= AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetFixedColCount(AValue: Integer);
+procedure TVSTCore.SetFixedColCount(const AValue: Integer);
 var
   i: Integer;
 begin
@@ -213,7 +213,7 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetSpan(AValue: Boolean);
+procedure TVSTCore.SetSpan(const AValue: Boolean);
 begin
   if FSpan=AValue then Exit;
   FSpan:=AValue;
@@ -239,7 +239,7 @@ begin
   FColumnWidths[Column]:= Sender.Columns[Column].Width;
 end;
 
-procedure TVSTCore.SetVisible(AValue: Boolean);
+procedure TVSTCore.SetVisible(const AValue: Boolean);
 begin
   FTree.Visible:= AValue;
 end;
@@ -289,7 +289,7 @@ begin
   end;
 end;
 
-procedure TVSTCore.SetCanSelect(AValue: Boolean);
+procedure TVSTCore.SetCanSelect(const AValue: Boolean);
 begin
   if FCanSelect=AValue then Exit;
   FCanSelect:=AValue;
@@ -320,7 +320,7 @@ begin
     FTree.Header.Columns[i].Width:= FColumnWidths[i];
 end;
 
-procedure TVSTCore.SetColumnVisibles(AValue: TBoolVector);
+procedure TVSTCore.SetColumnVisibles(const AValue: TBoolVector);
 var
   i: Integer;
 begin
@@ -336,41 +336,41 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetHeaderBGColor(AValue: TColor);
+procedure TVSTCore.SetHeaderBGColor(const AValue: TColor);
 begin
   if FHeaderBGColor=AValue then Exit;
   FHeaderBGColor:=AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetHeaderFont(AValue: TFont);
+procedure TVSTCore.SetHeaderFont(const AValue: TFont);
 begin
   FHeaderFont.Assign(AValue);
   FTree.Header.Font.Assign(FHeaderFont);
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetSelectedBGColor(AValue: TColor);
+procedure TVSTCore.SetSelectedBGColor(const AValue: TColor);
 begin
   if FSelectedBGColor=AValue then Exit;
   FSelectedBGColor:=AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetSelectedFont(AValue: TFont);
+procedure TVSTCore.SetSelectedFont(const AValue: TFont);
 begin
   FSelectedFont.Assign(AValue);
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetValuesBGColor(AValue: TColor);
+procedure TVSTCore.SetValuesBGColor(const AValue: TColor);
 begin
   if FValuesBGColor=AValue then Exit;
   FValuesBGColor:=AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTCore.SetValuesFont(AValue: TFont);
+procedure TVSTCore.SetValuesFont(const AValue: TFont);
 begin
   FValuesFont.Assign(AValue);
   FTree.Font.Assign(FValuesFont);
@@ -481,7 +481,7 @@ begin
   if ARowHeight>H then
     RowHeight:= ARowHeight
   else
-    RowHeight:=H;
+    RowHeight:= H;
   H:= Tree.ScaleFormTo96(FTree.Header.DefaultHeight);
   if AHeaderHeight>H then
     HeaderHeight:= AHeaderHeight

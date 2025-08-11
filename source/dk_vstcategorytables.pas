@@ -23,13 +23,13 @@ type
     FSelected: TBoolMatrix;
     FCategoryFont: TFont;
 
-    procedure SetTreeLinesVisible(AValue: Boolean);
+    procedure SetTreeLinesVisible(const AValue: Boolean);
     procedure HeaderClear; override;
     function IsIndexesCorrect(const AIndex1, AIndex2: Integer): Boolean;
 
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
     function GetIsSelected: Boolean;
-    procedure SetCategoryFont(AValue: TFont);
+    procedure SetCategoryFont(const AValue: TFont);
     procedure CellFont(Node: PVirtualNode; {%H-}Column: TColumnIndex); override;
 
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
@@ -78,9 +78,9 @@ type
     procedure MouseDown(Sender: TObject; Button: TMouseButton;
                         {%H-}Shift: TShiftState; X, Y: Integer);
 
-    procedure SetCanSelect(AValue: Boolean); override;
-    procedure SetRadioEnable(AValue: Boolean);
-    procedure SetRadioVisible(AValue: Boolean);
+    procedure SetCanSelect(const AValue: Boolean); override;
+    procedure SetRadioEnable(const AValue: Boolean);
+    procedure SetRadioVisible(const AValue: Boolean);
 
     procedure SelectNode(Node: PVirtualNode);
     procedure UnselectNode;
@@ -124,18 +124,18 @@ type
     procedure Checking(Sender: TBaseVirtualTree; {%H-}Node: PVirtualNode;
       var {%H-}NewState: TCheckState; var Allowed: Boolean);
 
-    procedure SetCanSelect(AValue: Boolean); override;
-    procedure SetCheckVisible(AValue: Boolean);
-    procedure SetCheckKind(AValue: TVSTCategoryCheckKind);
+    procedure SetCanSelect(const AValue: Boolean); override;
+    procedure SetCheckVisible(const AValue: Boolean);
+    procedure SetCheckKind(const AValue: TVSTCategoryCheckKind);
 
-    procedure SetSelected(AValue: TBoolMatrix);
+    procedure SetSelected(const AValue: TBoolMatrix);
     function GetSelected: TBoolMatrix;
 
     function GetCategorySelected: TBoolVector;
-    procedure SetCategorySelected(AValue: TBoolVector);
+    procedure SetCategorySelected(const AValue: TBoolVector);
 
-    procedure SetChecked(AIndex1, AIndex2: Integer; AValue: Boolean);
-    function GetChecked(AIndex1, AIndex2: Integer): Boolean;
+    procedure SetChecked(const AIndex1, AIndex2: Integer; const AValue: Boolean);
+    function GetChecked(const AIndex1, AIndex2: Integer): Boolean;
 
     procedure CheckNode(Node: PVirtualNode; const AChecked: Boolean);
     procedure Check(const AIndex1, AIndex2: Integer; const AChecked: Boolean);
@@ -173,13 +173,13 @@ implementation
 
 { TVSTCategoryCoreTable }
 
-procedure TVSTCategoryCoreTable.SetCategoryFont(AValue: TFont);
+procedure TVSTCategoryCoreTable.SetCategoryFont(const AValue: TFont);
 begin
   FCategoryFont.Assign(AValue);
   FTree.Refresh;
 end;
 
-procedure TVSTCategoryCoreTable.SetTreeLinesVisible(AValue: Boolean);
+procedure TVSTCategoryCoreTable.SetTreeLinesVisible(const AValue: Boolean);
 begin
   if Avalue then
     FTree.TreeOptions.PaintOptions:= FTree.TreeOptions.PaintOptions + [toShowTreeLines]
@@ -475,13 +475,13 @@ begin
   end;
 end;
 
-procedure TVSTCategoryRadioTable.SetCanSelect(AValue: Boolean);
+procedure TVSTCategoryRadioTable.SetCanSelect(const AValue: Boolean);
 begin
   if not AValue then UnselectNode;
   inherited SetCanSelect(AValue);
 end;
 
-procedure TVSTCategoryRadioTable.SetRadioEnable(AValue: Boolean);
+procedure TVSTCategoryRadioTable.SetRadioEnable(const AValue: Boolean);
 begin
   if FRadioEnable=AValue then Exit;
   FRadioEnable:= AValue;
@@ -490,7 +490,7 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCategoryRadioTable.SetRadioVisible(AValue: Boolean);
+procedure TVSTCategoryRadioTable.SetRadioVisible(const AValue: Boolean);
 begin
   if FRadioVisible=AValue then Exit;
   FRadioVisible:= AValue;
@@ -574,7 +574,8 @@ end;
 
 { TVSTCategoryCheckTable }
 
-function TVSTCategoryCheckTable.GetChecked(AIndex1, AIndex2: Integer): Boolean;
+function TVSTCategoryCheckTable.GetChecked(const AIndex1, AIndex2: Integer
+  ): Boolean;
 begin
   Result:= False;
   if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
@@ -586,7 +587,7 @@ begin
   Result:= MCut(FSelected);
 end;
 
-procedure TVSTCategoryCheckTable.SetCheckVisible(AValue: Boolean);
+procedure TVSTCategoryCheckTable.SetCheckVisible(const AValue: Boolean);
 begin
   if FCheckVisible=AValue then Exit;
   FCheckVisible:= AValue;
@@ -598,7 +599,7 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCategoryCheckTable.SetSelected(AValue: TBoolMatrix);
+procedure TVSTCategoryCheckTable.SetSelected(const AValue: TBoolMatrix);
 var
   i, j: Integer;
 begin
@@ -619,7 +620,8 @@ begin
   FTree.Refresh;
 end;
 
-procedure TVSTCategoryCheckTable.SetCheckKind(AValue: TVSTCategoryCheckKind);
+procedure TVSTCategoryCheckTable.SetCheckKind(
+  const AValue: TVSTCategoryCheckKind);
 begin
   if FCheckKind=AValue then Exit;
   FCheckKind:=AValue;
@@ -638,7 +640,7 @@ begin
     Result[i]:= IsCategoryAllChecked(i);
 end;
 
-procedure TVSTCategoryCheckTable.SetCategorySelected(AValue: TBoolVector);
+procedure TVSTCategoryCheckTable.SetCategorySelected(const AValue: TBoolVector);
 var
   i: Integer;
 begin
@@ -733,7 +735,7 @@ begin
   Allowed:= False;
 end;
 
-procedure TVSTCategoryCheckTable.SetCanSelect(AValue: Boolean);
+procedure TVSTCategoryCheckTable.SetCanSelect(const AValue: Boolean);
 begin
   if not AValue then CheckAll(False);
   inherited SetCanSelect(AValue);
@@ -768,8 +770,8 @@ begin
   CheckNode(NodeFromIndex(AIndex1, AIndex2), AChecked);
 end;
 
-procedure TVSTCategoryCheckTable.SetChecked(AIndex1, AIndex2: Integer;
-  AValue: Boolean);
+procedure TVSTCategoryCheckTable.SetChecked(const AIndex1, AIndex2: Integer;
+  const AValue: Boolean);
 begin
   if not IsIndexesCorrect(AIndex1, AIndex2) then Exit;
   Check(AIndex1, AIndex2, AValue);

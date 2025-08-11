@@ -9,7 +9,7 @@ object VSTDropDownForm: TVSTDropDownForm
   ClientWidth = 400
   DesignTimePPI = 120
   FormStyle = fsSystemStayOnTop
-  LCLVersion = '4.0.0.4'
+  LCLVersion = '4.2.0.0'
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow

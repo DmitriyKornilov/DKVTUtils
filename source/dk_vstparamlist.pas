@@ -5,7 +5,7 @@ unit DK_VSTParamList;
 interface
 
 uses
-  Classes, SysUtils, Controls, ExtCtrls, Forms, VirtualTrees,
+  Classes, SysUtils, Controls, StdCtrls, ExtCtrls, Forms, VirtualTrees,
   Graphics, DK_VSTTypes, DK_VSTTables, DK_VSTTableTools, DK_Vector;
 
 const
@@ -27,9 +27,12 @@ type
     FNames: TStrVector;
     FScrollBox: TScrollBox;
     FSpace: Integer;
-    FHeight: Integer;
     FFont: TFont;
 
+    function GetItem(const AItemName: String): TVSTCoreTable;
+    function GetItemByIndex(const AItemIndex: Integer): TVSTCoreTable;
+    function GetTree(const AItemName: String): TVirtualStringTree;
+    function GetTreeByIndex(const AItemIndex: Integer): TVirtualStringTree;
     function ItemIndex(const AItemName: String): Integer;
 
     function GetIsSelectedByIndex(const AItemIndex: Integer): Boolean;
@@ -44,32 +47,28 @@ type
     function GetCheckedsInt(const AItemName: String): TIntVector;
     function GetVisiblesByIndex(const AItemIndex: Integer): Boolean;
     function GetVisibles(const AItemName: String): Boolean;
+    function GetItemVisiblesByIndex(const AItemIndex: Integer): TBoolVector;
+    function GetItemVisibles(const AItemName: String): TBoolVector;
     function GetParams: TIntVector;
 
     procedure SetSelectedByIndex(const AItemIndex: Integer; const AValue: Integer);
     procedure SetSelected(const AItemName: String; const AValue: Integer);
     procedure SetCheckedByIndex(const AItemIndex, AParamIndex: Integer; const AValue: Boolean);
     procedure SetChecked(const AItemName: String; const AParamIndex: Integer; const AValue: Boolean);
-    procedure SetCheckedsByIndex(const AItemIndex: Integer; const AValue: TBoolVector);
-    procedure SetCheckeds(const AItemName: String; const AValue: TBoolVector);
-    procedure SetCheckedsIntByIndex(const AItemIndex: Integer; const AValue: TIntVector);
-    procedure SetCheckedsInt(const AItemName: String; const AValue: TIntVector);
+    procedure SetCheckedsByIndex(const AItemIndex: Integer; const AValues: TBoolVector);
+    procedure SetCheckeds(const AItemName: String; const AValues: TBoolVector);
+    procedure SetCheckedsIntByIndex(const AItemIndex: Integer; const AValues: TIntVector);
+    procedure SetCheckedsInt(const AItemName: String; const AValues: TIntVector);
     procedure SetVisiblesByIndex(const AItemIndex: Integer; const AValue: Boolean);
     procedure SetVisibles(const AItemName: String; const AValue: Boolean);
-    procedure SetParams(const AValue: TIntVector);
+    procedure SetItemVisiblesByIndex(const AItemIndex: Integer; const AValues: TBoolVector);
+    procedure SetItemVisibles(const AItemName: String; const AValues: TBoolVector);
+    procedure SetParams(const AValues: TIntVector);
+
+    procedure AddCustomList(const AListType: TVSTListType; const AName: String);
 
     procedure MouseWheel(Sender: TObject; {%H-}Shift: TShiftState; WheelDelta: Integer;
                          {%H-}MousePos: TPoint; var {%H-}Handled: Boolean);
-    procedure ParentResize(Sender: TObject);
-    procedure AddCustomList(const AListType: TVSTListType; const AName: String);
-
-    property IsSelectedByIndex[const AItemIndex: Integer]: Boolean read GetIsSelectedByIndex;
-    property SelectedByIndex[const AItemIndex: Integer]: Integer read GetSelectedByIndex write SetSelectedByIndex;
-    property CheckedByIndex[const AItemIndex, AParamIndex: Integer]: Boolean read GetCheckedByIndex write SetCheckedByIndex;
-    property CheckedsByIndex[const AItemIndex: Integer]: TBoolVector read GetCheckedsByIndex write SetCheckedsByIndex;
-    property CheckedsIntByIndex[const AItemIndex: Integer]: TIntVector read GetCheckedsIntByIndex write SetCheckedsIntByIndex;
-    property VisiblesByIndex[const AItemIndex: Integer]: Boolean read GetVisiblesByIndex write SetVisiblesByIndex;
-
   public
     constructor Create(const AParent: TPanel; const AFont: TFont = nil);
     destructor Destroy; override;
@@ -83,24 +82,77 @@ type
                             const AOnSelect: TVSTEvent;
                             const ACheckeds: TBoolVector = nil);
 
+    property IsSelectedByIndex[const AItemIndex: Integer]: Boolean read GetIsSelectedByIndex;
+    property SelectedByIndex[const AItemIndex: Integer]: Integer read GetSelectedByIndex write SetSelectedByIndex;
+    property CheckedByIndex[const AItemIndex, AParamIndex: Integer]: Boolean read GetCheckedByIndex write SetCheckedByIndex;
+    property CheckedsByIndex[const AItemIndex: Integer]: TBoolVector read GetCheckedsByIndex write SetCheckedsByIndex;
+    property CheckedsIntByIndex[const AItemIndex: Integer]: TIntVector read GetCheckedsIntByIndex write SetCheckedsIntByIndex;
+    property VisiblesByIndex[const AItemIndex: Integer]: Boolean read GetVisiblesByIndex write SetVisiblesByIndex;
+    property ItemVisiblesByIndex[const AItemIndex: Integer]: TBoolVector read GetItemVisiblesByIndex write SetItemVisiblesByIndex;
+
     property IsSelected[const AItemName: String]: Boolean read GetIsSelected;
     property Selected[const AItemName: String]: Integer read GetSelected write SetSelected;
     property Checked[const AItemName: String; const AParamIndex: Integer]: Boolean read GetChecked write SetChecked;
     property Checkeds[const AItemName: String]: TBoolVector read GetCheckeds write SetCheckeds;
     property CheckedsInt[const AItemName: String]: TIntVector read GetCheckedsInt write SetCheckedsInt;
     property Visibles[const AItemName: String]: Boolean read GetVisibles write SetVisibles;
+    property ItemVisibles[const AItemName: String]: TBoolVector read GetItemVisibles write SetItemVisibles;
     property Params: TIntVector read GetParams write SetParams;
 
-    property Height: Integer read FHeight;
+    property TreeByIndex[const AItemIndex: Integer]: TVirtualStringTree read GetTreeByIndex;
+    property ItemByIndex[const AItemIndex: Integer]: TVSTCoreTable read GetItemByIndex;
+
+    property Tree[const AItemName: String]: TVirtualStringTree read GetTree;
+    property Item[const AItemName: String]: TVSTCoreTable read GetItem;
   end;
 
 implementation
 
 { TVSTParamList }
 
+function TVSTParamList.GetItemVisiblesByIndex(const AItemIndex: Integer): TBoolVector;
+begin
+  Result:= FItems[AItemIndex].Visibles;
+end;
+
+function TVSTParamList.GetItemVisibles(const AItemName: String): TBoolVector;
+begin
+  Result:= ItemVisiblesByIndex[ItemIndex(AItemName)];
+end;
+
+procedure TVSTParamList.SetItemVisiblesByIndex(const AItemIndex: Integer; const AValues: TBoolVector);
+begin
+  FItems[AItemIndex].Visibles:= AValues;
+end;
+
+procedure TVSTParamList.SetItemVisibles(const AItemName: String; const AValues: TBoolVector);
+begin
+  ItemVisiblesByIndex[ItemIndex(AItemName)]:= AValues;
+end;
+
 function TVSTParamList.ItemIndex(const AItemName: String): Integer;
 begin
   Result:= VIndexOf(FNames, AItemName);
+end;
+
+function TVSTParamList.GetItem(const AItemName: String): TVSTCoreTable;
+begin
+  Result:= FItems[ItemIndex(AItemName)];
+end;
+
+function TVSTParamList.GetItemByIndex(const AItemIndex: Integer): TVSTCoreTable;
+begin
+  Result:= FItems[AItemIndex];
+end;
+
+function TVSTParamList.GetTree(const AItemName: String): TVirtualStringTree;
+begin
+  Result:= FTrees[ItemIndex(AItemName)];
+end;
+
+function TVSTParamList.GetTreeByIndex(const AItemIndex: Integer): TVirtualStringTree;
+begin
+  Result:= FTrees[AItemIndex];
 end;
 
 function TVSTParamList.GetVisibles(const AItemName: String): Boolean;
@@ -128,14 +180,14 @@ begin
   Result:= VBoolToInt(Checkeds[AItemName]);
 end;
 
-procedure TVSTParamList.SetCheckedsIntByIndex(const AItemIndex: Integer; const AValue: TIntVector);
+procedure TVSTParamList.SetCheckedsIntByIndex(const AItemIndex: Integer; const AValues: TIntVector);
 begin
-  CheckedsByIndex[AItemIndex]:= VIntToBool(AValue);
+  CheckedsByIndex[AItemIndex]:= VIntToBool(AValues);
 end;
 
-procedure TVSTParamList.SetCheckedsInt(const AItemName: String; const AValue: TIntVector);
+procedure TVSTParamList.SetCheckedsInt(const AItemName: String; const AValues: TIntVector);
 begin
-  Checkeds[AItemName]:= VIntToBool(AValue);
+  Checkeds[AItemName]:= VIntToBool(AValues);
 end;
 
 procedure TVSTParamList.SetVisibles(const AItemName: String; const AValue: Boolean);
@@ -205,15 +257,15 @@ begin
   CheckedByIndex[ItemIndex(AItemName), AParamIndex]:= AValue;
 end;
 
-procedure TVSTParamList.SetCheckedsByIndex(const AItemIndex: Integer; const AValue: TBoolVector);
+procedure TVSTParamList.SetCheckedsByIndex(const AItemIndex: Integer; const AValues: TBoolVector);
 begin
   if (AItemIndex<0) or (FTypes[AItemIndex]<>ltCheck) then Exit;
-  (FItems[AItemIndex] as TVSTCheckList).Checkeds:= AValue;
+  (FItems[AItemIndex] as TVSTCheckList).Checkeds:= AValues;
 end;
 
-procedure TVSTParamList.SetCheckeds(const AItemName: String; const AValue: TBoolVector);
+procedure TVSTParamList.SetCheckeds(const AItemName: String; const AValues: TBoolVector);
 begin
-  CheckedsByIndex[ItemIndex(AItemName)]:= AValue;
+  CheckedsByIndex[ItemIndex(AItemName)]:= AValues;
 end;
 
 function TVSTParamList.GetSelectedByIndex(const AItemIndex: Integer): Integer;
@@ -239,7 +291,7 @@ begin
   SelectedByIndex[ItemIndex(AItemName)]:= AValue;
 end;
 
-procedure TVSTParamList.SetParams(const AValue: TIntVector);
+procedure TVSTParamList.SetParams(const AValues: TIntVector);
 var
   i, j, n: Integer;
 begin
@@ -251,12 +303,12 @@ begin
       ltString:
         begin
           n:= 1;
-          SelectedByIndex[i]:= AValue[j];
+          SelectedByIndex[i]:= AValues[j];
         end;
       ltCheck:
         begin
           n:= (FItems[i] as TVSTCheckList).RowCount;
-          CheckedsIntByIndex[i]:= VCut(AValue, j, j+n-1);
+          CheckedsIntByIndex[i]:= VCut(AValues, j, j+n-1);
         end;
     end;
     j:= j + n;
@@ -275,19 +327,6 @@ begin
     FScrollBox.VertScrollBar.Position:= FScrollBox.VertScrollBar.Position - H;
 end;
 
-procedure TVSTParamList.ParentResize(Sender: TObject);
-var
-  i: Integer;
-begin
-  for i:= 0 to High(FItems) do
-  begin
-    FTrees[i].Height:= FItems[i].TotalHeight;
-    if Screen.PixelsPerInch>96 then
-      FTrees[i].Height:= FTrees[i].Height + 6;
-  end;
-  FScrollBox.HorzScrollBar.Visible:= False;
-end;
-
 constructor TVSTParamList.Create(const AParent: TPanel; const AFont: TFont = nil);
 var
   PPI: Integer;
@@ -295,8 +334,6 @@ begin
   inherited Create;
 
   FParent:= AParent;
-  FParent.OnResize:= @ParentResize;
-  FHeight:= 0;
 
   PPI:= Screen.PixelsPerInch;
   if PPI<108 then
@@ -320,6 +357,7 @@ begin
   FScrollBox.Color:= clWindow;
   FScrollBox.BorderStyle:= bsNone;
   FScrollBox.VertScrollBar.Increment:= FParent.Scale96ToForm(SCROLLBAR_INCREMENT_DEFAULT);
+  FScrollBox.HorzScrollBar.Visible:= False;
 end;
 
 destructor TVSTParamList.Destroy;
@@ -360,6 +398,7 @@ begin
   VT.AnchorSide[akRight].Control:= FScrollBox;
   VT.Anchors:= [akLeft, akTop, akRight];
 
+  VT.ScrollBarOptions.ScrollBars:= ssNone;
   VT.OnMouseWheel:= @MouseWheel;
   FTrees[N]:= VT;
 
