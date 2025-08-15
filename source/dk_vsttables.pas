@@ -285,7 +285,8 @@ function TVSTCoreTable.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex):
 begin
   Result:= inherited IsCellSelected(Node, Column);
   if not Result then Exit;
-  Result:= FSelected[Node^.Index];
+  if not VIsNil(FSelected) then
+    Result:= FSelected[Node^.Index];
 end;
 
 procedure TVSTCoreTable.HeaderClear;
