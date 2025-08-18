@@ -536,7 +536,7 @@ begin
     Sheet:= Exporter.AddWorksheet(ASheetName);
 
     VisibleColumnWidths:= VCut(FColumnWidths, FColumnVisibles);
-    Writer:= TSheetWriter.Create(VisibleColumnWidths, Sheet, nil, RowHeight);
+    Writer:= TSheetWriter.Create(VisibleColumnWidths, Sheet);
     try
       SheetWrite;
     finally
