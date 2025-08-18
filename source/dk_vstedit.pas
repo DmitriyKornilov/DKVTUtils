@@ -115,6 +115,8 @@ type
                        const ARowHeight: Integer = ROW_HEIGHT_DEFAULT);
     destructor  Destroy; override;
 
+    procedure Clear; override;
+
     procedure EditingDone;
 
     procedure ValuesClear; override;
@@ -768,19 +770,16 @@ begin
   FColumnRowTitlesFont:= TFont.Create;
   FColumnRowTitlesFont.Assign(FTree.Font);
 
-  FTitleColumnIndex:= -1;
-  FSelectedRowIndex:= -1;
-  FSelectedColIndex:= -1;
-
   FIsShowZeros:= False;
   FIsUnselectOnExit:= True;
   FIsEditing:= False;
   FIsOneRowEditing:= False;
   FIsBeginEditOnKeyPress:= True;
 
-  FCellTextBeforeEditing:= 'FCellTextBeforeEditing';
   FColorColumnCellMargin:= 0;
   FColorColumnBorderColor:= clNone;
+
+  Clear;
 end;
 
 destructor TVSTEdit.Destroy;
@@ -788,6 +787,24 @@ begin
   FreeAndNil(FColumnRowTitlesFont);
   if Assigned(FEditor) then FreeAndNil(FEditor);
   inherited Destroy;
+end;
+
+procedure TVSTEdit.Clear;
+begin
+  inherited Clear;
+
+  FPicks:= nil;
+  FKeys:= nil;
+  FColumnTypes:= nil;
+  FColumnFormatStrings:= nil;
+  FColumnMinValues:= nil;
+  FColumnMaxValues:= nil;
+  FDecimalPlaces:= nil;
+
+  FTitleColumnIndex:= -1;
+  FSelectedRowIndex:= -1;
+  FSelectedColIndex:= -1;
+  FCellTextBeforeEditing:= 'FCellTextBeforeEditing';
 end;
 
 procedure TVSTEdit.EditingDone;

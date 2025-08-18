@@ -111,7 +111,7 @@ type
     destructor  Destroy; override;
 
     procedure ValuesClear; virtual;
-    procedure Clear;
+    procedure Clear; virtual;
     procedure Refresh;
 
     procedure SetZoom(const APercents: Integer);
