@@ -82,6 +82,8 @@ type
                             const AOnSelect: TVSTEvent;
                             const ACheckeds: TBoolVector = nil);
 
+    procedure AutoHeight;
+
     property IsSelectedByIndex[const AItemIndex: Integer]: Boolean read GetIsSelectedByIndex;
     property SelectedByIndex[const AItemIndex: Integer]: Integer read GetSelectedByIndex write SetSelectedByIndex;
     property CheckedByIndex[const AItemIndex, AParamIndex: Integer]: Boolean read GetCheckedByIndex write SetCheckedByIndex;
@@ -441,6 +443,14 @@ begin
   List.StopSelectEventWhileCheckAll:= True;
   List.Update(AItems, ACheckeds);
   FItems[N]:= List;
+end;
+
+procedure TVSTParamList.AutoHeight;
+var
+  i: Integer;
+begin
+  for i:= 0 to High(FItems) do
+    FTrees[i].Height:= FItems[i].AutoHeightValue;
 end;
 
 end.
