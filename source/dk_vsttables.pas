@@ -357,6 +357,7 @@ procedure TVSTTable.Select(const AIndex: Integer);
 var
   Node: PVirtualNode;
 begin
+  if not IsIndexCorrect(AIndex) then Exit;
   Node:= NodeFromIndex(AIndex);
   if Assigned(Node) then SelectNode(Node);
 end;
