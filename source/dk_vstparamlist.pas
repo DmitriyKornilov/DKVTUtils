@@ -28,6 +28,7 @@ type
     FScrollBox: TScrollBox;
     FSpace: Integer;
     FFont: TFont;
+    FItemHeight: Integer;
 
     function GetItem(const AItemName: String): TVSTCoreTable;
     function GetItemByIndex(const AItemIndex: Integer): TVSTCoreTable;
@@ -347,6 +348,10 @@ begin
   else
     FSpace:= 12;
 
+  FItemHeight:= ROW_HEIGHT_DEFAULT;
+  if PPI<108 then
+    FItemHeight:= Round(1.25*FItemHeight);
+
   FFont:= TFont.Create;
   if Assigned(AFont) then
     FFont.Assign(AFont)
@@ -422,7 +427,7 @@ begin
 
   N:= Length(FItems);
   SetLength(FItems, N+1);
-  List:= TVSTStringList.Create(FTrees[N], ACaption, AOnSelect);
+  List:= TVSTStringList.Create(FTrees[N], ACaption, AOnSelect, FItemHeight);
   List.Update(AItems, ASelectedIndex);
   FItems[N]:= List;
 end;
@@ -439,7 +444,7 @@ begin
 
   N:= Length(FItems);
   SetLength(FItems, N+1);
-  List:= TVSTCheckList.Create(FTrees[N], ACaption, AOnSelect);
+  List:= TVSTCheckList.Create(FTrees[N], ACaption, AOnSelect, FItemHeight);
   List.StopSelectEventWhileCheckAll:= True;
   List.Update(AItems, ACheckeds);
   FItems[N]:= List;

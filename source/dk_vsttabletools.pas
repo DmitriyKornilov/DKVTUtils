@@ -24,7 +24,9 @@ type
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AOnSelect: TVSTEvent
+                       const AOnSelect: TVSTEvent;
+                       const ACaptionHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const AItemHeight: Integer = ROW_HEIGHT_DEFAULT
                        );
     procedure Update(const AItems: TStrVector; const ASelectedIndex: Integer = 0);
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
@@ -36,7 +38,10 @@ type
   public
     constructor Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AOnSelect: TVSTEvent);
+                       const AOnSelect: TVSTEvent;
+                       const ACaptionHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const AItemHeight: Integer = ROW_HEIGHT_DEFAULT
+                       );
     procedure Update(const AItems: TStrVector;
                      const ACheckeds: TBoolVector = nil);
   end;
@@ -107,10 +112,12 @@ end;
 
 constructor TVSTStringList.Create(const ATree: TVirtualStringTree;
                        const ACaption: String;
-                       const AOnSelect: TVSTEvent
+                       const AOnSelect: TVSTEvent;
+                       const ACaptionHeight: Integer = ROW_HEIGHT_DEFAULT;
+                       const AItemHeight: Integer = ROW_HEIGHT_DEFAULT
                        );
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, ACaptionHeight, AItemHeight);
   SetSimpleListParams(Self, ACaption);
   CanSelect:= True;
   CanUnselect:= False;
@@ -141,9 +148,11 @@ end;
 
 constructor TVSTCheckList.Create(const ATree: TVirtualStringTree;
                                  const ACaption: String;
-                                 const AOnSelect: TVSTEvent);
+                                 const AOnSelect: TVSTEvent;
+                                 const ACaptionHeight: Integer = ROW_HEIGHT_DEFAULT;
+                                 const AItemHeight: Integer = ROW_HEIGHT_DEFAULT);
 begin
-  inherited Create(ATree);
+  inherited Create(ATree, ACaptionHeight, AItemHeight);
   SetSimpleListParams(Self, ACaption);
   SelectedBGColor:= FTree.Color;
   Draw;
