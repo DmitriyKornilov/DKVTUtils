@@ -827,7 +827,10 @@ end;
 function TVSTEdit.CellBGColor(Node: PVirtualNode; Column: TColumnIndex): TColor;
 begin
   if FColumnTypes[Column]=ctColor then
-    Result:= StrToInt(FDataValues[Column, Node^.Index])
+  begin
+    if not TryStrToInt(FDataValues[Column, Node^.Index], Result) then
+      Result:= clBlack;
+  end
   else
     Result:= inherited CellBGColor(Node, Column);
 end;
@@ -951,9 +954,13 @@ var
   end;
 
   procedure CreateEditorColor;
+  var
+    c: TColor;
   begin
     FEditor:= TEdit.Create(FTree);
-    TEdit(FEditor).Color:= StrToInt(SelectedText);
+    if not TryStrToInt(SelectedText, c) then
+      c:= clBlack;
+    TEdit(FEditor).Color:= c;
     TEdit(FEditor).Font.Color:= TEdit(FEditor).Color;
     TEdit(FEditor).Text:= SelectedText;
     TEdit(FEditor).Alignment:= FTree.Header.Columns[FSelectedColIndex].Alignment;
@@ -995,10 +1002,13 @@ var
   procedure GoEditColor;
   var
     ColorDialog: TColorDialog;
+    c: TColor;
   begin
     ColorDialog:= TColorDialog.Create(nil);
     try
-      ColorDialog.Color:= StrToInt(SelectedText);
+      if not TryStrToInt(SelectedText, c) then
+        c:= clBlack;
+      ColorDialog.Color:= c;
       if ColorDialog.Execute then
       begin
         TEdit(FEditor).Text:= IntToStr(ColorToRGB(ColorDialog.Color));
