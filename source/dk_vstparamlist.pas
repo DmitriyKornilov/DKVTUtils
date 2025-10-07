@@ -338,6 +338,7 @@ begin
   inherited Create;
 
   FParent:= AParent;
+  FParent.Caption:= EmptyStr;
 
   PPI:= Screen.PixelsPerInch;
   if PPI<108 then
