@@ -22,6 +22,7 @@ type
     ctString,
     ctDate,
     ctTime,
+    ctDateTime,
     ctDouble,
     ctKeyPick,
     ctColor

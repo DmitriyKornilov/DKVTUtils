@@ -483,6 +483,13 @@ var
       else
         Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
     end
+    else if AType = ctDateTime then
+    begin
+      if TryStrToDateTime(AValue, DTValue) then
+        Writer.WriteDateTime(ARow, ACol, DTValue, cbtOuter)
+      else
+        Writer.WriteText(ARow, ACol, AValue, cbtOuter, True, True);
+    end
     else if AType = ctDouble then
     begin
       if TryStrToFloat(AValue, DblValue) then
