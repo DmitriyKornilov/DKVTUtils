@@ -321,7 +321,6 @@ procedure TVSTCoreTable.AddColumn(const ACaption: String;
 begin
   inherited AddColumn(ACaption, AWidth, ACaptionAlignment);
   MAppend(FDataValues, nil);
-  VAppend(FColumnVisibles, True);
 end;
 
 procedure TVSTCoreTable.SetColumn(const AColIndex: Integer;

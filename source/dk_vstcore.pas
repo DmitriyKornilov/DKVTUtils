@@ -606,6 +606,7 @@ begin
   VAppend(FColumnWidths, W);
   VAppend(FColumnValuesBGColors, clNone);
   VAppend(FColumnHeaderBGColors, clNone);
+  VAppend(FColumnVisibles, True);
   C:= FTree.Header.Columns.Add;
   C.Text:= ACaption;
   C.CaptionAlignment:= ACaptionAlignment;

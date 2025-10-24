@@ -238,6 +238,7 @@ type
     function ColumnAsColor(out AValues: TColorVector; const ACaption: String;
                           const ADefaultValue: TColor = clBlack): Boolean;
 
+    procedure RowAppend(const AValues: TStrVector = nil);
     procedure RowInsert(const ARowIndex: Integer; const AValues: TStrVector = nil);
     procedure RowDelete(const ARowIndex: Integer);
     property RowValues[ARowIndex: Integer]: TStrVector read GetRowValues write SetRowValues;
@@ -519,6 +520,11 @@ var
 begin
   ColIndex:= VIndexOf(FHeadercaptions, ACaption);
   Result:= ColumnAsColor(AValues, ColIndex, ADefaultValue);
+end;
+
+procedure TVSTEdit.RowAppend(const AValues: TStrVector);
+begin
+  RowInsert(RowCount, AValues);
 end;
 
 procedure TVSTEdit.RowInsert(const ARowIndex: Integer; const AValues: TStrVector = nil);
@@ -1239,7 +1245,6 @@ procedure TVSTEdit.SetNewColumnSettings(const AColumnType: TVSTColumnType;
                                         const AFormatString: String;
                                         const ADecimalPlaces: Integer = 0);
 begin
-  MAppend(FDataValues, nil);
   VAppend(FColumnFormatStrings, AFormatString);
   VAppend(FColumnMinValues, EmptyStr);
   VAppend(FColumnMaxValues, EmptyStr);
