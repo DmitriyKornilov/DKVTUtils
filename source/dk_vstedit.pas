@@ -277,8 +277,6 @@ implementation
 
 function TVSTEdit.IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean;
 begin
-  Result:= inherited IsCellSelected(Node, Column);
-  if not Result then Exit;
   Result:= (Node^.Index=FSelectedRowIndex) and (Column=FSelectedColIndex);
 end;
 
