@@ -39,7 +39,7 @@ type
     FOnEdititingBegin: TVSTEvent;
     FOnDeleteCellText: TVSTEvent;
     FColumnRowTitlesFont: TFont;
-    //FColumnRowTitlesBGColor: TColor;
+    FColumnRowTitlesBGColor: TColor;
     FColorColumnBorderColor: TColor;
     FColorColumnCellMargin: Integer;
 
@@ -53,18 +53,17 @@ type
     function IsCellSelected(Node: PVirtualNode; Column: TColumnIndex): Boolean; override;
     function GetIsSelected: Boolean;
     function GetSelectedText: String;
-    procedure SetSelectedText(AValue: String);
+    procedure SetSelectedText(const AValue: String);
     function SelectedCellRect: TRect;
 
-    procedure SetShowZeros(AValue: Boolean);
+    procedure SetShowZeros(const AValue: Boolean);
 
     function IsEditingColIndexCorrect(const AIndex: Integer): Boolean;
     function IsRowIndexCorrect(const AIndex: Integer): Boolean;
 
-    function GetColumnRowTitlesBGColor: TColor;
-    procedure SetColumnRowTitlesBGColor(AValue: TColor);
-    procedure SetColumnRowTitlesFont(AValue: TFont);
-    procedure SetColumnRowTitlesVisible(AValue: Boolean);
+    procedure SetColumnRowTitlesBGColor(const AValue: TColor);
+    procedure SetColumnRowTitlesFont(const AValue: TFont);
+    procedure SetColumnRowTitlesVisible(const AValue: Boolean);
 
     procedure SetNewColumnSettings(const AColumnType: TVSTColumnType;
                                    const AFormatString: String;
@@ -92,8 +91,7 @@ type
     procedure MoveSelectionVertical(const ADirection {1 down, -1 up}: Integer);
     procedure MoveSelectionHorizontal(const ADirection {1 right, -1 left}: Integer);
 
-    procedure BeginEdit;
-    procedure EndEdit(const ASaveChanges: Boolean = True);
+    procedure EditingDone;
 
     procedure GetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
                       Column: TColumnIndex; {%H-}TextType: TVSTTextType;
@@ -117,7 +115,8 @@ type
 
     procedure Clear; override;
 
-    procedure EditingDone;
+    procedure BeginEdit;
+    procedure EndEdit(const ASaveChanges: Boolean = True);
 
     procedure ValuesClear; override;
     procedure Draw; override;
@@ -259,7 +258,7 @@ type
 
     procedure SetColumnRowTitlesHeaderBGColor(const ABGColor: TColor);
     property ColumnRowTitlesFont: TFont read FColumnRowTitlesFont write SetColumnRowTitlesFont;
-    property ColumnRowTitlesBGColor: TColor read GetColumnRowTitlesBGColor write SetColumnRowTitlesBGColor;
+    property ColumnRowTitlesBGColor: TColor read FColumnRowTitlesBGColor write SetColumnRowTitlesBGColor;
 
     property IsColumnRowTitlesExists: Boolean read GetIsRowTitlesColumnExists;
     property ColumnRowTitlesVisible: Boolean write SetColumnRowTitlesVisible;
@@ -292,22 +291,14 @@ begin
   Result:= (Node^.Index=FSelectedRowIndex) and (Column=FSelectedColIndex);
 end;
 
-function TVSTEdit.GetColumnRowTitlesBGColor: TColor;
+procedure TVSTEdit.SetColumnRowTitlesBGColor(const AValue: TColor);
 begin
-  Result:= clNone;
-  if not IsColumnRowTitlesExists then Exit;
-  Result:= FColumnValuesBGColors[FTitleColumnIndex];
-end;
-
-procedure TVSTEdit.SetColumnRowTitlesBGColor(AValue: TColor);
-begin
-  if not IsColumnRowTitlesExists then Exit;
-  if FColumnValuesBGColors[FTitleColumnIndex]=AValue then Exit;
-  FColumnValuesBGColors[FTitleColumnIndex]:= AValue;
+  if FColumnRowTitlesBGColor=AValue then Exit;
+  FColumnRowTitlesBGColor:= AValue;
   FTree.Refresh;
 end;
 
-procedure TVSTEdit.SetColumnRowTitlesFont(AValue: TFont);
+procedure TVSTEdit.SetColumnRowTitlesFont(const AValue: TFont);
 begin
   FColumnRowTitlesFont.Assign(AValue);
   FTree.Refresh;
@@ -593,7 +584,7 @@ begin
   SetColumnHeaderBGColor(FTitleColumnIndex, ABGColor);
 end;
 
-procedure TVSTEdit.SetShowZeros(AValue: Boolean);
+procedure TVSTEdit.SetShowZeros(const AValue: Boolean);
 begin
   if FIsShowZeros=AValue then Exit;
   FIsShowZeros:= AValue;
@@ -847,6 +838,8 @@ begin
     if not TryStrToInt(FDataValues[Column, Node^.Index], Result) then
       Result:= clBlack;
   end
+  else if Column=FTitleColumnIndex then
+    Result:= FColumnRowTitlesBGColor
   else
     Result:= inherited CellBGColor(Node, Column);
 end;
@@ -1057,6 +1050,8 @@ var
   end;
 
 begin
+  if not IsSelected then Exit;
+
   FIsEditing:= True;
   ColumnType:= FColumnTypes[FSelectedColIndex];
 
@@ -1148,7 +1143,7 @@ begin
   FreeAndNil(FEditor);
 end;
 
-procedure TVSTEdit.SetColumnRowTitlesVisible(AValue: Boolean);
+procedure TVSTEdit.SetColumnRowTitlesVisible(const AValue: Boolean);
 begin
   if not IsColumnRowTitlesExists then Exit;
   if AValue then
@@ -1174,7 +1169,7 @@ begin
   Result:= FDataValues[FSelectedColIndex, FSelectedRowIndex];
 end;
 
-procedure TVSTEdit.SetSelectedText(AValue: String);
+procedure TVSTEdit.SetSelectedText(const AValue: String);
 begin
   if not IsSelected then Exit;
   if FDataValues[FSelectedColIndex, FSelectedRowIndex]=AValue then Exit;
