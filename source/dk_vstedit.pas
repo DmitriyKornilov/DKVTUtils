@@ -776,6 +776,7 @@ begin
 
   FColumnRowTitlesFont:= TFont.Create;
   FColumnRowTitlesFont.Assign(FTree.Font);
+  FColumnRowTitlesBGColor:= COLOR_BG_DEFAULT;
 
   FIsShowZeros:= False;
   FIsUnselectOnExit:= True;
